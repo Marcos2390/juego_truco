@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Truco Uruguayo</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<script>window.supabase={createClient:()=>({from:()=>({select:()=>Promise.resolve({data:null,error:{message:"Sin Supabase"}}),upsert:()=>Promise.resolve({error:null}),update:()=>({eq:()=>Promise.resolve({error:null})}),eq:()=>Promise.resolve({data:null,error:null})})})}</script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -13,12 +13,12 @@
   --gold:#d4a017;--cream:#e0d5b0;--green:#4a9a4a;
   --red:#c0392b;--blue:#2980b9;--muted:#3a6a3a;
 }
-body{font-family:'Playfair Display',Georgia,serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
+body{font-family:Georgia,'Times New Roman',serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
 .screen{display:none;min-height:100vh;flex-direction:column;padding:8px;gap:7px;max-width:520px;margin:0 auto}
 .screen.on{display:flex}
 h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,#7fba5a,var(--gold),#7fba5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;text-align:center;line-height:1.1}
 h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:2px}
-.btn{background:transparent;border:1.5px solid currentColor;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;letter-spacing:1px;transition:background .15s,transform .1s;color:var(--cream)}
+.btn{background:transparent;border:1.5px solid currentColor;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:1px;transition:background .15s,transform .1s;color:var(--cream)}
 .btn:active{transform:scale(.97)}
 .btn.green{color:var(--green);border-color:var(--green)}
 .btn.green:hover{background:#4a9a4a22}
@@ -34,7 +34,7 @@ h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spa
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 5px transparent}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes think{0%,100%{opacity:.4}50%{opacity:1}}
-input[type=text],input[type=password]{background:#0a140a;border:1.5px solid var(--bg3);border-radius:8px;color:var(--cream);font-family:'Playfair Display',serif;font-size:13px;padding:10px 12px;width:100%;outline:none;transition:border-color .15s}
+input[type=text],input[type=password]{background:#0a140a;border:1.5px solid var(--bg3);border-radius:8px;color:var(--cream);font-family:Georgia,serif;font-size:13px;padding:10px 12px;width:100%;outline:none;transition:border-color .15s}
 input:focus{border-color:var(--green)}
 label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;display:block}
 .card{border-radius:8px;cursor:pointer;position:relative;flex-shrink:0;transition:transform .15s,box-shadow .15s;overflow:visible}
@@ -220,6 +220,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 </div>
 
 <script>
+
 /* ═══════════════════════════════════════════
    CONSTANTES & LÓGICA DE CARTAS
 ═══════════════════════════════════════════ */
@@ -274,13 +275,6 @@ function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick=
 }
 
 // ── Poder base ─────────────────────────────────────────────
-const MAX_PTS=30;
-const SUITS=['espadas','bastos','oros','copas'];
-const VALS=[1,2,3,4,5,6,7,10,11,12];
-const INK={espadas:'#1a1a40',bastos:'#1a3a10',oros:'#7a5000',copas:'#8a1a1a'};
-const BG={espadas:'#f8f5ea',bastos:'#eef6ea',oros:'#fdf8de',copas:'#f8eaea'};
-const VLAB={1:'1',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',10:'S',11:'C',12:'R'};
-const VNOME={1:'As',2:'Dos',3:'Tres',4:'Cuatro',5:'Cinco',6:'Seis',7:'Siete',10:'Sota',11:'Caballo',12:'Rey'};
 
 // Piezas: 2,4,5,11,10 del palo de la muestra (orden de mayor a menor)
 const MUESTRA_ORDER=[2,4,5,11,10];
@@ -1065,6 +1059,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     this.value=this.value.toUpperCase();
   });
 });
+
 </script>
 </body>
 </html>
