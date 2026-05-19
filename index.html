@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15,7 +14,7 @@
   --red:#c0392b;--blue:#2980b9;--muted:#3a6a3a;
 }
 body{font-family:'Playfair Display',Georgia,serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
-.screen{display:none;min-height:100vh;flex-direction:column;padding:14px;gap:10px;max-width:480px;margin:0 auto}
+.screen{display:none;min-height:100vh;flex-direction:column;padding:8px;gap:7px;max-width:520px;margin:0 auto}
 .screen.on{display:flex}
 h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,#7fba5a,var(--gold),#7fba5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;text-align:center;line-height:1.1}
 h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:2px}
@@ -47,21 +46,21 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 .row.center{justify-content:center}
 .row.between{justify-content:space-between}
 .bar{background:var(--bg2);border:1px solid var(--bg3);border-radius:10px;padding:10px 14px}
-.log-box{background:#050f05;border:1px solid #0a1e0a;border-radius:8px;padding:6px 10px;height:80px;overflow-y:auto;font-size:10px;font-family:monospace;color:#4a7a4a}
+.log-box{background:#050f05;border:1px solid #0a1e0a;border-radius:8px;padding:5px 8px;height:62px;overflow-y:auto;font-size:10px;font-family:monospace;color:#4a7a4a}
 .log-box::-webkit-scrollbar{width:3px}
 .log-box::-webkit-scrollbar-thumb{background:#1e3a1e;border-radius:2px}
-.mesa{background:#0f2010;border:1px solid #1e3a1e;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;gap:16px;min-height:140px;position:relative}
+.mesa{background:#0f2010;border:1px solid #1e3a1e;border-radius:12px;padding:10px 8px;display:flex;align-items:center;justify-content:center;gap:10px;min-height:148px;position:relative}
 .rounds-badge{position:absolute;top:6px;left:8px;display:flex;gap:4px}
 .rb{font-size:9px;padding:2px 6px;border-radius:4px;background:#0a1a0a}
 .notice{background:#1a0808;border:1px solid #8a3a3a;border-radius:6px;padding:5px 10px;color:var(--red);font-size:11px;font-weight:700;animation:fadeUp .3s ease;text-align:center}
 .score-panel{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:80px}
-.score-num{font-size:34px;font-weight:900;line-height:1}
+.score-num{font-size:38px;font-weight:900;line-height:1}
 .score-bar{width:80px;height:5px;background:#111;border-radius:3px;overflow:hidden}
 .score-fill{height:100%;border-radius:3px;transition:width .5s}
-.hand-row{display:flex;gap:7px;overflow-x:auto;padding:4px 2px;justify-content:center}
+.hand-row{display:flex;gap:6px;overflow-x:auto;padding:4px 2px;justify-content:center;align-items:flex-end}
 .hand-row::-webkit-scrollbar{height:3px}
 .hand-row::-webkit-scrollbar-thumb{background:#1e3a1e}
-.actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:4px 0}
+.actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:2px 0;min-height:40px}
 .tip{color:var(--muted);font-size:10px;text-align:center;width:100%}
 .separator{border:none;border-top:1px solid #1a2a1a;margin:4px 0}
 .code-box{background:#050f05;border:1px solid var(--green);border-radius:8px;padding:12px;text-align:center;font-size:28px;font-weight:900;color:var(--gold);letter-spacing:8px}
@@ -162,7 +161,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div>
 
   <!-- Opponent hand -->
-  <div class="row" style="min-height:60px">
+  <div class="row" style="min-height:50px">
     <div style="color:#1a3a1a;font-size:9px;writing-mode:vertical-rl;margin-right:4px">RIVAL</div>
     <div id="opp-hand" class="hand-row" style="flex:1"></div>
     <div id="opp-count" style="color:#1a3a1a;font-size:9px"></div>
@@ -232,285 +231,128 @@ const BG    = {espadas:'#f8f5ea',bastos:'#eef6ea',oros:'#fdf8de',copas:'#f8eaea'
 const VLAB  = {1:'1',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',10:'S',11:'C',12:'R'};
 const VNOME = {1:'As',2:'Dos',3:'Tres',4:'Cuatro',5:'Cinco',6:'Seis',7:'Siete',10:'Sota',11:'Caballo',12:'Rey'};
 
-// ── SVG pip de cada palo — estilo naipe español uruguayo ─
-function pipSVG(suit, sz){
-  const c=INK[suit];
-  const s=Math.round(sz);
-
-  if(suit==='espadas'){
-    const w=Math.round(sz*0.55),h=s;
-    return `<svg viewBox="0 0 20 36" width="${w}" height="${h}" style="display:block">
-      <polygon points="10,1 8,26 12,26" fill="${c}"/>
-      <rect x="2" y="25" width="16" height="2.8" rx="1.4" fill="${c}"/>
-      <rect x="8.5" y="28" width="3" height="5" rx="1.5" fill="${c}"/>
-      <ellipse cx="10" cy="34.5" rx="3.5" ry="2" fill="${c}"/>
-    </svg>`;
-  }
-
-  if(suit==='bastos'){
-    const w=Math.round(sz*0.48),h=s;
-    return `<svg viewBox="0 0 18 38" width="${w}" height="${h}" style="display:block">
-      <rect x="7" y="10" width="4" height="18" rx="2" fill="${c}"/>
-      <ellipse cx="9" cy="9"  rx="5.5" ry="5" fill="${c}"/>
-      <ellipse cx="9" cy="20" rx="4"   ry="3.5" fill="${c}"/>
-      <ellipse cx="9" cy="30" rx="5"   ry="4.5" fill="${c}"/>
-      <ellipse cx="9" cy="36" rx="3"   ry="2" fill="${c}"/>
-    </svg>`;
-  }
-
-  if(suit==='oros'){
-    const rays=[0,30,60,90,120,150,180,210,240,270,300,330];
-    const rlines=rays.map(a=>{
-      const rad=a*Math.PI/180;
-      const x1=(15+9.5*Math.cos(rad)).toFixed(1),y1=(15+9.5*Math.sin(rad)).toFixed(1);
-      const x2=(15+13*Math.cos(rad)).toFixed(1),y2=(15+13*Math.sin(rad)).toFixed(1);
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="1.6"/>`;
-    }).join('');
-    return `<svg viewBox="0 0 30 30" width="${s}" height="${s}" style="display:block">
-      <circle cx="15" cy="15" r="13" fill="${c}" opacity="0.15"/>
-      ${rlines}
-      <circle cx="15" cy="15" r="13"  stroke="${c}" stroke-width="2"   fill="none"/>
-      <circle cx="15" cy="15" r="8.5" stroke="${c}" stroke-width="1.6" fill="none"/>
-      <circle cx="15" cy="15" r="3.5" fill="${c}"/>
-    </svg>`;
-  }
-
-  if(suit==='copas'){
-    const w=Math.round(sz*0.76),h=s;
-    return `<svg viewBox="0 0 28 38" width="${w}" height="${h}" style="display:block">
-      <path d="M3,3 L25,3 Q24,19 14,23 Q4,19 3,3 Z" fill="${c}" opacity="0.18"/>
-      <path d="M3,3 Q4,19 14,23 Q24,19 25,3" stroke="${c}" stroke-width="2.3" fill="none"/>
-      <line x1="3"  y1="3"  x2="25" y2="3"  stroke="${c}" stroke-width="2.3" stroke-linecap="round"/>
-      <line x1="14" y1="23" x2="14" y2="30" stroke="${c}" stroke-width="3"   stroke-linecap="round"/>
-      <ellipse cx="14" cy="27" rx="4.5" ry="3" fill="${c}"/>
-      <path d="M5,34 Q5,37 14,37 Q23,37 23,34 L21,31 Q14,33.5 7,31 Z" fill="${c}"/>
-      <line x1="5" y1="34" x2="23" y2="34" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>
-    </svg>`;
-  }
+// ═══ SVG PALOS ════════════════════════════════════════════
+function pipSVG(suit,sz){
+  const c=INK[suit],s=Math.round(sz);
+  if(suit==='espadas'){const w=Math.round(sz*0.55),h=s;return `<svg viewBox="0 0 20 36" width="${w}" height="${h}" style="display:block"><polygon points="10,1 8,26 12,26" fill="${c}"/><rect x="2" y="25" width="16" height="2.8" rx="1.4" fill="${c}"/><rect x="8.5" y="28" width="3" height="5" rx="1.5" fill="${c}"/><ellipse cx="10" cy="34.5" rx="3.5" ry="2" fill="${c}"/></svg>`;}
+  if(suit==='bastos'){const w=Math.round(sz*0.48),h=s;return `<svg viewBox="0 0 18 38" width="${w}" height="${h}" style="display:block"><rect x="7" y="10" width="4" height="18" rx="2" fill="${c}"/><ellipse cx="9" cy="9" rx="5.5" ry="5" fill="${c}"/><ellipse cx="9" cy="20" rx="4" ry="3.5" fill="${c}"/><ellipse cx="9" cy="30" rx="5" ry="4.5" fill="${c}"/><ellipse cx="9" cy="36" rx="3" ry="2" fill="${c}"/></svg>`;}
+  if(suit==='oros'){const rays=[0,30,60,90,120,150,180,210,240,270,300,330];const rlines=rays.map(a=>{const rad=a*Math.PI/180;const x1=(15+9.5*Math.cos(rad)).toFixed(1),y1=(15+9.5*Math.sin(rad)).toFixed(1),x2=(15+13*Math.cos(rad)).toFixed(1),y2=(15+13*Math.sin(rad)).toFixed(1);return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="1.6"/>`;}).join('');return `<svg viewBox="0 0 30 30" width="${s}" height="${s}" style="display:block"><circle cx="15" cy="15" r="13" fill="${c}" opacity="0.15"/>${rlines}<circle cx="15" cy="15" r="13" stroke="${c}" stroke-width="2" fill="none"/><circle cx="15" cy="15" r="8.5" stroke="${c}" stroke-width="1.6" fill="none"/><circle cx="15" cy="15" r="3.5" fill="${c}"/></svg>`;}
+  if(suit==='copas'){const w=Math.round(sz*0.76),h=s;return `<svg viewBox="0 0 28 38" width="${w}" height="${h}" style="display:block"><path d="M3,3 L25,3 Q24,19 14,23 Q4,19 3,3 Z" fill="${c}" opacity="0.18"/><path d="M3,3 Q4,19 14,23 Q24,19 25,3" stroke="${c}" stroke-width="2.3" fill="none"/><line x1="3" y1="3" x2="25" y2="3" stroke="${c}" stroke-width="2.3" stroke-linecap="round"/><line x1="14" y1="23" x2="14" y2="30" stroke="${c}" stroke-width="3" stroke-linecap="round"/><ellipse cx="14" cy="27" rx="4.5" ry="3" fill="${c}"/><path d="M5,34 Q5,37 14,37 Q23,37 23,34 L21,31 Q14,33.5 7,31 Z" fill="${c}"/><line x1="5" y1="34" x2="23" y2="34" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/></svg>`;}
   return '';
 }
 
-// ── Figuras SVG — Sota, Caballo, Rey ─────────────────────
-function figuraHTML(val, suit, W, H){
-  const ink=INK[suit], bg2=INK[suit]+'22';
-  if(val===10) return figuraSota(suit, W, H, ink, bg2);
-  if(val===11) return figuraCaballo(suit, W, H, ink, bg2);
-  if(val===12) return figuraRey(suit, W, H, ink, bg2);
+function figuraHTML(val,suit,W,H){
+  const ink=INK[suit];
+  if(val===10) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><svg viewBox="0 0 60 90" width="${Math.round(W*0.72)}" height="${Math.round(H*0.62)}" style="display:block"><ellipse cx="30" cy="12" rx="14" ry="5" fill="${ink}"/><rect x="20" y="8" width="20" height="7" rx="3" fill="${ink}"/><ellipse cx="30" cy="22" rx="9" ry="10" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/><circle cx="27" cy="20" r="1.5" fill="${ink}"/><circle cx="33" cy="20" r="1.5" fill="${ink}"/><path d="M27,26 Q30,29 33,26" stroke="${ink}" stroke-width="1.5" fill="none"/><path d="M18,32 Q15,55 18,75 L42,75 Q45,55 42,32 Q36,28 30,28 Q24,28 18,32Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.5"/><circle cx="30" cy="40" r="1.5" fill="${ink}"/><circle cx="30" cy="50" r="1.5" fill="${ink}"/><line x1="42" y1="38" x2="52" y2="45" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><line x1="24" y1="75" x2="22" y2="88" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><line x1="36" y1="75" x2="38" y2="88" stroke="${ink}" stroke-width="3" stroke-linecap="round"/></svg><div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">SOTA</div><div>${pipSVG(suit,W*0.2)}</div></div>`;
+  if(val===11) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><svg viewBox="0 0 72 80" width="${Math.round(W*0.84)}" height="${Math.round(H*0.58)}" style="display:block"><path d="M10,55 Q10,35 30,30 Q50,25 62,35 Q68,45 60,58 Q50,68 30,68 Q15,68 10,55Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.8"/><line x1="20" y1="66" x2="16" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><line x1="30" y1="68" x2="28" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><line x1="44" y1="68" x2="42" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><line x1="56" y1="62" x2="60" y2="74" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><path d="M28,30 Q26,20 20,15 Q28,10 34,18 Q36,25 32,30Z" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/><circle cx="22" cy="17" r="1.5" fill="${ink}"/><ellipse cx="44" cy="24" rx="7" ry="8" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/><circle cx="42" cy="22" r="1.5" fill="${ink}"/><circle cx="47" cy="22" r="1.5" fill="${ink}"/><path d="M38,32 Q36,44 40,46 L54,44 Q56,38 52,30 Q48,26 44,26 Q40,26 38,32Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.5"/><ellipse cx="44" cy="16" rx="10" ry="4" fill="${ink}"/><rect x="36" y="13" width="16" height="5" rx="2.5" fill="${ink}"/></svg><div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">CABA</div><div>${pipSVG(suit,W*0.2)}</div></div>`;
+  if(val===12) return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><svg viewBox="0 0 60 95" width="${Math.round(W*0.72)}" height="${Math.round(H*0.65)}" style="display:block"><polygon points="15,18 15,8 21,14 30,6 39,14 45,8 45,18" fill="${ink}"/><line x1="15" y1="18" x2="45" y2="18" stroke="${ink}" stroke-width="2.5"/><circle cx="21" cy="14" r="2" fill="${ink}" opacity="0.5"/><circle cx="30" cy="9" r="2.5" fill="${ink}" opacity="0.6"/><circle cx="39" cy="14" r="2" fill="${ink}" opacity="0.5"/><ellipse cx="30" cy="28" rx="10" ry="11" fill="${ink}" opacity="0.13" stroke="${ink}" stroke-width="1.8"/><circle cx="26.5" cy="26" r="1.8" fill="${ink}"/><circle cx="33.5" cy="26" r="1.8" fill="${ink}"/><path d="M24,33 Q30,38 36,33" stroke="${ink}" stroke-width="1.8" fill="none"/><path d="M14,40 Q10,65 14,88 L46,88 Q50,65 46,40 Q38,34 30,34 Q22,34 14,40Z" fill="${ink}" opacity="0.11" stroke="${ink}" stroke-width="1.8"/><line x1="46" y1="40" x2="54" y2="18" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/><circle cx="55" cy="16" r="4" fill="${ink}"/><line x1="23" y1="88" x2="20" y2="94" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><line x1="37" y1="88" x2="40" y2="94" stroke="${ink}" stroke-width="3" stroke-linecap="round"/></svg><div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">REY</div><div>${pipSVG(suit,W*0.2)}</div></div>`;
   return '';
 }
 
-function figuraSota(suit, W, H, ink, bg2){
-  // Sota: figura de pie sosteniendo el símbolo del palo
-  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
-    <svg viewBox="0 0 60 90" width="${Math.round(W*0.72)}" height="${Math.round(H*0.62)}" style="display:block">
-      <!-- sombrero -->
-      <ellipse cx="30" cy="12" rx="14" ry="5" fill="${ink}"/>
-      <rect x="20" y="8" width="20" height="7" rx="3" fill="${ink}"/>
-      <!-- cabeza -->
-      <ellipse cx="30" cy="22" rx="9" ry="10" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/>
-      <circle cx="27" cy="20" r="1.5" fill="${ink}"/>
-      <circle cx="33" cy="20" r="1.5" fill="${ink}"/>
-      <path d="M27,26 Q30,29 33,26" stroke="${ink}" stroke-width="1.5" fill="none"/>
-      <!-- cuerpo con capa -->
-      <path d="M18,32 Q15,55 18,75 L42,75 Q45,55 42,32 Q36,28 30,28 Q24,28 18,32Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.5"/>
-      <!-- botones -->
-      <circle cx="30" cy="40" r="1.5" fill="${ink}"/>
-      <circle cx="30" cy="50" r="1.5" fill="${ink}"/>
-      <!-- brazo con símbolo del palo -->
-      <line x1="42" y1="38" x2="52" y2="45" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>
-      <!-- piernas -->
-      <line x1="24" y1="75" x2="22" y2="88" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <line x1="36" y1="75" x2="38" y2="88" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-    </svg>
-    <div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">SOTA</div>
-    <div>${pipSVG(suit, W*0.2)}</div>
-  </div>`;
-}
-
-function figuraCaballo(suit, W, H, ink, bg2){
-  // Caballo: jinete a caballo como en las cartas reales
-  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
-    <svg viewBox="0 0 72 80" width="${Math.round(W*0.84)}" height="${Math.round(H*0.58)}" style="display:block">
-      <!-- cuerpo caballo -->
-      <path d="M10,55 Q10,35 30,30 Q50,25 62,35 Q68,45 60,58 Q50,68 30,68 Q15,68 10,55Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.8"/>
-      <!-- patas -->
-      <line x1="20" y1="66" x2="16" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <line x1="30" y1="68" x2="28" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <line x1="44" y1="68" x2="42" y2="78" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <line x1="56" y1="62" x2="60" y2="74" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <!-- cuello y cabeza del caballo -->
-      <path d="M28,30 Q26,20 20,15 Q28,10 34,18 Q36,25 32,30Z" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/>
-      <!-- crin -->
-      <path d="M26,14 Q28,8 32,12 Q30,6 35,10" stroke="${ink}" stroke-width="1.5" fill="none"/>
-      <!-- ojo caballo -->
-      <circle cx="22" cy="17" r="1.5" fill="${ink}"/>
-      <!-- jinete -->
-      <ellipse cx="44" cy="24" rx="7" ry="8" fill="${ink}" opacity="0.15" stroke="${ink}" stroke-width="1.5"/>
-      <circle cx="42" cy="22" r="1.5" fill="${ink}"/>
-      <circle cx="47" cy="22" r="1.5" fill="${ink}"/>
-      <!-- cuerpo jinete -->
-      <path d="M38,32 Q36,44 40,46 L54,44 Q56,38 52,30 Q48,26 44,26 Q40,26 38,32Z" fill="${ink}" opacity="0.12" stroke="${ink}" stroke-width="1.5"/>
-      <!-- sombrero jinete -->
-      <ellipse cx="44" cy="16" rx="10" ry="4" fill="${ink}"/>
-      <rect x="36" y="13" width="16" height="5" rx="2.5" fill="${ink}"/>
-    </svg>
-    <div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">CABA</div>
-    <div>${pipSVG(suit, W*0.2)}</div>
-  </div>`;
-}
-
-function figuraRey(suit, W, H, ink, bg2){
-  // Rey: figura con corona y cetro
-  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
-    <svg viewBox="0 0 60 95" width="${Math.round(W*0.72)}" height="${Math.round(H*0.65)}" style="display:block">
-      <!-- corona -->
-      <polygon points="15,18 15,8 21,14 30,6 39,14 45,8 45,18" fill="${ink}"/>
-      <line x1="15" y1="18" x2="45" y2="18" stroke="${ink}" stroke-width="2.5"/>
-      <!-- joyas corona -->
-      <circle cx="21" cy="14" r="2" fill="${ink}" opacity="0.5"/>
-      <circle cx="30" cy="9"  r="2.5" fill="${ink}" opacity="0.6"/>
-      <circle cx="39" cy="14" r="2" fill="${ink}" opacity="0.5"/>
-      <!-- cabeza -->
-      <ellipse cx="30" cy="28" rx="10" ry="11" fill="${ink}" opacity="0.13" stroke="${ink}" stroke-width="1.8"/>
-      <circle cx="26.5" cy="26" r="1.8" fill="${ink}"/>
-      <circle cx="33.5" cy="26" r="1.8" fill="${ink}"/>
-      <!-- barba/bigote -->
-      <path d="M24,33 Q30,38 36,33" stroke="${ink}" stroke-width="1.8" fill="none"/>
-      <path d="M26,30 Q30,32 34,30" stroke="${ink}" stroke-width="1.2" fill="none"/>
-      <!-- cuerpo con manto real -->
-      <path d="M14,40 Q10,65 14,88 L46,88 Q50,65 46,40 Q38,34 30,34 Q22,34 14,40Z" fill="${ink}" opacity="0.11" stroke="${ink}" stroke-width="1.8"/>
-      <!-- decoración del manto -->
-      <path d="M20,50 Q30,48 40,50" stroke="${ink}" stroke-width="1.2" fill="none" opacity="0.6"/>
-      <path d="M18,62 Q30,60 42,62" stroke="${ink}" stroke-width="1.2" fill="none" opacity="0.6"/>
-      <!-- cetro -->
-      <line x1="46" y1="40" x2="54" y2="18" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="55" cy="16" r="4" fill="${ink}"/>
-      <!-- espada/símbolo -->
-      <line x1="14" y1="40" x2="6"  y2="22" stroke="${ink}" stroke-width="2"   stroke-linecap="round"/>
-      <!-- piernas -->
-      <line x1="23" y1="88" x2="20" y2="94" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-      <line x1="37" y1="88" x2="40" y2="94" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>
-    </svg>
-    <div style="font-size:${W*0.13}px;font-weight:900;color:${ink};font-family:Georgia,serif;letter-spacing:1px">REY</div>
-    <div>${pipSVG(suit, W*0.2)}</div>
-  </div>`;
-}
-
-// ── Posiciones de pips según valor ───────────────────────
-// Cada pip es [x%, y%] relativo al área interior de la carta
 function pipPositions(val){
-  const L=28,C=50,R=72;
-  const T=15,TM=32,M=50,BM=68,B=85;
-  const map={
-    1:[[C,M]],
-    2:[[C,T],[C,B]],
-    3:[[C,T],[C,M],[C,B]],
-    4:[[L,T],[R,T],[L,B],[R,B]],
-    5:[[L,T],[R,T],[C,M],[L,B],[R,B]],
-    6:[[L,T],[R,T],[L,M],[R,M],[L,B],[R,B]],
-    7:[[L,T],[R,T],[L,M],[R,M],[C,TM],[L,B],[R,B]],
-  };
+  const L=27,C=50,R=73,T=14,TM=32,M=50,BM=68,B=86;
+  const map={1:[[C,M]],2:[[C,T],[C,B]],3:[[C,T],[C,M],[C,B]],4:[[L,T],[R,T],[L,B],[R,B]],5:[[L,T],[R,T],[C,M],[L,B],[R,B]],6:[[L,T],[R,T],[L,M],[R,M],[L,B],[R,B]],7:[[L,T],[R,T],[L,M],[R,M],[C,TM],[L,B],[R,B]]};
   return map[val]||[];
 }
 
-// ── HTML completo de una carta ────────────────────────────
 function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick='',isMuestra=false}={}){
-  const W=small?54:72, H=small?82:108;
-  const brd=sel?`3px solid #d4a017`:isMuestra?`2px solid #e8c84a`:`1.5px solid rgba(0,0,0,0.25)`;
-  const shad=sel?'0 14px 32px rgba(212,160,23,.75)':isMuestra?'0 0 12px rgba(232,200,74,.6)':'2px 4px 10px rgba(0,0,0,.5)';
-
-  if(back||!card){
-    return `<div class="card back ${disabled?'disabled':''}"
-      style="width:${W}px;height:${H}px;border:2px solid #7a1010;box-shadow:inset 0 0 0 3px #a03030,${shad}">
-    </div>`;
-  }
-
-  const bg=BG[card.s], ink=INK[card.s];
-  const isFigura=card.v>=10;
-  const numFS=small?12:15;
-  const cornerPipSz=small?8:11;
-
-  // corner label (number + pip)
-  const corner=`<div style="display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1">
-    <span style="font-size:${numFS}px;font-weight:900;font-family:Georgia,serif;line-height:1;color:${ink}">${VLAB[card.v]}</span>
-    ${pipSVG(card.s, cornerPipSz)}
-  </div>`;
-
-  // pip area
+  const W=small?64:86,H=small?96:128;
+  const brd=sel?`3px solid #d4a017`:isMuestra?`2px solid #e8c84a`:`1.5px solid rgba(0,0,0,0.22)`;
+  const shad=sel?'0 16px 34px rgba(212,160,23,.78)':isMuestra?'0 0 14px rgba(232,200,74,.65)':'2px 4px 10px rgba(0,0,0,.5)';
+  if(back||!card) return `<div class="card back ${disabled?'disabled':''}" style="width:${W}px;height:${H}px;border:2px solid #7a1010;box-shadow:inset 0 0 0 3px #a03030,${shad}"></div>`;
+  const bg=BG[card.s],ink=INK[card.s];
+  const numFS=small?13:16,cPipSz=small?9:12;
+  const corner=`<div style="display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1"><span style="font-size:${numFS}px;font-weight:900;font-family:Georgia,serif;line-height:1;color:${ink}">${VLAB[card.v]}</span>${pipSVG(card.s,cPipSz)}</div>`;
   let pipsHTML='';
-  if(isFigura){
-    pipsHTML=figuraHTML(card.v, card.s, W, H);
-  } else {
+  if(card.v>=10){pipsHTML=figuraHTML(card.v,card.s,W,H);}
+  else{
     const positions=pipPositions(card.v);
-    const pipSz=small? (card.v<=2?16:card.v<=4?13:11) : (card.v<=2?22:card.v<=4?18:15);
-    pipsHTML=positions.map(([x,y])=>{
-      // for values 2,3 bottom pips rotate 180deg
-      const rotate=(card.v>=2 && y>50)?'rotate(180deg)':'none';
-      return `<div style="position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-50%) ${rotate}">
-        ${pipSVG(card.s,pipSz)}
-      </div>`;
-    }).join('');
+    const pipSz=small?(card.v<=2?17:card.v<=4?14:12):(card.v<=2?24:card.v<=4?20:17);
+    pipsHTML=positions.map(([x,y])=>{const rot=(card.v>=2&&y>50)?'rotate(180deg)':'none';return `<div style="position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-50%) ${rot}">${pipSVG(card.s,pipSz)}</div>`;}).join('');
   }
-
-  return `<div class="card ${sel?'sel':''} ${disabled?'disabled':''}"
-    style="width:${W}px;height:${H}px;background:${bg};border:${brd};box-shadow:${shad};cursor:${disabled?'default':'pointer'}"
-    onclick="${onclick}">
-
-    <!-- top-left -->
-    <div style="position:absolute;top:4px;left:4px">${corner}</div>
-
-    <!-- bottom-right (rotated) -->
-    <div style="position:absolute;bottom:4px;right:4px;transform:rotate(180deg)">${corner}</div>
-
-    <!-- pip area -->
-    <div style="position:absolute;inset:${small?18:24}px ${small?6:8}px;overflow:hidden">
-      ${pipsHTML}
-    </div>
-
-  </div>`;
+  return `<div class="card ${sel?'sel':''} ${disabled?'disabled':''}" style="width:${W}px;height:${H}px;background:${bg};border:${brd};box-shadow:${shad};cursor:${onclick?'pointer':'default'}" onclick="${onclick}"><div style="position:absolute;top:4px;left:4px">${corner}</div><div style="position:absolute;bottom:4px;right:4px;transform:rotate(180deg)">${corner}</div><div style="position:absolute;inset:${small?20:26}px ${small?6:8}px;overflow:hidden">${pipsHTML}</div><div class="pwr">${card.p}</div></div>`;
 }
 
-// ── Poder base (sin muestra) ──────────────────────────────
+// ── Poder base ─────────────────────────────────────────────
+const MAX_PTS=30;
+const SUITS=['espadas','bastos','oros','copas'];
+const VALS=[1,2,3,4,5,6,7,10,11,12];
+const INK={espadas:'#1a1a40',bastos:'#1a3a10',oros:'#7a5000',copas:'#8a1a1a'};
+const BG={espadas:'#f8f5ea',bastos:'#eef6ea',oros:'#fdf8de',copas:'#f8eaea'};
+const VLAB={1:'1',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',10:'S',11:'C',12:'R'};
+const VNOME={1:'As',2:'Dos',3:'Tres',4:'Cuatro',5:'Cinco',6:'Seis',7:'Siete',10:'Sota',11:'Caballo',12:'Rey'};
+
+// Piezas: 2,4,5,11,10 del palo de la muestra (orden de mayor a menor)
+const MUESTRA_ORDER=[2,4,5,11,10];
+// Valor envido de cada pieza (imagen guía garciaguzzini)
+const PIEZA_ENV={2:30,4:29,5:28,11:27,10:27};
+
 function poderBase(v,s){
-  if(v===1&&s==='espadas') return 14;
-  if(v===1&&s==='bastos')  return 13;
-  if(v===7&&s==='espadas') return 12;
-  if(v===7&&s==='oros')    return 11;
-  if(v===3) return 10; if(v===2) return 9;
-  if(v===1) return 8;
+  if(v===1&&s==='espadas')return 14; if(v===1&&s==='bastos')return 13;
+  if(v===7&&s==='espadas')return 12; if(v===7&&s==='oros')return 11;
+  if(v===3)return 10; if(v===2)return 9; if(v===1)return 8;
   if(v===12)return 7; if(v===11)return 6; if(v===10)return 5;
-  if(v===7) return 4; if(v===6) return 3; if(v===5) return 2; if(v===4) return 1;
+  if(v===7)return 4; if(v===6)return 3; if(v===5)return 2; if(v===4)return 1;
   return 0;
 }
-
-// ── Poder con muestra: 2>4>5>11>10 del palo de muestra ───
-// Las cartas de muestra valen 20,19,18,17,16 (por encima de todo)
-const MUESTRA_ORDER = [2,4,5,11,10]; // más valioso primero
-function poderConMuestra(v,s,muestraSuit){
-  if(s===muestraSuit){
-    const idx=MUESTRA_ORDER.indexOf(v);
-    if(idx!==-1) return 20 - idx; // 20,19,18,17,16
-  }
+function poderConMuestra(v,s,ms){
+  if(s===ms){const i=MUESTRA_ORDER.indexOf(v);if(i!==-1)return 20-i;}
   return poderBase(v,s);
 }
+function esPieza(v,s,ms){return s===ms&&MUESTRA_ORDER.includes(v);}
 
-function esMuestra(v,s,muestraSuit){
-  return s===muestraSuit && MUESTRA_ORDER.includes(v);
+// Valor envido individual por carta
+// Piezas: valor especial (30,29,28,27,27)
+// Negras (1♠,1♣,7♠,7◎): valor face
+// Comunes: valor face, pero sota/caballo/rey = 0
+function envValCard(v,s,ms){
+  if(s===ms&&PIEZA_ENV[v]!==undefined) return PIEZA_ENV[v];
+  if(v>=10) return 0;
+  return v;
 }
 
-function envVal(c){ return c.v>=10?0:c.v; }
-function calcEnvido(hand){
+// Flor: 2+ piezas, ó 1 pieza + 2 cartas más del mismo palo, ó 3 del mismo palo
+function calcFlor(hand,ms){
+  const piezas=hand.filter(c=>esPieza(c.v,c.s,ms));
+  if(piezas.length>=2) return true;
+  if(piezas.length===1){
+    const sameAsPieza=hand.filter(c=>c.s===ms);
+    if(sameAsPieza.length>=3) return true;
+  }
   const bySuit={};
   hand.forEach(c=>{(bySuit[c.s]=bySuit[c.s]||[]).push(c);});
-  let best=0,flor=false;
-  Object.values(bySuit).forEach(cs=>{
-    if(cs.length===3) flor=true;
-    if(cs.length>=2){
-      const vs=cs.map(envVal).sort((a,b)=>b-a);
-      best=Math.max(best,vs[0]+vs[1]+20);
-    } else best=Math.max(best,envVal(cs[0]));
-  });
-  return{score:best,flor};
+  if(Object.values(bySuit).some(cs=>cs.length>=3)) return true;
+  return false;
+}
+
+// Cálculo envido según guía:
+// - 1 pieza + otras: env(pieza) + max(env de las otras)
+// - 2 cartas mismo palo (no piezas): suma + 20
+// - todas diferentes: max individual
+function calcEnvido(hand,ms){
+  const flor=calcFlor(hand,ms);
+  if(flor) return{score:0,flor:true};
+  const cards=hand.map(c=>({...c,ev:envValCard(c.v,c.s,ms)}));
+  const piezas=cards.filter(c=>esPieza(c.v,c.s,ms));
+  let best=0;
+  if(piezas.length===1){
+    const pEnv=piezas[0].ev;
+    const others=cards.filter(c=>!esPieza(c.v,c.s,ms));
+    const bestOther=others.length?Math.max(...others.map(c=>c.ev)):0;
+    best=pEnv+bestOther;
+  } else {
+    // Sin piezas: buscar par de mismo palo
+    const bySuit={};
+    cards.forEach(c=>{(bySuit[c.s]=bySuit[c.s]||[]).push(c);});
+    for(const cs of Object.values(bySuit)){
+      if(cs.length>=2){
+        const sorted=cs.map(c=>c.ev).sort((a,b)=>b-a);
+        best=Math.max(best,sorted[0]+sorted[1]+20);
+      }
+    }
+    best=Math.max(best,Math.max(...cards.map(c=>c.ev)));
+  }
+  return{score:best,flor:false};
 }
 
 function crearMazo(){
@@ -518,453 +360,438 @@ function crearMazo(){
   for(let i=d.length-1;i>0;i--){const j=0|Math.random()*(i+1);[d[i],d[j]]=[d[j],d[i]];}
   return d;
 }
-
-function aplicarMuestra(cards, muestraSuit){
-  return cards.map(c=>({...c, p:poderConMuestra(c.v,c.s,muestraSuit)}));
-}
+function aplicarMuestra(cards,ms){return cards.map(c=>({...c,p:poderConMuestra(c.v,c.s,ms)}));}
 
 /* ═══════════════════════════════════════════
-   ESTADO DEL JUEGO (G)
+   ESTADO GLOBAL
+   Fases:
+   'p_turn'       jugador puede jugar carta, envido, truco
+   'ai_turn'      IA actúa UNA sola acción
+   'p_resp_env'   jugador responde envido de IA
+   'p_resp_truco' jugador responde truco/retruco/vale4 de IA
+   'hand_done'    mano terminada
 ═══════════════════════════════════════════ */
-let G={};            // game state
-let SEL=null;        // selected hand index
-let BUSY=false;      // AI thinking / online wait
-let SB=null;         // Supabase client
-let CHANNEL=null;    // realtime channel
-let MY_ROLE='p1';    // 'p1'|'p2'
-let MODE='ai';       // 'ai'|'online'
-let ROOM='';         // room code
+let G={};
+let SEL=null;
+let SB=null,CHANNEL=null,ROOM='';
+let MY_ROLE='p1';
+let MODE='ai';
+let _aiTimer=null;
+
+function scheduleAI(ms){
+  if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
+  _aiTimer=setTimeout(()=>{_aiTimer=null;aiActuar();},ms);
+}
 
 function nuevoTurno(p1IsMano){
   const d=crearMazo();
-  // carta 6 (índice 6) es la muestra — boca arriba en la mesa
-  const muestra=d[6];
-  const ms=muestra.s; // palo de la muestra
-  // repartir 3 a cada uno (las primeras 6), muestra=índice 6, resto=mazo
-  const rawP1=d.slice(0,3), rawP2=d.slice(3,6);
-  // aplicar poder de muestra a todas las cartas
-  const p1H=aplicarMuestra(rawP1,ms);
-  const p2H=aplicarMuestra(rawP2,ms);
-  const muestraCard={...muestra, p:poderConMuestra(muestra.v,muestra.s,ms)};
-
-  const {score:p1Env,flor:p1Flor}=calcEnvido(p1H);
-  const {score:p2Env,flor:p2Flor}=calcEnvido(p2H);
+  const mr=d[6], ms=mr.s;
+  const p1H=aplicarMuestra(d.slice(0,3),ms);
+  const p2H=aplicarMuestra(d.slice(3,6),ms);
+  const mc={...mr,p:poderConMuestra(mr.v,mr.s,ms)};
+  const ep1=calcEnvido(p1H,ms), ep2=calcEnvido(p2H,ms);
   return{
-    p1Hand:p1H, p2Hand:p2H,
-    p1Played:[], p2Played:[],
-    mesa:{p1:null,p2:null},
-    muestra:muestraCard, muestraSuit:ms,
-    rounds:[], mano:p1IsMano?'p1':'p2',
-    turn:p1IsMano?'p1':'p2',
-    p1Env,p2Env,p1Flor,p2Flor,
-    envDisp:true, envPend:null, envDone:false,
-    trucoPend:null, trucoOk:false, trucoStake:1, trucoDone:false,
-    handDone:false, handWinner:null,
+    p1Hand:p1H,p2Hand:p2H,p1Played:[],p2Played:[],
+    mesa:{p1:null,p2:null},muestra:mc,muestraSuit:ms,
+    rounds:[],mano:p1IsMano?'p1':'p2',turn:p1IsMano?'p1':'p2',
+    fase:p1IsMano?'p_turn':'ai_turn',
+    envPend:null,envDone:false,
+    p1Env:ep1.score,p2Env:ep2.score,p1Flor:ep1.flor,p2Flor:ep2.flor,
+    trucoPend:null,trucoAcep:false,trucoStake:0,trucoDone:false,
+    handDone:false,handWinner:null,_scored:false,
   };
 }
 
 function initGame(p1IsMano=true,myPts=0,oppPts=0){
+  if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
   const h=nuevoTurno(p1IsMano);
   G={...h,pScore:myPts,oScore:oppPts,logs:[]};
-  SEL=null;BUSY=false;
-  const suitNames={espadas:'Espadas',bastos:'Bastos',oros:'Oros',copas:'Copas'};
+  SEL=null;
+  const sN={espadas:'Espadas',bastos:'Bastos',oros:'Oros',copas:'Copas'};
   addLog('🃏 Nueva mano. '+(p1IsMano?'Sos el mano.':'El rival es mano.'),'#d4a017');
-  addLog('🎴 Muestra: '+VNOME[h.muestra.v]+' de '+suitNames[h.muestra.s]+' → palo de muestra: '+suitNames[h.muestraSuit],'#e8c84a');
-  if(h.p1Flor) addLog('🌸 ¡Tenés Flor!','#f8a5c2');
+  addLog('🎴 Muestra: '+VNOME[h.muestra.v]+' de '+sN[h.muestra.s],'#e8c84a');
+  if(h.p1Flor) addLog('🌸 ¡Tenés Flor! El envido se cancela.','#f8a5c2');
   renderGame();
-  if(MODE==='ai'&&G.turn==='p2') setTimeout(aiActuar,700);
+  if(MODE==='ai'&&G.fase==='ai_turn') scheduleAI(900);
 }
 
-/* ═══════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════ */
-function myHand(){ return MY_ROLE==='p1'?G.p1Hand:G.p2Hand; }
-function oppHand(){ return MY_ROLE==='p1'?G.p2Hand:G.p1Hand; }
-function myPlayed(){ return MY_ROLE==='p1'?G.p1Played:G.p2Played; }
-function oppPlayed(){ return MY_ROLE==='p1'?G.p2Played:G.p1Played; }
-function myMesa(){ return MY_ROLE==='p1'?G.mesa.p1:G.mesa.p2; }
-function oppMesa(){ return MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1; }
-function myEnv(){ return MY_ROLE==='p1'?G.p1Env:G.p2Env; }
-function oppEnv(){ return MY_ROLE==='p1'?G.p2Env:G.p1Env; }
-function isMyTurn(){ return G.turn===MY_ROLE; }
-function opp(r){ return r==='p1'?'p2':'p1'; }
-
-function addLog(txt,color='#4a7a4a'){
-  G.logs=(G.logs||[]).slice(-60);
-  G.logs=[...G.logs,{txt,color}];
-}
-
+/* ─── HELPERS ──────────────────────────────────────────── */
+function myHand(){return MY_ROLE==='p1'?G.p1Hand:G.p2Hand;}
+function oppHand(){return MY_ROLE==='p1'?G.p2Hand:G.p1Hand;}
+function myMesa(){return MY_ROLE==='p1'?G.mesa.p1:G.mesa.p2;}
+function oppMesa(){return MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1;}
+function myEnv(){return MY_ROLE==='p1'?G.p1Env:G.p2Env;}
+function oppEnv(){return MY_ROLE==='p1'?G.p2Env:G.p1Env;}
+function opp(r){return r==='p1'?'p2':'p1';}
+function addLog(txt,color='#4a7a4a'){G.logs=[...(G.logs||[]).slice(-60),{txt,color}];}
 function cn(c){return VNOME[c.v]+' de '+c.s.charAt(0).toUpperCase()+c.s.slice(1);}
 
-/* ═══════════════════════════════════════════
-   RESOLUCIÓN DE ROUNDS
-═══════════════════════════════════════════ */
-function resRound(p1c,p2c){
-  if(p1c.p>p2c.p) return 'p1';
-  if(p2c.p>p1c.p) return 'p2';
-  return 'tie';
+function checkGameOver(){
+  if(G.pScore>=MAX_PTS||G.oScore>=MAX_PTS){renderGame();endGame();return true;}
+  return false;
 }
 
+// Puntúa la mano y programa la siguiente — llamada UNA sola vez
+function finalizeHand(){
+  if(G._scored) return;
+  G._scored=true;
+  const pts=G.trucoAcep?G.trucoStake:1;
+  const myWin=G.handWinner===MY_ROLE;
+  if(myWin) G.pScore=Math.min(MAX_PTS,G.pScore+pts);
+  else G.oScore=Math.min(MAX_PTS,G.oScore+pts);
+  addLog((myWin?'🏆 Ganás':'💀 Perdés')+' la mano! '+
+    (myWin?'+'+pts+' pts → Vos: '+G.pScore:'IA +'+pts+' pts → IA: '+G.oScore)+'/'+MAX_PTS,
+    myWin?'#7fba5a':'#e06060');
+  renderGame();
+  if(MODE==='online') syncOnline();
+  if(checkGameOver()) return;
+  const ps=G.pScore,os=G.oScore,nm=opp(G.mano);
+  setTimeout(()=>initGame(nm==='p1',ps,os),2200);
+}
+
+function resRound(p1c,p2c){
+  if(p1c.p>p2c.p)return 'p1'; if(p2c.p>p1c.p)return 'p2'; return 'tie';
+}
 function resHand(rounds,mano){
   let p1=0,p2=0;
-  for(const r of rounds){ if(r.w==='p1')p1++;else if(r.w==='p2')p2++; }
-  if(p1>=2) return 'p1';
-  if(p2>=2) return 'p2';
+  for(const r of rounds){if(r.w==='p1')p1++;else if(r.w==='p2')p2++;}
+  if(p1>=2)return 'p1'; if(p2>=2)return 'p2';
   if(rounds.length>=2){
     const r1=rounds[0].w,r2=rounds[1].w;
-    if(r1==='tie'){
-      if(rounds.length===2) return r2!=='tie'?r2:mano;
-      return mano;
-    }
-    if(r2==='tie') return r1;
+    if(r1==='tie'){if(rounds.length===2)return r2!=='tie'?r2:mano;return mano;}
+    if(r2==='tie')return r1;
   }
-  if(rounds.length===3) return mano;
+  if(rounds.length===3)return mano;
   return null;
 }
 
-/* ═══════════════════════════════════════════
-   ACCIONES DEL JUGADOR (mi turno)
-═══════════════════════════════════════════ */
-function playCard(idx){
-  if(BUSY||G.handDone) return;
-  if(G.envPend||G.trucoPend) return;
-  if(!isMyTurn()) return;
-
-  const hand=myHand();
-  const card=hand[idx];
-  if(!card) return;
-
-  const newHand=hand.filter((_,i)=>i!==idx);
-  if(MY_ROLE==='p1'){G.p1Hand=newHand;G.p1Played=[...G.p1Played,card];}
-  else{G.p2Hand=newHand;G.p2Played=[...G.p2Played,card];}
-  G.mesa={...G.mesa,[MY_ROLE]:card};
-  G.envDisp=false;
-  addLog('▶ Jugás '+cn(card),'#7fba5a');
-  SEL=null;
-
-  // if opponent already played → resolve round
-  const oppCard=MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1;
-  if(oppCard){
-    resolveRound(card,oppCard);
-  } else {
-    G.turn=opp(MY_ROLE);
-  }
-
-  finalize();
-}
-
-function resolveRound(myCard,oppCard){
-  const p1c=MY_ROLE==='p1'?myCard:oppCard;
-  const p2c=MY_ROLE==='p1'?oppCard:myCard;
+/* ─── RESOLVER ROUND (central) ──────────────────────────── */
+function resolveRound(){
+  const p1c=G.mesa.p1,p2c=G.mesa.p2;
   const w=resRound(p1c,p2c);
-  const newRound={p1:p1c,p2:p2c,w};
-  G.rounds=[...G.rounds,newRound];
-
+  G.rounds=[...G.rounds,{p1:p1c,p2:p2c,w}];
+  G.mesa={p1:null,p2:null};
   if(w===MY_ROLE) addLog('✅ Ganás el round.','#7fba5a');
   else if(w===opp(MY_ROLE)) addLog('❌ El rival gana el round.','#e06060');
   else addLog('🔄 Parda (empate).','#70b0d0');
-
   const hw=resHand(G.rounds,G.mano);
   if(hw){
-    G.handDone=true;G.handWinner=hw;
-    G.mesa={p1:null,p2:null};
+    G.handDone=true;G.handWinner=hw;G.fase='hand_done';
+    finalizeHand();
   } else {
-    const rl=w==='tie'?(MY_ROLE==='p1'?G.mano:G.mano):w;
-    G.mesa={p1:null,p2:null};
-    G.turn=rl;
+    const nt=w==='tie'?G.mano:w;
+    G.turn=nt;
+    G.fase=nt===MY_ROLE?'p_turn':'ai_turn';
+    renderGame();
+    if(G.fase==='ai_turn') scheduleAI(800);
   }
 }
 
+/* ═══════════════════════════════════════════
+   ACCIONES DEL JUGADOR
+═══════════════════════════════════════════ */
+function playCard(idx){
+  if(G.fase!=='p_turn'||G.handDone) return;
+  const hand=myHand();
+  const card=hand[idx];
+  if(!card) return;
+  if(MY_ROLE==='p1'){G.p1Hand=G.p1Hand.filter((_,i)=>i!==idx);G.p1Played=[...G.p1Played,card];}
+  else{G.p2Hand=G.p2Hand.filter((_,i)=>i!==idx);G.p2Played=[...G.p2Played,card];}
+  G.mesa={...G.mesa,[MY_ROLE]:card};
+  addLog('▶ Jugás '+cn(card),'#7fba5a');
+  SEL=null;
+  const oppCard=MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1;
+  if(oppCard){
+    resolveRound();
+  } else {
+    G.fase='ai_turn';
+    renderGame();
+    scheduleAI(800);
+  }
+}
+
+/* ─── Envido (puede llamarse en cualquier momento hasta que se resuelva) ─ */
+function canCallEnvido(){
+  return G.fase==='p_turn'&&!G.envDone&&!G.envPend&&!G.handDone&&
+         !G.p1Flor&&!G.p2Flor;
+}
 function callEnvido(level){
-  if(BUSY||!G.envDisp||G.envDone||!isMyTurn()) return;
-  const stakes={envido:2,realenvido:3,faltaenvido:MAX_PTS-Math.min(G.pScore,G.oScore)};
-  const refuses={envido:1,realenvido:2,faltaenvido:Math.max(1,stakes[level]-1)};
+  if(!canCallEnvido()) return;
+  const falta=MAX_PTS-Math.min(G.pScore,G.oScore);
+  const stakes={envido:2,realenvido:3,faltaenvido:falta};
+  const refuses={envido:1,realenvido:2,faltaenvido:Math.max(1,falta-1)};
   G.envPend={level,by:MY_ROLE,stake:stakes[level],refuseVal:refuses[level]};
-  G.envDisp=false;
   const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
   addLog('▶ Decís: ¡'+names[level]+'!','#d4890a');
-  finalize();
-  if(MODE==='ai') setTimeout(aiRespondEnvido,1000);
+  G.fase='ai_turn';
+  renderGame();
+  scheduleAI(1100);
 }
 
-function callTruco(level){
-  if(BUSY||G.trucoDone) return;
-  if(!isMyTurn()) return;
-  const stakes={truco:2,retruco:3,vale4:4};
-  const refuses={truco:1,retruco:2,vale4:3};
-  G.trucoPend={level,by:MY_ROLE,stake:stakes[level],refuseVal:refuses[level]};
-  const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-  addLog('▶ Decís: ¡'+names[level]+'!','#e04040');
-  finalize();
-  if(MODE==='ai') setTimeout(aiRespondTruco,1000);
+/* ─── Truco: jugador solo puede llamar TRUCO inicial ─────── */
+function canCallTruco(){
+  return G.fase==='p_turn'&&!G.trucoDone&&!G.trucoAcep&&!G.trucoPend&&!G.handDone;
+}
+function callTruco(){
+  if(!canCallTruco()) return;
+  G.trucoPend={level:'truco',by:MY_ROLE,stake:2,refuseVal:1};
+  addLog('▶ Decís: ¡Truco!','#e04040');
+  G.fase='ai_turn';
+  renderGame();
+  scheduleAI(1100);
 }
 
+/* ─── Jugador responde envido de IA ─────────────────────── */
 function respondEnvido(accept){
-  if(!G.envPend) return;
-  const {stake,refuseVal,by}=G.envPend;
+  if(G.fase!=='p_resp_env'||!G.envPend) return;
+  const{stake,refuseVal,by}=G.envPend;
   G.envPend=null;G.envDone=true;
-  const caller=by;
-  const responder=opp(by);
-
   if(accept){
-    const p1wins=G.p1Env>=G.p2Env;
-    const envWinner=p1wins?'p1':'p2';
-    const myWin=envWinner===MY_ROLE;
-    const pts=stake;
-    addLog((by===MY_ROLE?'🤖 IA dice: ¡Quiero!':'▶ Querés el envido.'),'#7fba5a');
-    addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Tus puntos: '+myEnv()+' vs rival: '+oppEnv()+'. '+(myWin?'+'+pts+' pts para vos.':'IA +'+pts+' pts.'),myWin?'#7fba5a':'#e06060');
-    if(myWin) G.pScore=Math.min(MAX_PTS,G.pScore+pts);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+pts);
+    addLog('▶ Querés el envido.','#7fba5a');
+    const winner=G.p1Env>=G.p2Env?'p1':'p2';
+    const myWin=winner===MY_ROLE;
+    addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+myEnv()+' vs IA: '+oppEnv()+
+      '. '+(myWin?'+'+stake+' pts.':'IA +'+stake+' pts.'),myWin?'#7fba5a':'#e06060');
+    if(myWin)G.pScore=Math.min(MAX_PTS,G.pScore+stake);
+    else G.oScore=Math.min(MAX_PTS,G.oScore+stake);
   } else {
-    // refuser loses; caller (who called envido) wins
-    const callerWins=true;
-    const myWin=caller===MY_ROLE;
-    addLog((by===MY_ROLE?'🤖 IA dice: No quiero.':'▶ No querés el envido.'),'#d4890a');
-    addLog((myWin?'✅ Vos':'❌ IA')+' gana: +'+(refuseVal)+' pts.',myWin?'#7fba5a':'#e06060');
-    if(myWin) G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
+    addLog('▶ No querés el envido.','#d4890a');
+    // IA llamó → jugador no quiere → IA gana refuseVal
+    G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
+    addLog('❌ IA gana: +'+refuseVal+' pts.','#e06060');
   }
-
-  if(G.pScore>=MAX_PTS||G.oScore>=MAX_PTS){ endGame(); return; }
-  G.turn=G.mano; // after envido, mano plays
-  finalize();
+  if(checkGameOver()) return;
+  // Retoma el turno: quien es mano juega primero
+  G.turn=G.mano;
+  G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';
+  renderGame();
+  if(G.fase==='ai_turn') scheduleAI(700);
 }
 
+/* ─── Jugador responde truco/retruco/vale4 de IA ────────── */
+// accept=true → Quiero
+// accept=false, raise=false → No quiero
+// accept=false, raise=true → Subir (retruco/vale4) — solo disponible si level no es vale4
 function respondTruco(accept,raise=false){
-  if(!G.trucoPend) return;
-  const {level,stake,refuseVal,by}=G.trucoPend;
+  if(G.fase!=='p_resp_truco'||!G.trucoPend) return;
+  const{level,stake,refuseVal,by}=G.trucoPend;
 
   if(raise){
+    // Jugador SUBE como respuesta — alterna el turno de llamada
     const next={truco:'retruco',retruco:'vale4'}[level];
     if(!next) return;
-    G.trucoPend=null;
-    const stakes={truco:2,retruco:3,vale4:4};
-    const refuses={truco:1,retruco:2,vale4:3};
-    G.trucoPend={level:next,by:opp(by),stake:stakes[next],refuseVal:refuses[next]};
-    G.trucoOk=true;G.trucoStake=stake; // previous stake secured
+    const stakes2={retruco:3,vale4:4};
+    const refuses2={retruco:2,vale4:3};
     const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const who=by===MY_ROLE?'🤖 IA sube:':'▶ Subís:';
-    addLog(who+' ¡'+names[next]+'!','#c0392b');
-    finalize();
-    if(MODE==='ai'&&by===MY_ROLE) setTimeout(aiRespondTruco,1000);
+    G.trucoAcep=true; G.trucoStake=stake; // nivel anterior asegurado
+    G.trucoPend={level:next,by:MY_ROLE,stake:stakes2[next],refuseVal:refuses2[next]};
+    addLog('▶ Subís: ¡'+names[next]+'!','#c0392b');
+    // Ahora la IA responde al llamado del jugador
+    G.fase='ai_turn';
+    renderGame();
+    scheduleAI(1100);
     return;
   }
 
   G.trucoPend=null;
   if(accept){
-    G.trucoOk=true;G.trucoStake=stake;
-    addLog((by===MY_ROLE?'🤖 IA dice: ¡Quiero!':'▶ Querés el truco.'),'#7fba5a');
-    G.turn=opp(by); // responder acts first after accepting
-  } else {
-    G.trucoDone=true;G.trucoStake=refuseVal;
-    const callerWins=by===MY_ROLE;
-    addLog((by===MY_ROLE?'🤖 IA dice: No quiero.':'▶ No querés el truco.'),'#d4890a');
-    addLog((callerWins?'✅ Vos':'❌ IA')+' gana: +'+refuseVal+' pts.',callerWins?'#7fba5a':'#e06060');
-    if(callerWins) G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
-    G.handDone=true;G.handWinner=by;
-  }
-  if(G.pScore>=MAX_PTS||G.oScore>=MAX_PTS){ endGame(); return; }
-  finalize();
-}
-
-function mazo(){
-  if(!isMyTurn()||BUSY||G.handDone) return;
-  G.oScore=Math.min(MAX_PTS,G.oScore+1);
-  addLog('▶ Te tirás al mazo. Rival +1 pt.','#d4890a');
-  G.handDone=true;G.handWinner=opp(MY_ROLE);
-  if(G.oScore>=MAX_PTS){ endGame(); return; }
-  finalize();
-}
-
-function finalize(){
-  if(G.handDone&&G.handWinner&&!G.trucoDone){
-    const pts=G.trucoOk?G.trucoStake:1;
-    const myWin=G.handWinner===MY_ROLE;
-    addLog((myWin?'🏆 Ganás':'💀 Perdés')+' la mano! '+(myWin?'+'+pts+' pts → Total: '+(G.pScore+pts):'IA +'+pts+' pts → IA total: '+(G.oScore+pts))+'/'+MAX_PTS,myWin?'#7fba5a':'#e06060');
-    if(myWin) G.pScore=Math.min(MAX_PTS,G.pScore+pts);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+pts);
-    if(G.pScore>=MAX_PTS||G.oScore>=MAX_PTS){ renderGame(); endGame(); return; }
+    G.trucoAcep=true; G.trucoStake=stake;
+    addLog('▶ Querés el truco. ('+stake+' pts en juego)','#7fba5a');
+    // IA llamó truco → jugador aceptó → continúa en el turno normal
+    G.fase=G.turn===MY_ROLE?'p_turn':'ai_turn';
+    if(!G.mesa.p1&&!G.mesa.p2){G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';}
     renderGame();
-    if(MODE==='online') syncOnline();
-    setTimeout(()=>{
-      const nextMano=G.mano==='p1'?'p2':'p1';
-      initGame(nextMano==='p1',G.pScore,G.oScore);
-      if(MODE==='online') syncOnline();
-    },2200);
-    return;
-  }
-  renderGame();
-  if(MODE==='online') syncOnline();
-  // AI's turn?
-  if(MODE==='ai'&&!G.handDone&&!G.envPend&&!G.trucoPend&&G.turn==='p2'){
-    BUSY=true;setTimeout(aiActuar,800);
+    if(G.fase==='ai_turn') scheduleAI(700);
+  } else {
+    // Jugador no quiere → IA (quien llamó) gana refuseVal
+    addLog('▶ No querés. IA gana +'+refuseVal+' pts.','#d4890a');
+    G.trucoDone=true;
+    G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
+    G.handDone=true;G.handWinner=opp(MY_ROLE);G.fase='hand_done';
+    finalizeHand();
   }
 }
 
-function endGame(){
-  renderGame();
-  if(MODE==='online') syncOnline();
-  const won=G.pScore>=MAX_PTS;
-  document.getElementById('go-emoji').textContent=won?'🏆':'💀';
-  document.getElementById('go-title').textContent=won?'¡GANASTE!':'PERDISTE';
-  document.getElementById('go-title').style.color=won?'#7fba5a':'#c0392b';
-  document.getElementById('go-sub').textContent=won?'La IA no te pudo ganar.':'La IA te ganó. ¿Revancha?';
-  document.getElementById('go-scores').textContent='Vos: '+G.pScore+' — IA: '+G.oScore;
-  show('s-gameover');
-}
-
-function rematch(){
-  if(MODE==='ai') startAI();
-  else show('s-menu');
+/* ─── Al mazo ───────────────────────────────────────────── */
+function mazo(){
+  if(G.fase!=='p_turn'||G.handDone) return;
+  addLog('▶ Te tirás al mazo. IA +1 pt.','#d4890a');
+  G.oScore=Math.min(MAX_PTS,G.oScore+1);
+  G.handDone=true;G.handWinner=opp(MY_ROLE);G.fase='hand_done';
+  finalizeHand();
 }
 
 /* ═══════════════════════════════════════════
-   LÓGICA DE IA (p2)
+   IA — UNA ACCIÓN POR LLAMADA
 ═══════════════════════════════════════════ */
 function aiActuar(){
-  BUSY=true;
-  const ai=G.p2Hand;
-  if(!ai||ai.length===0){BUSY=false;return;}
+  if(G.fase!=='ai_turn') return;
 
+  // 1. Responder pendiente del jugador (envido o truco) — primero
+  if(G.trucoPend&&G.trucoPend.by===MY_ROLE){aiDecideTruco();return;}
+  if(G.envPend&&G.envPend.by===MY_ROLE){aiDecideEnvido();return;}
+
+  const ai=G.p2Hand;
+  if(!ai||ai.length===0) return;
   const avg=ai.reduce((s,c)=>s+c.p,0)/ai.length;
 
-  // IA llama envido?
-  if(G.envDisp&&!G.envDone&&!G.trucoPend&&G.turn==='p2'&&G.p2Env>=24){
-    BUSY=false;
-    G.trucoPend=null;
-    const stakes={envido:2,realenvido:3};
+  // 2. IA llama envido (UNA vez, si no hay nada pendiente y tiene buenos puntos)
+  if(!G.envDone&&!G.envPend&&!G.trucoPend&&!G.trucoDone&&!G.p2Flor&&!G.p1Flor&&G.p2Env>=24){
     const level=G.p2Env>=28?'realenvido':'envido';
+    const stakes={envido:2,realenvido:3};
     G.envPend={level,by:'p2',stake:stakes[level],refuseVal:stakes[level]-1};
-    G.envDisp=false;
-    addLog('🤖 IA dice: ¡'+(level==='envido'?'Envido':'Real Envido')+'!','#a78bca');
+    G.envDone=false; // still pending
+    const names={envido:'Envido',realenvido:'Real Envido'};
+    addLog('🤖 IA dice: ¡'+names[level]+'!','#a78bca');
+    G.fase='p_resp_env';
     renderGame();
-    return;
+    return; // PARAR — esperar respuesta del jugador
   }
 
-  // IA llama truco?
-  if(!G.trucoPend&&!G.trucoOk&&!G.trucoDone&&G.turn==='p2'&&avg>=9){
-    BUSY=false;
-    const stakes={truco:2};
+  // 3. IA llama truco (UNA vez, solo si no hay truco activo/pendiente)
+  if(!G.trucoAcep&&!G.trucoPend&&!G.trucoDone&&avg>=9){
     G.trucoPend={level:'truco',by:'p2',stake:2,refuseVal:1};
     addLog('🤖 IA dice: ¡Truco!','#e74c3c');
+    G.fase='p_resp_truco';
     renderGame();
-    return;
+    return; // PARAR — esperar respuesta del jugador
   }
 
-  // IA sube truco?
-  if(G.trucoOk&&!G.trucoDone&&!G.trucoPend&&G.trucoStake<4&&G.turn==='p2'&&avg>=11){
-    BUSY=false;
-    const next=G.trucoStake===2?'retruco':'vale4';
-    const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const stakes={retruco:3,vale4:4};
-    G.trucoPend={level:next,by:'p2',stake:stakes[next],refuseVal:stakes[next]-1};
-    addLog('🤖 IA dice: ¡'+names[next]+'!','#e74c3c');
+  // 4. IA juega carta
+  if(G.trucoPend||G.envPend) return; // no jugar si hay algo pendiente
+  const meCard=G.mesa.p1;
+  let chosen;
+  if(meCard){
+    const winners=ai.filter(c=>c.p>meCard.p).sort((a,b)=>a.p-b.p);
+    chosen=winners[0]||[...ai].sort((a,b)=>a.p-b.p)[0];
+  } else {
+    const sorted=[...ai].sort((a,b)=>a.p-b.p);
+    chosen=sorted[Math.floor(sorted.length/2)];
+  }
+  G.p2Hand=G.p2Hand.filter(c=>c.id!==chosen.id);
+  G.p2Played=[...G.p2Played,chosen];
+  G.mesa={...G.mesa,p2:chosen};
+  addLog('🤖 IA juega '+cn(chosen),'#a78bca');
+  const p1Card=G.mesa.p1;
+  if(p1Card){
+    resolveRound();
+  } else {
+    G.turn=MY_ROLE;G.fase='p_turn';
     renderGame();
-    return;
   }
-
-  // IA juega carta
-  if(G.turn==='p2'){
-    const myCard=G.mesa.p1; // already played by p1?
-    let chosen;
-    if(myCard){
-      // respond: play lowest winning card or lowest
-      const winners=ai.filter(c=>c.p>myCard.p).sort((a,b)=>a.p-b.p);
-      chosen=winners[0]||[...ai].sort((a,b)=>a.p-b.p)[0];
-    } else {
-      // lead: play mid card
-      const sorted=[...ai].sort((a,b)=>a.p-b.p);
-      chosen=sorted[Math.floor(sorted.length/2)];
-    }
-
-    G.p2Hand=G.p2Hand.filter(c=>c.id!==chosen.id);
-    G.p2Played=[...G.p2Played,chosen];
-    G.mesa={...G.mesa,p2:chosen};
-    G.envDisp=false;
-    addLog('🤖 IA juega '+cn(chosen),'#a78bca');
-    BUSY=false;
-
-    const meCard=G.mesa.p1;
-    if(meCard){
-      resolveRound(meCard,chosen);
-      finalize();
-    } else {
-      G.turn='p1';
-      finalize();
-    }
-  }
-  BUSY=false;
 }
 
-function aiRespondEnvido(){
+/* ─── IA decide sobre envido del jugador ─────────────────── */
+function aiDecideEnvido(){
   if(!G.envPend) return;
+  const{stake,refuseVal}=G.envPend;
+  G.envPend=null;G.envDone=true;
   const accept=G.p2Env>=21;
-  respondEnvido(accept);
+  if(accept){
+    addLog('🤖 IA dice: ¡Quiero!','#a78bca');
+    const winner=G.p1Env>=G.p2Env?'p1':'p2';
+    const myWin=winner===MY_ROLE;
+    addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+myEnv()+' vs IA: '+oppEnv()+
+      '. '+(myWin?'+'+stake+' pts.':'IA +'+stake+' pts.'),myWin?'#7fba5a':'#e06060');
+    if(myWin)G.pScore=Math.min(MAX_PTS,G.pScore+stake);
+    else G.oScore=Math.min(MAX_PTS,G.oScore+stake);
+  } else {
+    addLog('🤖 IA dice: No quiero.','#a78bca');
+    G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
+    addLog('✅ Vos ganás: +'+refuseVal+' pts.','#7fba5a');
+  }
+  if(checkGameOver()) return;
+  G.turn=G.mano;
+  G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';
+  renderGame();
+  if(G.fase==='ai_turn') scheduleAI(600);
 }
 
-function aiRespondTruco(){
+/* ─── IA decide sobre truco del jugador ──────────────────── */
+function aiDecideTruco(){
   if(!G.trucoPend) return;
-  const ai=G.p2Hand;
-  const avg=ai.reduce((s,c)=>s+c.p,0)/Math.max(1,ai.length);
-  const willAccept=avg>=5;
-  const willRaise=false; // simplify
-  respondTruco(willAccept,willRaise);
+  const{level,stake,refuseVal}=G.trucoPend;
+  const avg=G.p2Hand.reduce((s,c)=>s+c.p,0)/Math.max(1,G.p2Hand.length);
+  const canRaise=level!=='vale4';
+  const willRaise=canRaise&&avg>=12;
+  const willAccept=!willRaise&&avg>=5;
+
+  if(willRaise){
+    // IA sube como RESPUESTA — turno pasa al jugador
+    const next={truco:'retruco',retruco:'vale4'}[level];
+    const stakes2={retruco:3,vale4:4};
+    const refuses2={retruco:2,vale4:3};
+    const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
+    G.trucoPend=null;
+    G.trucoAcep=true;G.trucoStake=stake;
+    G.trucoPend={level:next,by:'p2',stake:stakes2[next],refuseVal:refuses2[next]};
+    addLog('🤖 IA sube: ¡'+names[next]+'!','#e74c3c');
+    G.fase='p_resp_truco'; // jugador responde al retruco/vale4 de IA
+    renderGame();
+  } else if(willAccept){
+    G.trucoPend=null;
+    G.trucoAcep=true;G.trucoStake=stake;
+    addLog('🤖 IA dice: ¡Quiero! ('+stake+' pts)','#a78bca');
+    // IA aceptó truco del jugador → IA juega carta ahora
+    G.fase='ai_turn';
+    renderGame();
+    scheduleAI(700);
+  } else {
+    G.trucoPend=null;G.trucoDone=true;
+    addLog('🤖 IA dice: No quiero.','#a78bca');
+    G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
+    addLog('✅ Vos ganás: +'+refuseVal+' pts.','#7fba5a');
+    G.handDone=true;G.handWinner=MY_ROLE;G.fase='hand_done';
+    finalizeHand();
+  }
 }
 
 /* ═══════════════════════════════════════════
    RENDER
 ═══════════════════════════════════════════ */
-
-
 function renderGame(){
   if(!G.p1Hand) return;
-
-  const myH=myHand(), oppH=oppHand();
-  const myScore=G.pScore, oppScore=G.oScore;
-  const myIsMano=G.mano===MY_ROLE;
+  const myH=myHand(),oppH=oppHand(),myIsMano=G.mano===MY_ROLE;
 
   // Scores
   document.getElementById('score-me').innerHTML=
     `<div style="font-size:9px;color:#7fba5a;letter-spacing:1px">VOS ${myIsMano?'🎯':''}</div>
-     <div class="score-num" style="color:#7fba5a">${myScore}</div>
-     <div class="score-bar"><div class="score-fill" style="width:${(myScore/MAX_PTS*100)}%;background:#7fba5a"></div></div>`;
-
+     <div class="score-num" style="color:#7fba5a">${G.pScore}</div>
+     <div class="score-bar"><div class="score-fill" style="width:${(G.pScore/MAX_PTS*100)}%;background:#7fba5a"></div></div>`;
   document.getElementById('score-opp').innerHTML=
     `<div style="font-size:9px;color:#e06060;letter-spacing:1px">${MODE==='ai'?'IA':'RIVAL'} ${!myIsMano?'🎯':''}</div>
-     <div class="score-num" style="color:#e06060">${oppScore}</div>
-     <div class="score-bar"><div class="score-fill" style="width:${(oppScore/MAX_PTS*100)}%;background:#e06060"></div></div>`;
+     <div class="score-num" style="color:#e06060">${G.oScore}</div>
+     <div class="score-bar"><div class="score-fill" style="width:${(G.oScore/MAX_PTS*100)}%;background:#e06060"></div></div>`;
 
   // Turn badge
-  const thinking=BUSY||(!isMyTurn()&&!G.handDone&&!G.envPend&&!G.trucoPend);
-  document.getElementById('turn-badge').innerHTML=
-    G.handDone?'<span style="color:#d4a017">Resolviendo...</span>':
-    thinking?`<span class="thinking">⏳ ${MODE==='ai'?'IA':'Rival'} pensando...</span>`:
-    `<span style="color:#7fba5a">⚔️ TU TURNO</span>`;
+  const fase=G.fase;
+  const tb=document.getElementById('turn-badge');
+  if(fase==='hand_done')      tb.innerHTML='<span style="color:#d4a017">Nueva mano...</span>';
+  else if(fase==='ai_turn')   tb.innerHTML='<span class="thinking">⏳ IA pensando...</span>';
+  else if(fase==='p_turn')    tb.innerHTML='<span style="color:#7fba5a;font-weight:700">⚔️ TU TURNO</span>';
+  else if(fase==='p_resp_env')   tb.innerHTML='<span style="color:#d4890a;font-weight:700">🎯 Respondé el envido</span>';
+  else if(fase==='p_resp_truco') tb.innerHTML='<span style="color:#e04040;font-weight:700">⚔️ Respondé el truco</span>';
 
   // Truco badge
-  const tb=document.getElementById('truco-badge');
-  if(G.trucoOk&&G.trucoStake>1){
+  const tb2=document.getElementById('truco-badge');
+  if(G.trucoAcep&&G.trucoStake>0){
     const tn={2:'Truco',3:'Re-Truco',4:'Vale Cuatro'};
-    tb.textContent='⚔ '+tn[G.trucoStake]+' ('+G.trucoStake+' pts)';
-  } else tb.textContent='';
+    tb2.textContent='⚔ '+tn[G.trucoStake]+' ('+G.trucoStake+' pts)';
+  } else tb2.textContent='';
 
-  // Opponent hand
-  document.getElementById('opp-hand').innerHTML=
-    oppH.map(()=>cardHTML(null,{back:true,small:true})).join('');
-  document.getElementById('opp-count').textContent=oppH.length+' cartas';
+  // Opponent hand (face down)
+  document.getElementById('opp-hand').innerHTML=oppH.map(()=>cardHTML(null,{back:true,small:true})).join('');
+  document.getElementById('opp-count').textContent=oppH.length+'✦';
 
-  // Mesa — muestra (always visible, slightly rotated)
+  // Muestra
   const muestraEl=document.getElementById('mesa-muestra');
-  if(G.muestra){
-    muestraEl.innerHTML=`<div style="transform:rotate(15deg);display:inline-block">${cardHTML(G.muestra,{disabled:true,small:true,isMuestra:true})}</div>`;
-  }
+  if(G.muestra) muestraEl.innerHTML=`<div style="transform:rotate(14deg);display:inline-block">${cardHTML(G.muestra,{disabled:true,small:true,isMuestra:true})}</div>`;
 
-  // Mesa played cards
+  // Mesa
   document.getElementById('mesa-opp').innerHTML=cardHTML(oppMesa(),{disabled:true});
   document.getElementById('mesa-me').innerHTML=cardHTML(myMesa(),{disabled:true});
 
-  // Rounds badges
+  // Round badges
   document.getElementById('rounds-badges').innerHTML=
     (G.rounds||[]).map((r,i)=>{
       const myW=r.w===MY_ROLE,tie=r.w==='tie';
@@ -972,14 +799,13 @@ function renderGame(){
       return `<div class="rb" style="color:${myW?'#7fba5a':tie?'#70b0d0':'#e06060'};border:1px solid ${c}">R${i+1} ${myW?'✓':tie?'=':'✗'}</div>`;
     }).join('');
 
-  // Mesa notice (pending call)
+  // Mesa notice
   const mn=document.getElementById('mesa-notice');
-  if(G.envPend||G.trucoPend){
-    const p=G.envPend||G.trucoPend;
+  const pend=G.envPend||G.trucoPend;
+  if(pend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    mn.style.display='block';
-    mn.className='notice';
-    mn.textContent=(G.envPend?'🎯 ':'⚔️ ')+names[p.level];
+    mn.style.display='block';mn.className='notice';
+    mn.textContent=(G.envPend?'🎯 ':'⚔️ ')+names[pend.level];
   } else mn.style.display='none';
 
   // Log
@@ -987,70 +813,75 @@ function renderGame(){
   logEl.innerHTML=(G.logs||[]).map(l=>`<div style="color:${l.color};margin-bottom:2px">${l.txt}</div>`).join('');
   logEl.scrollTop=logEl.scrollHeight;
 
-  // My hand — highlight muestra cards
+  // My hand
   document.getElementById('my-hand').innerHTML=
     myH.map((c,i)=>cardHTML(c,{
       sel:SEL===i,
-      disabled:!isMyTurn()||BUSY||G.handDone,
-      isMuestra: esMuestra(c.v,c.s,G.muestraSuit),
+      disabled:G.fase!=='p_turn'||G.handDone,
+      isMuestra:esPieza(c.v,c.s,G.muestraSuit),
       onclick:`handleCardClick(${i})`
     })).join('');
 
-  // Actions
+  renderActions();
+}
+
+function renderActions(){
   const act=document.getElementById('actions');
-  const tip=document.getElementById('action-tip');
-  act.innerHTML='<div class="tip" id="action-tip"></div>';
+  act.innerHTML='';
+  const fase=G.fase;
 
-  const myT=isMyTurn()&&!BUSY&&!G.handDone;
-
-  if(G.envPend&&G.envPend.by!==MY_ROLE){
+  // ── Responder envido de IA ─────────────────────────────
+  if(fase==='p_resp_env'&&G.envPend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
-    act.innerHTML+=`<div class="tip" style="color:#d4890a;font-weight:700">🤖 ${MODE==='ai'?'IA':'Rival'} dice: ¡${names[G.envPend.level]}! ¿Querés? (tus puntos: ${myEnv()})</div>
-      <button class="btn green" onclick="respondEnvido(true)">✅ Quiero</button>
-      <button class="btn red" onclick="respondEnvido(false)">❌ No quiero</button>`;
+    act.innerHTML=`
+      <div class="tip" style="color:#d4890a;font-weight:700;font-size:12px">
+        🤖 IA dice: ¡${names[G.envPend.level]}! &nbsp;(Tus puntos de envido: ${myEnv()})
+      </div>
+      <button class="btn green" onclick="respondEnvido(true)" style="padding:10px 22px;font-size:13px">✅ Quiero</button>
+      <button class="btn red"   onclick="respondEnvido(false)" style="padding:10px 22px;font-size:13px">❌ No quiero</button>`;
     return;
   }
 
-  if(G.trucoPend&&G.trucoPend.by!==MY_ROLE){
+  // ── Responder truco de IA ──────────────────────────────
+  if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    act.innerHTML+=`<div class="tip" style="color:#e04040;font-weight:700">🤖 ${MODE==='ai'?'IA':'Rival'} dice: ¡${names[G.trucoPend.level]}! ¿Querés?</div>
-      <button class="btn green" onclick="respondTruco(true)">✅ Quiero</button>
-      <button class="btn red" onclick="respondTruco(false)">❌ No quiero (–${G.trucoPend.refuseVal})</button>
-      ${G.trucoPend.level!=='vale4'?`<button class="btn" style="color:#8e44ad;border-color:#8e44ad" onclick="respondTruco(false,true)">⬆️ ${G.trucoPend.level==='truco'?'Re-Truco':'Vale Cuatro'}</button>`:''}`;
+    const canRaise=G.trucoPend.level!=='vale4';
+    const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
+    act.innerHTML=`
+      <div class="tip" style="color:#e04040;font-weight:700;font-size:12px">
+        🤖 IA dice: ¡${names[G.trucoPend.level]}! ¿Querés?
+      </div>
+      <button class="btn green" onclick="respondTruco(true)"  style="padding:10px 22px;font-size:13px">✅ Quiero</button>
+      <button class="btn red"   onclick="respondTruco(false)" style="padding:10px 22px;font-size:13px">❌ No quiero&nbsp;(–${G.trucoPend.refuseVal})</button>
+      ${canRaise?`<button class="btn" style="color:#8e44ad;border-color:#8e44ad;padding:10px 16px;font-size:13px" onclick="respondTruco(false,true)">⬆️ ${nextName}</button>`:''}`;
     return;
   }
 
-  if(myT){
-    act.innerHTML+=`<div class="tip">${SEL!==null?'▶ Click de nuevo para jugar · o elegí otra':'← Seleccioná una carta'}</div>`;
+  // ── Turno del jugador ──────────────────────────────────
+  if(fase==='p_turn'){
+    act.innerHTML=`<div class="tip">${SEL!==null?'▶ Toca de nuevo para jugar, o elegí otra':'← Tocá una carta de tu mano'}</div>`;
 
-    // Envido buttons
-    if(G.envDisp&&!G.envDone){
-      act.innerHTML+=`<button class="btn gold sm" onclick="callEnvido('envido')">🎯 Envido</button>
-        <button class="btn gold sm" onclick="callEnvido('realenvido')">🎯 Real Envido</button>
+    // Envido — disponible si no fue resuelto ni hay flor
+    if(!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
+      act.innerHTML+=`
+        <button class="btn gold sm" onclick="callEnvido('envido')">🎯 Envido (2)</button>
+        <button class="btn gold sm" onclick="callEnvido('realenvido')">🎯 Real Envido (3)</button>
         <button class="btn gold sm" onclick="callEnvido('faltaenvido')">🎯 Falta Envido</button>`;
     }
 
-    // Truco buttons
-    if(!G.trucoPend&&!G.trucoDone){
-      if(!G.trucoOk){
-        act.innerHTML+=`<button class="btn red sm pulse" onclick="callTruco('truco')">⚔️ Truco</button>`;
-      } else if(G.trucoStake===2){
-        act.innerHTML+=`<button class="btn red sm" onclick="callTruco('retruco')">⚔️ Re-Truco</button>`;
-      } else if(G.trucoStake===3){
-        act.innerHTML+=`<button class="btn red sm" onclick="callTruco('vale4')">⚔️ Vale Cuatro</button>`;
-      }
+    // Truco — solo si no hay truco activo/pendiente
+    if(!G.trucoDone&&!G.trucoPend&&!G.trucoAcep){
+      act.innerHTML+=`<button class="btn red sm pulse" onclick="callTruco()">⚔️ Truco</button>`;
     }
 
-    // Al mazo
     act.innerHTML+=`<button class="btn sm" style="color:#5a5a4a;border-color:#3a3a2a" onclick="mazo()">🃏 Al mazo</button>`;
   }
 }
 
 function handleCardClick(i){
-  if(!isMyTurn()||BUSY||G.handDone) return;
-  if(G.envPend||G.trucoPend) return;
-  if(SEL===i){ playCard(i); }
-  else { SEL=i; renderGame(); }
+  if(G.fase!=='p_turn'||G.handDone) return;
+  if(SEL===i){playCard(i);}
+  else{SEL=i;renderGame();}
 }
 
 /* ═══════════════════════════════════════════
@@ -1062,6 +893,22 @@ function startAI(){
   show('s-game');
 }
 
+function endGame(){
+  const won=G.pScore>=MAX_PTS;
+  document.getElementById('go-emoji').textContent=won?'🏆':'💀';
+  document.getElementById('go-title').textContent=won?'¡GANASTE!':'PERDISTE';
+  document.getElementById('go-title').style.color=won?'#7fba5a':'#c0392b';
+  document.getElementById('go-sub').textContent=won?'¡La IA no te pudo ganar!':'La IA te ganó. ¿Revancha?';
+  document.getElementById('go-scores').textContent='Vos: '+G.pScore+' — IA: '+G.oScore;
+  show('s-gameover');
+}
+
+function rematch(){ if(MODE==='ai') startAI(); else show('s-menu'); }
+
+
+/* ═══════════════════════════════════════════
+   SUPABASE — ONLINE
+═══════════════════════════════════════════ */
 /* ═══════════════════════════════════════════
    SUPABASE — ONLINE
 ═══════════════════════════════════════════ */
