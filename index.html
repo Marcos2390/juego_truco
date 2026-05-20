@@ -66,6 +66,20 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 .code-box{background:#050f05;border:1px solid var(--green);border-radius:8px;padding:12px;text-align:center;font-size:28px;font-weight:900;color:var(--gold);letter-spacing:8px}
 .sql-box{background:#050f05;border:1px solid #1e3a1e;border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:#6a9a6a;white-space:pre-wrap;overflow-x:auto;line-height:1.5}
 .thinking{color:#4a8a4a;font-size:10px;text-align:center;animation:think 1s infinite}
+
+/* ── PALITOS ── */
+.tally-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.tally-score-num{font-size:11px;font-weight:700;opacity:0.7;font-family:Georgia,serif}
+
+/* ── ABANICO ── */
+.fan-wrap{display:flex;justify-content:center;align-items:flex-end;
+  position:relative;height:120px;padding-top:14px}
+.fan-wrap .card-slot{position:absolute;bottom:0;transform-origin:center bottom;
+  transition:transform .15s}
+
+/* ── MESA VERDE ── */
+#s-game{background:radial-gradient(ellipse at 50% 40%,#1e5c1e 0%,#0f3a0f 70%,#0a2a0a 100%)!important}
+.mesa{background:#15401588!important;border:1px solid #2a6a2a88!important}
 </style>
 </head>
 <body>
@@ -161,7 +175,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div>
 
   <!-- Opponent hand -->
-  <div class="row" style="min-height:50px">
+  <div class="row" style="min-height:90px;justify-content:center">
     <div style="color:#1a3a1a;font-size:9px;writing-mode:vertical-rl;margin-right:4px">RIVAL</div>
     <div id="opp-hand" class="hand-row" style="flex:1"></div>
     <div id="opp-count" style="color:#1a3a1a;font-size:9px"></div>
@@ -190,7 +204,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   <div class="log-box" id="game-log"></div>
 
   <!-- My hand -->
-  <div id="my-hand" class="hand-row"></div>
+  <div id="my-hand" style="position:relative;min-height:130px;width:100%"></div>
 
   <!-- Actions -->
   <div class="actions" id="actions">
@@ -306,7 +320,23 @@ function envValCard(v,s,ms){
 }
 
 // Flor: 2+ piezas, ó 1 pieza + 2 cartas más del mismo palo, ó 3 del mismo palo
-function calcFlor(hand,ms){
+function esEspejito(v,s,ms,mc){ return v===12&&s===ms&&MUESTRA_ORDER.includes(mc.v); }
+
+function calcPoder(v,s,ms,mc){
+  if(esEspejito(v,s,ms,mc)){const i=MUESTRA_ORDER.indexOf(mc.v);if(i!==-1)return 20-i;}
+  if(s===ms){const i=MUESTRA_ORDER.indexOf(v);if(i!==-1)return 20-i;}
+  return poderBase(v,s);
+}
+
+function calcEnvVal(v,s,ms,mc){
+  if(esEspejito(v,s,ms,mc)){const mv=mc.v;if(PIEZA_ENV[mv]!==undefined)return PIEZA_ENV[mv];}
+  if(s===ms&&PIEZA_ENV[v]!==undefined)return PIEZA_ENV[v];
+  if(v>=10)return 0;
+  return v;
+}
+
+function calcFlor(hand,ms,mc){
+  mc=mc||{v:0,s:'_'};
   const piezas=hand.filter(c=>esPieza(c.v,c.s,ms));
   if(piezas.length>=2) return true;
   if(piezas.length===1){
@@ -323,7 +353,8 @@ function calcFlor(hand,ms){
 // - 1 pieza + otras: env(pieza) + max(env de las otras)
 // - 2 cartas mismo palo (no piezas): suma + 20
 // - todas diferentes: max individual
-function calcEnvido(hand,ms){
+function calcEnvido(hand,ms,mc){
+  mc=mc||{v:0,s:'_'};
   const flor=calcFlor(hand,ms);
   if(flor) return{score:0,flor:true};
   const cards=hand.map(c=>({...c,ev:envValCard(c.v,c.s,ms)}));
@@ -354,7 +385,7 @@ function crearMazo(){
   for(let i=d.length-1;i>0;i--){const j=0|Math.random()*(i+1);[d[i],d[j]]=[d[j],d[i]];}
   return d;
 }
-function aplicarMuestra(cards,ms){return cards.map(c=>({...c,p:poderConMuestra(c.v,c.s,ms)}));}
+function aplicarMuestra(cards,ms,mc){return cards.map(c=>({...c,p:calcPoder(c.v,c.s,ms,mc||{v:0,s:'_'})}));}
 
 /* ═══════════════════════════════════════════
    ESTADO GLOBAL
@@ -372,390 +403,522 @@ let MY_ROLE='p1';
 let MODE='ai';
 let _aiTimer=null;
 
+
+// Determina el próximo turno luego de interrupciones (envido/truco)
+function nextFaseAfterInterrupt(){
+  // Si hay una carta en mesa de uno, el otro responde
+  if(G.mesa.p1&&!G.mesa.p2) return 'ai_turn';
+  if(!G.mesa.p1&&G.mesa.p2)  return 'p_turn';
+  // Mesa vacía: juega quien lidera el round actual (ganador del anterior, o mano si es el 1ro)
+  return (G.roundLeader||G.mano)==='p1'?'p_turn':'ai_turn';
+}
+
 function scheduleAI(ms){
   if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
   _aiTimer=setTimeout(()=>{_aiTimer=null;aiActuar();},ms);
 }
 
-function nuevoTurno(p1IsMano){
-  const d=crearMazo();
-  const mr=d[6], ms=mr.s;
-  const p1H=aplicarMuestra(d.slice(0,3),ms);
-  const p2H=aplicarMuestra(d.slice(3,6),ms);
-  const mc={...mr,p:poderConMuestra(mr.v,mr.s,ms)};
-  const ep1=calcEnvido(p1H,ms), ep2=calcEnvido(p2H,ms);
-  return{
-    p1Hand:p1H,p2Hand:p2H,p1Played:[],p2Played:[],
-    mesa:{p1:null,p2:null},muestra:mc,muestraSuit:ms,
-    rounds:[],mano:p1IsMano?'p1':'p2',turn:p1IsMano?'p1':'p2',
-    fase:p1IsMano?'p_turn':'ai_turn',
-    envPend:null,envDone:false,
-    p1Env:ep1.score,p2Env:ep2.score,p1Flor:ep1.flor,p2Flor:ep2.flor,
-    trucoPend:null,trucoAcep:false,trucoStake:0,trucoDone:false,
-    handDone:false,handWinner:null,_scored:false,
+function nuevoTurno(p1IsMano) {
+  const d = crearMazo();
+  const mr = d[6], ms = mr.s;
+  const mc = { ...mr, p: calcPoder(mr.v, mr.s, ms, mr) };
+  const p1H = aplicarMuestra(d.slice(0, 3), ms, mc);
+  const p2H = aplicarMuestra(d.slice(3, 6), ms, mc);
+  const ep1 = calcEnvido(p1H, ms, mc);
+  const ep2 = calcEnvido(p2H, ms, mc);
+  return {
+    p1Hand: p1H, p2Hand: p2H, p1Played: [], p2Played: [],
+    mesa: { p1: null, p2: null }, muestra: mc, muestraSuit: ms,
+    rounds: [], mano: p1IsMano ? 'p1' : 'p2', turn: p1IsMano ? 'p1' : 'p2',
+    roundLeader: p1IsMano ? 'p1' : 'p2',
+    fase: p1IsMano ? 'p_turn' : 'ai_turn',
+    // Envido — solo se puede en la primera ronda (antes de que cualquiera juegue carta)
+    envDisp: true,  // disponible hasta que alguien juegue la primera carta de la mano
+    envPend: null, envDone: false,
+    p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
+    // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano
+    trucoPend: null, trucoAcep: false, trucoStake: 0, trucoDone: false,
+    // trucoCalledBy: who called each level (p1 or p2) to enforce raise rules
+    trucoCalledBy: null,  // who called 'truco'
+    handDone: false, handWinner: null, _scored: false,
   };
 }
 
-function initGame(p1IsMano=true,myPts=0,oppPts=0){
-  if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
-  const h=nuevoTurno(p1IsMano);
-  G={...h,pScore:myPts,oScore:oppPts,logs:[]};
-  SEL=null;
-  const sN={espadas:'Espadas',bastos:'Bastos',oros:'Oros',copas:'Copas'};
-  addLog('🃏 Nueva mano. '+(p1IsMano?'Sos el mano.':'El rival es mano.'),'#d4a017');
-  addLog('🎴 Muestra: '+VNOME[h.muestra.v]+' de '+sN[h.muestra.s],'#e8c84a');
-  if(h.p1Flor) addLog('🌸 ¡Tenés Flor! El envido se cancela.','#f8a5c2');
+function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
+  if (_aiTimer) { clearTimeout(_aiTimer); _aiTimer = null; }
+  const h = nuevoTurno(p1IsMano);
+  G = { ...h, pScore: myPts, oScore: oppPts, logs: [] };
+  SEL = null;
+  const sN = { espadas: 'Espadas', bastos: 'Bastos', oros: 'Oros', copas: 'Copas' };
+  addLog('🃏 Nueva mano. ' + (p1IsMano ? 'Sos el mano.' : 'El rival es mano.'), '#d4a017');
+  addLog('🎴 Muestra: ' + VNOME[h.muestra.v] + ' de ' + sN[h.muestra.s], '#e8c84a');
+
+  // Flor automática
+  if (h.p1Flor && h.p2Flor) {
+    // Ambos tienen flor — se anotan al final de la mano (simplificado: +3 al de más puntos)
+    addLog('🌸 ¡Ambos tienen Flor! Se resolverá al final de la mano.', '#f8a5c2');
+  } else if (h.p1Flor) {
+    addLog('🌸 ¡Tenés Flor! +3 pts automáticos.', '#f8a5c2');
+    G.pScore = Math.min(MAX_PTS, G.pScore + 3);
+    G.envDone = true; // la flor cancela el envido
+    if (G.pScore >= MAX_PTS) { setTimeout(() => show('s-gameover'), 600); renderGame(); return; }
+  } else if (h.p2Flor) {
+    addLog('🌸 ¡IA tiene Flor! IA +3 pts automáticos.', '#f8a5c2');
+    G.oScore = Math.min(MAX_PTS, G.oScore + 3);
+    G.envDone = true;
+    if (G.oScore >= MAX_PTS) { setTimeout(() => show('s-gameover'), 600); renderGame(); return; }
+  }
+
   renderGame();
-  if(MODE==='ai'&&G.fase==='ai_turn') scheduleAI(900);
+  if (G.fase === 'ai_turn') scheduleAI(900);
 }
 
-/* ─── HELPERS ──────────────────────────────────────────── */
-function myHand(){return MY_ROLE==='p1'?G.p1Hand:G.p2Hand;}
-function oppHand(){return MY_ROLE==='p1'?G.p2Hand:G.p1Hand;}
-function myMesa(){return MY_ROLE==='p1'?G.mesa.p1:G.mesa.p2;}
-function oppMesa(){return MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1;}
-function myEnv(){return MY_ROLE==='p1'?G.p1Env:G.p2Env;}
-function oppEnv(){return MY_ROLE==='p1'?G.p2Env:G.p1Env;}
-function opp(r){return r==='p1'?'p2':'p1';}
-function addLog(txt,color='#4a7a4a'){G.logs=[...(G.logs||[]).slice(-60),{txt,color}];}
-function cn(c){return VNOME[c.v]+' de '+c.s.charAt(0).toUpperCase()+c.s.slice(1);}
+/* ─── HELPERS ─────────────────────────────────────────────── */
+function myHand()  { return MY_ROLE === 'p1' ? G.p1Hand : G.p2Hand; }
+function oppHand() { return MY_ROLE === 'p1' ? G.p2Hand : G.p1Hand; }
+function myMesa()  { return MY_ROLE === 'p1' ? G.mesa.p1 : G.mesa.p2; }
+function oppMesa() { return MY_ROLE === 'p1' ? G.mesa.p2 : G.mesa.p1; }
+function myEnv()   { return MY_ROLE === 'p1' ? G.p1Env : G.p2Env; }
+function oppEnv()  { return MY_ROLE === 'p1' ? G.p2Env : G.p1Env; }
+function opp(r)    { return r === 'p1' ? 'p2' : 'p1'; }
 
-function checkGameOver(){
-  if(G.pScore>=MAX_PTS||G.oScore>=MAX_PTS){renderGame();endGame();return true;}
+function addLog(txt, color = '#4a7a4a') {
+  G.logs = [...(G.logs || []).slice(-60), { txt, color }];
+}
+function cn(c) { return VNOME[c.v] + ' de ' + c.s.charAt(0).toUpperCase() + c.s.slice(1); }
+
+function checkGameOver() {
+  if (G.pScore >= MAX_PTS || G.oScore >= MAX_PTS) {
+    renderGame();
+    show('s-gameover');
+    return true;
+  }
   return false;
 }
 
-// Puntúa la mano y programa la siguiente — llamada UNA sola vez
-function finalizeHand(){
-  if(G._scored) return;
-  G._scored=true;
-  const pts=G.trucoAcep?G.trucoStake:1;
-  const myWin=G.handWinner===MY_ROLE;
-  if(myWin) G.pScore=Math.min(MAX_PTS,G.pScore+pts);
-  else G.oScore=Math.min(MAX_PTS,G.oScore+pts);
-  addLog((myWin?'🏆 Ganás':'💀 Perdés')+' la mano! '+
-    (myWin?'+'+pts+' pts → Vos: '+G.pScore:'IA +'+pts+' pts → IA: '+G.oScore)+'/'+MAX_PTS,
-    myWin?'#7fba5a':'#e06060');
+function finalizeHand(g) {
+  // g can be undefined → use G
+  const state = g || G;
+  if (state._scored) return;
+  state._scored = true;
+  const pts = state.trucoAcep ? state.trucoStake : 1;
+  const myWin = state.handWinner === 'p1';
+  if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
+  else G.oScore = Math.min(MAX_PTS, G.oScore + pts);
+
+  // If both had flor, winner of mano scores 3 extra
+  if (G.p1Flor && G.p2Flor) {
+    if (myWin) { G.pScore = Math.min(MAX_PTS, G.pScore + 3); addLog('🌸 +3 pts por Flor!', '#f8a5c2'); }
+    else { G.oScore = Math.min(MAX_PTS, G.oScore + 3); addLog('🌸 IA +3 pts por Flor!', '#f8a5c2'); }
+  }
+
+  addLog(
+    (myWin ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
+    (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : 'IA +' + pts + ' pts → IA: ' + G.oScore) + '/' + MAX_PTS,
+    myWin ? '#7fba5a' : '#e06060'
+  );
   renderGame();
-  if(MODE==='online') syncOnline();
-  if(checkGameOver()) return;
-  const ps=G.pScore,os=G.oScore,nm=opp(G.mano);
-  setTimeout(()=>initGame(nm==='p1',ps,os),2200);
+  if (checkGameOver()) return;
+  const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
+  setTimeout(() => initGame(nm === 'p1', ps, os), 2200);
 }
 
-function resRound(p1c,p2c){
-  if(p1c.p>p2c.p)return 'p1'; if(p2c.p>p1c.p)return 'p2'; return 'tie';
+function resRound(p1c, p2c) {
+  if (p1c.p > p2c.p) return 'p1';
+  if (p2c.p > p1c.p) return 'p2';
+  return 'tie';
 }
-function resHand(rounds,mano){
-  let p1=0,p2=0;
-  for(const r of rounds){if(r.w==='p1')p1++;else if(r.w==='p2')p2++;}
-  if(p1>=2)return 'p1'; if(p2>=2)return 'p2';
-  if(rounds.length>=2){
-    const r1=rounds[0].w,r2=rounds[1].w;
-    if(r1==='tie'){if(rounds.length===2)return r2!=='tie'?r2:mano;return mano;}
-    if(r2==='tie')return r1;
+function resHand(rounds, mano) {
+  let p1 = 0, p2 = 0;
+  for (const r of rounds) { if (r.w === 'p1') p1++; else if (r.w === 'p2') p2++; }
+  if (p1 >= 2) return 'p1';
+  if (p2 >= 2) return 'p2';
+  if (rounds.length >= 2) {
+    const r1 = rounds[0].w, r2 = rounds[1].w;
+    if (r1 === 'tie') { if (rounds.length === 2) return r2 !== 'tie' ? r2 : mano; return mano; }
+    if (r2 === 'tie') return r1;
   }
-  if(rounds.length===3)return mano;
+  if (rounds.length === 3) return mano;
   return null;
 }
 
-/* ─── RESOLVER ROUND (central) ──────────────────────────── */
-function resolveRound(){
-  const p1c=G.mesa.p1,p2c=G.mesa.p2;
-  const w=resRound(p1c,p2c);
-  G.rounds=[...G.rounds,{p1:p1c,p2:p2c,w}];
-  G.mesa={p1:null,p2:null};
-  if(w===MY_ROLE) addLog('✅ Ganás el round.','#7fba5a');
-  else if(w===opp(MY_ROLE)) addLog('❌ El rival gana el round.','#e06060');
-  else addLog('🔄 Parda (empate).','#70b0d0');
-  const hw=resHand(G.rounds,G.mano);
-  if(hw){
-    G.handDone=true;G.handWinner=hw;G.fase='hand_done';
+function doResolveRound() {
+  const p1c = G.mesa.p1, p2c = G.mesa.p2;
+  const w = resRound(p1c, p2c);
+  G.rounds = [...G.rounds, { p1: p1c, p2: p2c, w }];
+  G.mesa = { p1: null, p2: null };
+  // Envido solo en la primera ronda: se cierra cuando el primer round se resuelve
+  G.envDisp = false;
+  if (w === 'p1') addLog('✅ Ganás el round.', '#7fba5a');
+  else if (w === 'p2') addLog('❌ El rival gana el round.', '#e06060');
+  else addLog('🔄 Parda (empate).', '#70b0d0');
+
+  // Actualizar quién lidera el próximo round:
+  // - Si alguien gana: él lidera el próximo round
+  // - Si parda: el mismo que lideró este round sigue liderando
+  if (w !== 'tie') G.roundLeader = w;
+  // si es tie, G.roundLeader queda igual (quien lideró este round)
+
+  const hw = resHand(G.rounds, G.mano);
+  if (hw) {
+    G.handDone = true; G.handWinner = hw; G.fase = 'hand_done';
     finalizeHand();
   } else {
-    const nt=w==='tie'?G.mano:w;
-    G.turn=nt;
-    G.fase=nt===MY_ROLE?'p_turn':'ai_turn';
+    G.fase = G.roundLeader === 'p1' ? 'p_turn' : 'ai_turn';
     renderGame();
-    if(G.fase==='ai_turn') scheduleAI(800);
+    if (G.fase === 'ai_turn') scheduleAI(800);
   }
 }
 
-/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    ACCIONES DEL JUGADOR
-═══════════════════════════════════════════ */
-function playCard(idx){
-  if(G.fase!=='p_turn'||G.handDone) return;
-  const hand=myHand();
-  const card=hand[idx];
-  if(!card) return;
-  if(MY_ROLE==='p1'){G.p1Hand=G.p1Hand.filter((_,i)=>i!==idx);G.p1Played=[...G.p1Played,card];}
-  else{G.p2Hand=G.p2Hand.filter((_,i)=>i!==idx);G.p2Played=[...G.p2Played,card];}
-  G.mesa={...G.mesa,[MY_ROLE]:card};
-  addLog('▶ Jugás '+cn(card),'#7fba5a');
-  SEL=null;
-  const oppCard=MY_ROLE==='p1'?G.mesa.p2:G.mesa.p1;
-  if(oppCard){
-    resolveRound();
+═══════════════════════════════════════════════════════════ */
+function playCard(idx) {
+  if (G.fase !== 'p_turn' || G.handDone) return;
+  const hand = myHand();
+  const card = hand[idx];
+  if (!card) return;
+  if (MY_ROLE === 'p1') {
+    G.p1Hand = G.p1Hand.filter((_, i) => i !== idx);
+    G.p1Played = [...G.p1Played, card];
   } else {
-    G.fase='ai_turn';
+    G.p2Hand = G.p2Hand.filter((_, i) => i !== idx);
+    G.p2Played = [...G.p2Played, card];
+  }
+  G.mesa = { ...G.mesa, [MY_ROLE]: card };
+  addLog('▶ Jugás ' + cn(card), '#7fba5a');
+  SEL = null;
+  // Si la mesa del rival está vacía, el jugador está liderando este round
+  if (!G.mesa.p2) G.roundLeader = 'p1';
+  if (G.mesa.p2) {
+    doResolveRound();
+  } else {
+    G.fase = 'ai_turn';
     renderGame();
     scheduleAI(800);
   }
 }
 
-/* ─── Envido (puede llamarse en cualquier momento hasta que se resuelva) ─ */
-function canCallEnvido(){
-  return G.fase==='p_turn'&&!G.envDone&&!G.envPend&&!G.handDone&&
-         !G.p1Flor&&!G.p2Flor;
+// ── Envido: solo en la primera ronda y antes de jugar carta ──
+function canCallEnvido() {
+  return G.fase === 'p_turn' && G.envDisp && !G.envDone && !G.envPend &&
+    !G.handDone && !G.p1Flor && !G.p2Flor;
 }
-function callEnvido(level){
-  if(!canCallEnvido()) return;
-  const falta=MAX_PTS-Math.min(G.pScore,G.oScore);
-  const stakes={envido:2,realenvido:3,faltaenvido:falta};
-  const refuses={envido:1,realenvido:2,faltaenvido:Math.max(1,falta-1)};
-  G.envPend={level,by:MY_ROLE,stake:stakes[level],refuseVal:refuses[level]};
-  const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
-  addLog('▶ Decís: ¡'+names[level]+'!','#d4890a');
-  G.fase='ai_turn';
+
+function callEnvido(level) {
+  if (!canCallEnvido()) return;
+  const falta = MAX_PTS - Math.min(G.pScore, G.oScore);
+  const stakes = { envido: 2, realenvido: 3, faltaenvido: falta };
+  const refuses = { envido: 1, realenvido: 2, faltaenvido: Math.max(1, falta - 1) };
+  const names = { envido: 'Envido', realenvido: 'Real Envido', faltaenvido: 'Falta Envido' };
+  G.envPend = { level, by: 'p1', stake: stakes[level], refuseVal: refuses[level] };
+  addLog('▶ Decís: ¡' + names[level] + '!', '#d4890a');
+  G.fase = 'ai_turn';
   renderGame();
   scheduleAI(1100);
 }
 
-/* ─── Truco: jugador solo puede llamar TRUCO inicial ─────── */
-function canCallTruco(){
-  return G.fase==='p_turn'&&!G.trucoDone&&!G.trucoAcep&&!G.trucoPend&&!G.handDone;
+// ── Truco ─────────────────────────────────────────────────────
+// Regla clave:
+//   Truco → adversario puede: quiero / no quiero / RETRUCO
+//   Si retruco → el que había gritado truco puede: quiero / no quiero / VALE4
+//   Si vale4 → adversario puede: quiero / no quiero
+// El mismo que gritó NO puede subir en su propio grito.
+function canCallTruco() {
+  return G.fase === 'p_turn' && !G.trucoDone && !G.trucoAcep &&
+    !G.trucoPend && !G.handDone;
 }
-function callTruco(){
-  if(!canCallTruco()) return;
-  G.trucoPend={level:'truco',by:MY_ROLE,stake:2,refuseVal:1};
-  addLog('▶ Decís: ¡Truco!','#e04040');
-  G.fase='ai_turn';
+
+function callTruco() {
+  if (!canCallTruco()) return;
+  G.trucoPend = { level: 'truco', by: 'p1', stake: 2, refuseVal: 1 };
+  G.trucoCalledBy = 'p1';
+  addLog('▶ Decís: ¡Truco!', '#e04040');
+  G.fase = 'ai_turn';
   renderGame();
   scheduleAI(1100);
 }
 
-/* ─── Jugador responde envido de IA ─────────────────────── */
-function respondEnvido(accept){
-  if(G.fase!=='p_resp_env'||!G.envPend) return;
-  const{stake,refuseVal,by}=G.envPend;
-  G.envPend=null;G.envDone=true;
-  if(accept){
-    addLog('▶ Querés el envido.','#7fba5a');
-    const winner=G.p1Env>=G.p2Env?'p1':'p2';
-    const myWin=winner===MY_ROLE;
-    addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+myEnv()+' vs IA: '+oppEnv()+
-      '. '+(myWin?'+'+stake+' pts.':'IA +'+stake+' pts.'),myWin?'#7fba5a':'#e06060');
-    if(myWin)G.pScore=Math.min(MAX_PTS,G.pScore+stake);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+stake);
+// ── Jugador responde envido de IA ─────────────────────────────
+function respondEnvido(accept) {
+  if (G.fase !== 'p_resp_env' || !G.envPend) return;
+  const { stake, refuseVal, by } = G.envPend;
+  G.envPend = null; G.envDone = true;
+  if (accept) {
+    addLog('▶ Querés el envido.', '#7fba5a');
+    const winner = G.p1Env >= G.p2Env ? 'p1' : 'p2';
+    const myWin = winner === 'p1';
+    addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
+      '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
+    if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
+    else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   } else {
-    addLog('▶ No querés el envido.','#d4890a');
-    // IA llamó → jugador no quiere → IA gana refuseVal
-    G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
-    addLog('❌ IA gana: +'+refuseVal+' pts.','#e06060');
+    addLog('▶ No querés el envido.', '#d4890a');
+    // IA llamó y jugador no quiere → IA gana refuseVal
+    G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
+    addLog('❌ IA gana: +' + refuseVal + ' pts.', '#e06060');
   }
-  if(checkGameOver()) return;
-  // Retoma el turno: quien es mano juega primero
-  G.turn=G.mano;
-  G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';
+  if (checkGameOver()) return;
+  G.fase = nextFaseAfterInterrupt();
   renderGame();
-  if(G.fase==='ai_turn') scheduleAI(700);
+  if (G.fase === 'ai_turn') scheduleAI(700);
 }
 
-/* ─── Jugador responde truco/retruco/vale4 de IA ────────── */
-// accept=true → Quiero
-// accept=false, raise=false → No quiero
-// accept=false, raise=true → Subir (retruco/vale4) — solo disponible si level no es vale4
-function respondTruco(accept,raise=false){
-  if(G.fase!=='p_resp_truco'||!G.trucoPend) return;
-  const{level,stake,refuseVal,by}=G.trucoPend;
+// ── Jugador responde truco/retruco/vale4 de IA ───────────────
+// raise=true solo disponible cuando IA gritó y jugador puede subir
+function respondTruco(accept, raise = false) {
+  if (G.fase !== 'p_resp_truco' || !G.trucoPend) return;
+  const { level, stake, refuseVal, by } = G.trucoPend;
 
-  if(raise){
-    // Jugador SUBE como respuesta — alterna el turno de llamada
-    const next={truco:'retruco',retruco:'vale4'}[level];
-    if(!next) return;
-    const stakes2={retruco:3,vale4:4};
-    const refuses2={retruco:2,vale4:3};
-    const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    G.trucoAcep=true; G.trucoStake=stake; // nivel anterior asegurado
-    G.trucoPend={level:next,by:MY_ROLE,stake:stakes2[next],refuseVal:refuses2[next]};
-    addLog('▶ Subís: ¡'+names[next]+'!','#c0392b');
-    // Ahora la IA responde al llamado del jugador
-    G.fase='ai_turn';
+  if (raise) {
+    // Jugador sube → solo si IA fue quien llamó el nivel actual
+    const next = { truco: 'retruco', retruco: 'vale4' }[level];
+    if (!next) return;
+    const stakes2 = { retruco: 3, vale4: 4 };
+    const refuses2 = { retruco: 2, vale4: 3 };
+    const names = { retruco: 'Re-Truco', vale4: 'Vale Cuatro' };
+    G.trucoAcep = true; G.trucoStake = stake;
+    G.trucoPend = { level: next, by: 'p1', stake: stakes2[next], refuseVal: refuses2[next] };
+    addLog('▶ Subís: ¡' + names[next] + '!', '#c0392b');
+    G.fase = 'ai_turn';
     renderGame();
     scheduleAI(1100);
     return;
   }
 
-  G.trucoPend=null;
-  if(accept){
-    G.trucoAcep=true; G.trucoStake=stake;
-    addLog('▶ Querés el truco. ('+stake+' pts en juego)','#7fba5a');
-    // IA llamó truco → jugador aceptó → continúa en el turno normal
-    G.fase=G.turn===MY_ROLE?'p_turn':'ai_turn';
-    if(!G.mesa.p1&&!G.mesa.p2){G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';}
+  G.trucoPend = null;
+  if (accept) {
+    G.trucoAcep = true; G.trucoStake = stake;
+    addLog('▶ Querés el truco. (' + stake + ' pts en juego)', '#7fba5a');
+    G.fase = nextFaseAfterInterrupt();
     renderGame();
-    if(G.fase==='ai_turn') scheduleAI(700);
+    if (G.fase === 'ai_turn') scheduleAI(700);
   } else {
-    // Jugador no quiere → IA (quien llamó) gana refuseVal
-    addLog('▶ No querés. IA gana +'+refuseVal+' pts.','#d4890a');
-    G.trucoDone=true;
-    G.oScore=Math.min(MAX_PTS,G.oScore+refuseVal);
-    G.handDone=true;G.handWinner=opp(MY_ROLE);G.fase='hand_done';
+    // No quiero → IA (quien llamó) gana refuseVal
+    addLog('▶ No querés. IA gana +' + refuseVal + ' pts.', '#d4890a');
+    G.trucoDone = true;
+    G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
+    G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
     finalizeHand();
   }
 }
 
-/* ─── Al mazo ───────────────────────────────────────────── */
-function mazo(){
-  if(G.fase!=='p_turn'||G.handDone) return;
-  addLog('▶ Te tirás al mazo. IA +1 pt.','#d4890a');
-  G.oScore=Math.min(MAX_PTS,G.oScore+1);
-  G.handDone=true;G.handWinner=opp(MY_ROLE);G.fase='hand_done';
+// ── Al mazo ───────────────────────────────────────────────────
+function mazo() {
+  if (G.fase !== 'p_turn' || G.handDone) return;
+  addLog('▶ Te tirás al mazo. IA +1 pt.', '#d4890a');
+  G.oScore = Math.min(MAX_PTS, G.oScore + 1);
+  G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
   finalizeHand();
 }
 
-/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    IA — UNA ACCIÓN POR LLAMADA
-═══════════════════════════════════════════ */
-function aiActuar(){
-  if(G.fase!=='ai_turn') return;
+═══════════════════════════════════════════════════════════ */
+function aiActuar() {
+  if (G.fase !== 'ai_turn') return;
+  const ai = G.p2Hand;
+  if (!ai || !ai.length) return;
+  const avg = ai.reduce((s, c) => s + c.p, 0) / ai.length;
 
-  // 1. Responder pendiente del jugador (envido o truco) — primero
-  if(G.trucoPend&&G.trucoPend.by===MY_ROLE){aiDecideTruco();return;}
-  if(G.envPend&&G.envPend.by===MY_ROLE){aiDecideEnvido();return;}
+  // 1. Responder pendiente del jugador (primero)
+  if (G.trucoPend && G.trucoPend.by === 'p1') { aiDecideTruco(); return; }
+  if (G.envPend && G.envPend.by === 'p1') { aiDecideEnvido(); return; }
 
-  const ai=G.p2Hand;
-  if(!ai||ai.length===0) return;
-  const avg=ai.reduce((s,c)=>s+c.p,0)/ai.length;
-
-  // 2. IA llama envido (UNA vez, si no hay nada pendiente y tiene buenos puntos)
-  if(!G.envDone&&!G.envPend&&!G.trucoPend&&!G.trucoDone&&!G.p2Flor&&!G.p1Flor&&G.p2Env>=24){
-    const level=G.p2Env>=28?'realenvido':'envido';
-    const stakes={envido:2,realenvido:3};
-    G.envPend={level,by:'p2',stake:stakes[level],refuseVal:stakes[level]-1};
-    G.envDone=false; // still pending
-    const names={envido:'Envido',realenvido:'Real Envido'};
-    addLog('🤖 IA dice: ¡'+names[level]+'!','#a78bca');
-    G.fase='p_resp_env';
+  // 2. IA llama envido (solo si envDisp y primera ronda)
+  if (G.envDisp && !G.envDone && !G.envPend && !G.trucoPend && !G.trucoDone &&
+    !G.p2Flor && !G.p1Flor && G.p2Env >= 24) {
+    const level = G.p2Env >= 28 ? 'realenvido' : 'envido';
+    const stakes = { envido: 2, realenvido: 3 };
+    G.envPend = { level, by: 'p2', stake: stakes[level], refuseVal: stakes[level] - 1 };
+    const names = { envido: 'Envido', realenvido: 'Real Envido' };
+    addLog('🤖 IA dice: ¡' + names[level] + '!', '#a78bca');
+    G.fase = 'p_resp_env';
     renderGame();
-    return; // PARAR — esperar respuesta del jugador
+    return;
   }
 
-  // 3. IA llama truco (UNA vez, solo si no hay truco activo/pendiente)
-  if(!G.trucoAcep&&!G.trucoPend&&!G.trucoDone&&avg>=9){
-    G.trucoPend={level:'truco',by:'p2',stake:2,refuseVal:1};
-    addLog('🤖 IA dice: ¡Truco!','#e74c3c');
-    G.fase='p_resp_truco';
+  // 3. IA llama truco (solo si no hay nada activo)
+  if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && avg >= 9) {
+    G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
+    G.trucoCalledBy = 'p2';
+    addLog('🤖 IA dice: ¡Truco!', '#e74c3c');
+    G.fase = 'p_resp_truco';
     renderGame();
-    return; // PARAR — esperar respuesta del jugador
+    return;
   }
 
-  // 4. IA juega carta
-  if(G.trucoPend||G.envPend) return; // no jugar si hay algo pendiente
-  const meCard=G.mesa.p1;
+  // 4. Jugar carta (nunca dos seguidas el mismo jugador)
+  if (G.trucoPend || G.envPend) return;
+  const mc = G.mesa.p1; // carta del jugador (si existe)
   let chosen;
-  if(meCard){
-    const winners=ai.filter(c=>c.p>meCard.p).sort((a,b)=>a.p-b.p);
-    chosen=winners[0]||[...ai].sort((a,b)=>a.p-b.p)[0];
+  if (mc) {
+    // IA responde: jugar la mínima ganadora, o la mínima si no puede ganar
+    const winners = ai.filter(c => c.p > mc.p).sort((a, b) => a.p - b.p);
+    chosen = winners[0] || [...ai].sort((a, b) => a.p - b.p)[0];
   } else {
-    const sorted=[...ai].sort((a,b)=>a.p-b.p);
-    chosen=sorted[Math.floor(sorted.length/2)];
+    // IA lidera: jugar la carta del medio (táctica conservadora)
+    const sorted = [...ai].sort((a, b) => a.p - b.p);
+    chosen = sorted[Math.floor(sorted.length / 2)];
   }
-  G.p2Hand=G.p2Hand.filter(c=>c.id!==chosen.id);
-  G.p2Played=[...G.p2Played,chosen];
-  G.mesa={...G.mesa,p2:chosen};
-  addLog('🤖 IA juega '+cn(chosen),'#a78bca');
-  const p1Card=G.mesa.p1;
-  if(p1Card){
-    resolveRound();
+  G.p2Hand = G.p2Hand.filter(c => c.id !== chosen.id);
+  G.p2Played = [...G.p2Played, chosen];
+  G.mesa = { ...G.mesa, p2: chosen };
+  addLog('🤖 IA juega ' + cn(chosen), '#a78bca');
+  // Si la mesa del jugador estaba vacía, la IA está liderando este round
+  if (!G.mesa.p1) G.roundLeader = 'p2';
+  if (G.mesa.p1) {
+    doResolveRound();
   } else {
-    G.turn=MY_ROLE;G.fase='p_turn';
+    G.fase = 'p_turn';
     renderGame();
   }
 }
 
-/* ─── IA decide sobre envido del jugador ─────────────────── */
-function aiDecideEnvido(){
-  if(!G.envPend) return;
-  const{stake,refuseVal}=G.envPend;
-  G.envPend=null;G.envDone=true;
-  const accept=G.p2Env>=21;
-  if(accept){
-    addLog('🤖 IA dice: ¡Quiero!','#a78bca');
-    const winner=G.p1Env>=G.p2Env?'p1':'p2';
-    const myWin=winner===MY_ROLE;
-    addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+myEnv()+' vs IA: '+oppEnv()+
-      '. '+(myWin?'+'+stake+' pts.':'IA +'+stake+' pts.'),myWin?'#7fba5a':'#e06060');
-    if(myWin)G.pScore=Math.min(MAX_PTS,G.pScore+stake);
-    else G.oScore=Math.min(MAX_PTS,G.oScore+stake);
+function aiDecideEnvido() {
+  if (!G.envPend) return;
+  const { stake, refuseVal } = G.envPend;
+  G.envPend = null; G.envDone = true;
+  const accept = G.p2Env >= 21;
+  if (accept) {
+    addLog('🤖 IA dice: ¡Quiero!', '#a78bca');
+    const myWin = G.p1Env >= G.p2Env;
+    addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
+      (myWin ? ' +' + stake + ' pts.' : ' IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
+    if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
+    else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   } else {
-    addLog('🤖 IA dice: No quiero.','#a78bca');
-    G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
-    addLog('✅ Vos ganás: +'+refuseVal+' pts.','#7fba5a');
+    addLog('🤖 IA dice: No quiero.', '#a78bca');
+    G.pScore = Math.min(MAX_PTS, G.pScore + refuseVal);
+    addLog('✅ Vos ganás: +' + refuseVal + ' pts.', '#7fba5a');
   }
-  if(checkGameOver()) return;
-  G.turn=G.mano;
-  G.fase=G.mano===MY_ROLE?'p_turn':'ai_turn';
+  if (checkGameOver()) return;
+  G.fase = nextFaseAfterInterrupt();
   renderGame();
-  if(G.fase==='ai_turn') scheduleAI(600);
+  if (G.fase === 'ai_turn') scheduleAI(600);
 }
 
-/* ─── IA decide sobre truco del jugador ──────────────────── */
-function aiDecideTruco(){
-  if(!G.trucoPend) return;
-  const{level,stake,refuseVal}=G.trucoPend;
-  const avg=G.p2Hand.reduce((s,c)=>s+c.p,0)/Math.max(1,G.p2Hand.length);
-  const canRaise=level!=='vale4';
-  const willRaise=canRaise&&avg>=12;
-  const willAccept=!willRaise&&avg>=5;
+function aiDecideTruco() {
+  if (!G.trucoPend) return;
+  const { level, stake, refuseVal } = G.trucoPend;
+  const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
+  const canRaise = level !== 'vale4';
+  const willRaise = canRaise && avg >= 12;
+  const willAccept = !willRaise && avg >= 5;
 
-  if(willRaise){
-    // IA sube como RESPUESTA — turno pasa al jugador
-    const next={truco:'retruco',retruco:'vale4'}[level];
-    const stakes2={retruco:3,vale4:4};
-    const refuses2={retruco:2,vale4:3};
-    const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    G.trucoPend=null;
-    G.trucoAcep=true;G.trucoStake=stake;
-    G.trucoPend={level:next,by:'p2',stake:stakes2[next],refuseVal:refuses2[next]};
-    addLog('🤖 IA sube: ¡'+names[next]+'!','#e74c3c');
-    G.fase='p_resp_truco'; // jugador responde al retruco/vale4 de IA
+  if (willRaise) {
+    // IA sube como respuesta → turno vuelve al jugador para responder
+    const next = { truco: 'retruco', retruco: 'vale4' }[level];
+    const stakes2 = { retruco: 3, vale4: 4 };
+    const refuses2 = { retruco: 2, vale4: 3 };
+    const names = { retruco: 'Re-Truco', vale4: 'Vale Cuatro' };
+    G.trucoAcep = true; G.trucoStake = stake;
+    G.trucoPend = { level: next, by: 'p2', stake: stakes2[next], refuseVal: refuses2[next] };
+    addLog('🤖 IA sube: ¡' + names[next] + '!', '#e74c3c');
+    G.fase = 'p_resp_truco';
     renderGame();
-  } else if(willAccept){
-    G.trucoPend=null;
-    G.trucoAcep=true;G.trucoStake=stake;
-    addLog('🤖 IA dice: ¡Quiero! ('+stake+' pts)','#a78bca');
-    // IA aceptó truco del jugador → IA juega carta ahora
-    G.fase='ai_turn';
+  } else if (willAccept) {
+    G.trucoPend = null;
+    G.trucoAcep = true; G.trucoStake = stake;
+    addLog('🤖 IA dice: ¡Quiero! (' + stake + ' pts)', '#a78bca');
+    // IA aceptó truco del jugador → IA juega carta
+    G.fase = 'ai_turn';
     renderGame();
     scheduleAI(700);
   } else {
-    G.trucoPend=null;G.trucoDone=true;
-    addLog('🤖 IA dice: No quiero.','#a78bca');
-    G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
-    addLog('✅ Vos ganás: +'+refuseVal+' pts.','#7fba5a');
-    G.handDone=true;G.handWinner=MY_ROLE;G.fase='hand_done';
+    G.trucoPend = null; G.trucoDone = true;
+    addLog('🤖 IA dice: No quiero.', '#a78bca');
+    G.pScore = Math.min(MAX_PTS, G.pScore + refuseVal);
+    addLog('✅ Vos ganás: +' + refuseVal + ' pts.', '#7fba5a');
+    G.handDone = true; G.handWinner = 'p1'; G.fase = 'hand_done';
     finalizeHand();
   }
 }
 
-/* ═══════════════════════════════════════════
-   RENDER
-═══════════════════════════════════════════ */
+
+
+/* ── PALITOS ─────────────────────────────────────────────── */
+function tallyMarks(score,color){
+  const GW=20,GH=20,GAP=5,COLS=3,ROWS=2;
+  const sw=2.2,c=color||'#888',dim='#1a3a1a';
+  let svg='';
+  for(let g=0;g<6;g++){
+    const col=g%COLS,row=Math.floor(g/COLS);
+    const ox=col*(GW+GAP),oy=row*(GH+GAP);
+    const cnt=g<Math.floor(score/5)?5:(g===Math.floor(score/5)?score%5:0);
+    const cc=cnt>0?c:dim;
+    const x1=ox+1,y1=oy+1,x2=ox+GW,y2=oy+GH;
+    if(cnt>=1)svg+=`<line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(cnt>=2)svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y1}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(cnt>=3)svg+=`<line x1="${x2}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(cnt>=4)svg+=`<line x1="${x1}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(cnt>=5)svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  }
+  const TW=COLS*(GW+GAP)-GAP,TH=ROWS*(GH+GAP)-GAP;
+  return `<svg viewBox="0 0 ${TW} ${TH}" width="${TW}" height="${TH}" style="display:block">${svg}</svg>`;
+}
+
+/* ── ABANICO ─────────────────────────────────────────────── */
+function fanHandHTML(cards,{disabled=false,selIdx=null,isMuestraFn=null}={}){
+  if(!cards||!cards.length) return '<div style="height:130px"></div>';
+  const n=cards.length;
+  const cfgs={1:[{r:0,ty:0}],2:[{r:-9,ty:8},{r:9,ty:8}],3:[{r:-14,ty:14},{r:0,ty:0},{r:14,ty:14}]};
+  const config=cfgs[n]||cfgs[3];
+  const CW=84,spacing=56;
+  const totalW=(n-1)*spacing+CW;
+  const startX=-(totalW/2)+(CW/2);
+  let h='<div style="position:relative;height:130px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
+  cards.forEach((card,i)=>{
+    const cfg=config[i]||{r:0,ty:0};
+    const isSel=selIdx===i;
+    const isM=isMuestraFn?isMuestraFn(card.v,card.s):false;
+    const extraY=isSel?-18:0;
+    const xPos=startX+i*spacing;
+    h+=`<div style="position:absolute;bottom:0;left:50%;
+      transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty+extraY}px) rotate(${cfg.r}deg);
+      transform-origin:center bottom;z-index:${isSel?10:i+1};transition:transform .18s;
+      cursor:${disabled?'default':'pointer'}" onclick="${disabled?'':('handleCardClick('+i+')')}">
+      ${cardHTML(card,{sel:isSel,disabled,isMuestra:isM})}
+    </div>`;
+  });
+  h+='</div>';
+  return h;
+}
+
+function fanFaceDown(n){
+  if(!n) return '<div style="height:90px"></div>';
+  const cfgs={1:[{r:0,ty:0}],2:[{r:-7,ty:7},{r:7,ty:7}],3:[{r:-10,ty:10},{r:0,ty:0},{r:10,ty:10}]};
+  const config=cfgs[n]||cfgs[3];
+  const CW=62,spacing=44;
+  const totalW=(n-1)*spacing+CW;
+  const startX=-(totalW/2)+(CW/2);
+  let h='<div style="position:relative;height:90px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
+  for(let i=0;i<n;i++){
+    const cfg=config[i]||{r:0,ty:0};
+    const xPos=startX+i*spacing;
+    h+=`<div style="position:absolute;bottom:0;left:50%;
+      transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty}px) rotate(${cfg.r}deg);
+      transform-origin:center bottom;z-index:${i+1}">
+      ${cardHTML(null,{back:true,small:true})}
+    </div>`;
+  }
+  h+='</div>';
+  return h;
+}
+
 function renderGame(){
   if(!G.p1Hand) return;
   const myH=myHand(),oppH=oppHand(),myIsMano=G.mano===MY_ROLE;
 
   // Scores
   document.getElementById('score-me').innerHTML=
-    `<div style="font-size:9px;color:#7fba5a;letter-spacing:1px">VOS ${myIsMano?'🎯':''}</div>
-     <div class="score-num" style="color:#7fba5a">${G.pScore}</div>
-     <div class="score-bar"><div class="score-fill" style="width:${(G.pScore/MAX_PTS*100)}%;background:#7fba5a"></div></div>`;
+    `<div style="font-size:9px;color:#7fba5a;letter-spacing:1px;margin-bottom:3px">VOS ${myIsMano?'🎯':''}</div>
+     <div style="color:#7fba5a">${tallyMarks(G.pScore,'#7fba5a')}</div>
+     <div style="font-size:10px;color:#7fba5a;font-weight:700;margin-top:2px">${G.pScore}/30</div>`;
   document.getElementById('score-opp').innerHTML=
-    `<div style="font-size:9px;color:#e06060;letter-spacing:1px">${MODE==='ai'?'IA':'RIVAL'} ${!myIsMano?'🎯':''}</div>
-     <div class="score-num" style="color:#e06060">${G.oScore}</div>
-     <div class="score-bar"><div class="score-fill" style="width:${(G.oScore/MAX_PTS*100)}%;background:#e06060"></div></div>`;
+    `<div style="font-size:9px;color:#e06060;letter-spacing:1px;margin-bottom:3px">${MODE==='ai'?'IA':'RIVAL'} ${!myIsMano?'🎯':''}</div>
+     <div style="color:#e06060">${tallyMarks(G.oScore,'#e06060')}</div>
+     <div style="font-size:10px;color:#e06060;font-weight:700;margin-top:2px">${G.oScore}/30</div>`;
 
   // Turn badge
   const fase=G.fase;
@@ -774,7 +937,7 @@ function renderGame(){
   } else tb2.textContent='';
 
   // Opponent hand (face down)
-  document.getElementById('opp-hand').innerHTML=oppH.map(()=>cardHTML(null,{back:true,small:true})).join('');
+  document.getElementById('opp-hand').innerHTML=fanFaceDown(oppH.length);
   document.getElementById('opp-count').textContent=oppH.length+'✦';
 
   // Muestra
@@ -808,13 +971,11 @@ function renderGame(){
   logEl.scrollTop=logEl.scrollHeight;
 
   // My hand
-  document.getElementById('my-hand').innerHTML=
-    myH.map((c,i)=>cardHTML(c,{
-      sel:SEL===i,
-      disabled:G.fase!=='p_turn'||G.handDone,
-      isMuestra:esPieza(c.v,c.s,G.muestraSuit),
-      onclick:`handleCardClick(${i})`
-    })).join('');
+  document.getElementById('my-hand').innerHTML=fanHandHTML(myH,{
+    disabled:G.fase!=='p_turn'||G.handDone,
+    selIdx:SEL,
+    isMuestraFn:(v,s)=>esPieza(v,s,G.muestraSuit)
+  });
 
   renderActions();
 }
@@ -855,8 +1016,8 @@ function renderActions(){
   if(fase==='p_turn'){
     act.innerHTML=`<div class="tip">${SEL!==null?'▶ Toca de nuevo para jugar, o elegí otra':'← Tocá una carta de tu mano'}</div>`;
 
-    // Envido — disponible si no fue resuelto ni hay flor
-    if(!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
+    // Envido — solo en la primera ronda, sin flor
+    if(G.envDisp&&!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
       act.innerHTML+=`
         <button class="btn gold sm" onclick="callEnvido('envido')">🎯 Envido (2)</button>
         <button class="btn gold sm" onclick="callEnvido('realenvido')">🎯 Real Envido (3)</button>
