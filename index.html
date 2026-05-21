@@ -80,6 +80,20 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 /* ── MESA VERDE ── */
 #s-game{background:radial-gradient(ellipse at 50% 40%,#1e5c1e 0%,#0f3a0f 70%,#0a2a0a 100%)!important}
 .mesa{background:#15401588!important;border:1px solid #2a6a2a88!important}
+
+/* ── BURBUJAS ── */
+.bubble{
+  position:absolute;left:50%;transform:translateX(-50%) scale(0.85);
+  background:#1a3a1a;border:1.5px solid #4a9a4a;border-radius:16px;
+  color:#b0e0b0;font-size:13px;font-weight:700;font-family:Georgia,serif;
+  padding:7px 16px;white-space:nowrap;z-index:50;pointer-events:none;
+  opacity:0;transition:opacity .25s,transform .25s;letter-spacing:.5px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+}
+.bubble.p2{top:4px;background:#1a1a3a;border-color:#7a6aaa;color:#c8b0e8;}
+.bubble.p1{bottom:4px;background:#1a2e1a;border-color:#4a8a4a;color:#a8d8a8;}
+#audio-toggle{background:transparent;border:1.5px solid #3a6a3a;color:#6a9a6a;
+  border-radius:8px;padding:3px 8px;cursor:pointer;font-size:14px;}
 </style>
 </head>
 <body>
@@ -164,10 +178,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 <div id="s-game" class="screen">
 
   <!-- Scores -->
-  <div class="bar row between" id="scorebar">
+  <div style="position:relative">
+  <div id="bubble-p2" class="bubble p2"></div>
+</div>
+<div class="bar row between" id="scorebar">
     <div class="score-panel" id="score-me"></div>
     <div style="text-align:center">
-      <div style="color:#2a4a2a;font-size:9px;letter-spacing:2px">TRUCO URUGUAYO</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+  <div style="color:#2a4a2a;font-size:9px;letter-spacing:2px">TRUCO URUGUAYO</div>
+  <button id="audio-toggle" onclick="toggleAudio()" title="Audio">🔊</button>
+</div>
       <div id="turn-badge" style="font-size:10px;margin-top:3px"></div>
       <div id="truco-badge" style="font-size:9px;color:var(--red);font-weight:700;margin-top:2px"></div>
     </div>
@@ -204,7 +224,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   <div class="log-box" id="game-log"></div>
 
   <!-- My hand -->
-  <div id="my-hand" style="position:relative;min-height:130px;width:100%"></div>
+  <div style="position:relative;height:0">
+  <div id="bubble-p1" class="bubble p1"></div>
+</div>
+<div id="my-hand" style="position:relative;min-height:130px;width:100%"></div>
 
   <!-- Actions -->
   <div class="actions" id="actions">
@@ -437,7 +460,7 @@ function nuevoTurno(p1IsMano) {
     envPend: null, envDone: false,
     p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
     // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano
-    trucoPend: null, trucoAcep: false, trucoStake: 0, trucoDone: false,
+    trucoPend: null, trucoAcep: false, trucoStake: 0, trucoDone: false, trucoHistory: [],
     // trucoCalledBy: who called each level (p1 or p2) to enforce raise rules
     trucoCalledBy: null,  // who called 'truco'
     handDone: false, handWinner: null, _scored: false,
@@ -512,6 +535,7 @@ function finalizeHand(g) {
     else { G.oScore = Math.min(MAX_PTS, G.oScore + 3); addLog('🌸 IA +3 pts por Flor!', '#f8a5c2'); }
   }
 
+  logEnvidoReveal();
   addLog(
     (myWin ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
     (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : 'IA +' + pts + ' pts → IA: ' + G.oScore) + '/' + MAX_PTS,
@@ -612,7 +636,7 @@ function callEnvido(level) {
   const refuses = { envido: 1, realenvido: 2, faltaenvido: Math.max(1, falta - 1) };
   const names = { envido: 'Envido', realenvido: 'Real Envido', faltaenvido: 'Falta Envido' };
   G.envPend = { level, by: 'p1', stake: stakes[level], refuseVal: refuses[level] };
-  addLog('▶ Decís: ¡' + names[level] + '!', '#d4890a');
+  sayAndShow('p1','▶ ¡'+names[level]+'!','#d4890a',names[level]);
   G.fase = 'ai_turn';
   renderGame();
   scheduleAI(1100);
@@ -633,7 +657,8 @@ function callTruco() {
   if (!canCallTruco()) return;
   G.trucoPend = { level: 'truco', by: 'p1', stake: 2, refuseVal: 1 };
   G.trucoCalledBy = 'p1';
-  addLog('▶ Decís: ¡Truco!', '#e04040');
+  G.trucoHistory = [...(G.trucoHistory||[]), {level:'truco',by:'p1'}];
+  sayAndShow('p1','▶ ¡Truco!','#e04040','Truco');
   G.fase = 'ai_turn';
   renderGame();
   scheduleAI(1100);
@@ -645,7 +670,7 @@ function respondEnvido(accept) {
   const { stake, refuseVal, by } = G.envPend;
   G.envPend = null; G.envDone = true;
   if (accept) {
-    addLog('▶ Querés el envido.', '#7fba5a');
+    sayAndShow('p1','▶ ¡Quiero!','#7fba5a','Quiero');
     const winner = G.p1Env >= G.p2Env ? 'p1' : 'p2';
     const myWin = winner === 'p1';
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
@@ -653,7 +678,7 @@ function respondEnvido(accept) {
     if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
     else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   } else {
-    addLog('▶ No querés el envido.', '#d4890a');
+    sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
     // IA llamó y jugador no quiere → IA gana refuseVal
     G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
     addLog('❌ IA gana: +' + refuseVal + ' pts.', '#e06060');
@@ -679,7 +704,9 @@ function respondTruco(accept, raise = false) {
     const names = { retruco: 'Re-Truco', vale4: 'Vale Cuatro' };
     G.trucoAcep = true; G.trucoStake = stake;
     G.trucoPend = { level: next, by: 'p1', stake: stakes2[next], refuseVal: refuses2[next] };
+    G.trucoHistory = [...(G.trucoHistory||[]), {level:next,by:'p1'}];
     addLog('▶ Subís: ¡' + names[next] + '!', '#c0392b');
+    say(names[next]);
     G.fase = 'ai_turn';
     renderGame();
     scheduleAI(1100);
@@ -689,13 +716,13 @@ function respondTruco(accept, raise = false) {
   G.trucoPend = null;
   if (accept) {
     G.trucoAcep = true; G.trucoStake = stake;
-    addLog('▶ Querés el truco. (' + stake + ' pts en juego)', '#7fba5a');
+    sayAndShow('p1','▶ ¡Quiero! ('+stake+' pts)','#7fba5a','Quiero');
     G.fase = nextFaseAfterInterrupt();
     renderGame();
     if (G.fase === 'ai_turn') scheduleAI(700);
   } else {
     // No quiero → IA (quien llamó) gana refuseVal
-    addLog('▶ No querés. IA gana +' + refuseVal + ' pts.', '#d4890a');
+    sayAndShow('p1','▶ No quiero. IA +'+refuseVal+' pts.','#d4890a','No quiero');
     G.trucoDone = true;
     G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
     G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
@@ -732,7 +759,7 @@ function aiActuar() {
     const stakes = { envido: 2, realenvido: 3 };
     G.envPend = { level, by: 'p2', stake: stakes[level], refuseVal: stakes[level] - 1 };
     const names = { envido: 'Envido', realenvido: 'Real Envido' };
-    addLog('🤖 IA dice: ¡' + names[level] + '!', '#a78bca');
+    sayAndShow('p2','🤖 ¡'+names[level]+'!','#a78bca',names[level]);
     G.fase = 'p_resp_env';
     renderGame();
     return;
@@ -742,7 +769,7 @@ function aiActuar() {
   if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && avg >= 9) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoCalledBy = 'p2';
-    addLog('🤖 IA dice: ¡Truco!', '#e74c3c');
+    sayAndShow('p2','🤖 ¡Truco!','#e74c3c','Truco');
     G.fase = 'p_resp_truco';
     renderGame();
     return;
@@ -781,14 +808,14 @@ function aiDecideEnvido() {
   G.envPend = null; G.envDone = true;
   const accept = G.p2Env >= 21;
   if (accept) {
-    addLog('🤖 IA dice: ¡Quiero!', '#a78bca');
+    sayAndShow('p2','🤖 ¡Quiero!','#a78bca','Quiero');
     const myWin = G.p1Env >= G.p2Env;
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
       (myWin ? ' +' + stake + ' pts.' : ' IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
     if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
     else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   } else {
-    addLog('🤖 IA dice: No quiero.', '#a78bca');
+    sayAndShow('p2','🤖 No quiero.','#a78bca','No quiero');
     G.pScore = Math.min(MAX_PTS, G.pScore + refuseVal);
     addLog('✅ Vos ganás: +' + refuseVal + ' pts.', '#7fba5a');
   }
@@ -814,20 +841,21 @@ function aiDecideTruco() {
     const names = { retruco: 'Re-Truco', vale4: 'Vale Cuatro' };
     G.trucoAcep = true; G.trucoStake = stake;
     G.trucoPend = { level: next, by: 'p2', stake: stakes2[next], refuseVal: refuses2[next] };
-    addLog('🤖 IA sube: ¡' + names[next] + '!', '#e74c3c');
+    G.trucoHistory = [...(G.trucoHistory||[]), {level:next,by:'p2'}];
+    sayAndShow('p2','🤖 ¡'+names[next]+'!','#e74c3c',names[next]);
     G.fase = 'p_resp_truco';
     renderGame();
   } else if (willAccept) {
     G.trucoPend = null;
     G.trucoAcep = true; G.trucoStake = stake;
-    addLog('🤖 IA dice: ¡Quiero! (' + stake + ' pts)', '#a78bca');
+    sayAndShow('p2','🤖 ¡Quiero! ('+stake+' pts)','#a78bca','Quiero');
     // IA aceptó truco del jugador → IA juega carta
     G.fase = 'ai_turn';
     renderGame();
     scheduleAI(700);
   } else {
     G.trucoPend = null; G.trucoDone = true;
-    addLog('🤖 IA dice: No quiero.', '#a78bca');
+    sayAndShow('p2','🤖 No quiero.','#a78bca','No quiero');
     G.pScore = Math.min(MAX_PTS, G.pScore + refuseVal);
     addLog('✅ Vos ganás: +' + refuseVal + ' pts.', '#7fba5a');
     G.handDone = true; G.handWinner = 'p1'; G.fase = 'hand_done';
@@ -904,6 +932,102 @@ function fanFaceDown(n){
   }
   h+='</div>';
   return h;
+}
+
+
+// ¿Puede el jugador subir el truco ahora?
+// Solo si el último nivel fue cantado por la IA (p2) y aún hay nivel para subir
+
+function playerRaiseTruco(level){
+  if(G.fase!=='p_turn'||G.trucoDone||G.handDone) return;
+  const can=playerCanRaiseTruco();
+  if(!can||can!==level) return;
+  const stakes={retruco:3,vale4:4};
+  const refuses={retruco:2,vale4:3};
+  const names={retruco:'Re-Truco',vale4:'Vale Cuatro'};
+  G.trucoHistory=[...(G.trucoHistory||[]),{level,by:'p1'}];
+  G.trucoPend={level,by:'p1',stake:stakes[level],refuseVal:refuses[level]};
+  addLog('▶ Subís: ¡'+names[level]+'!','#c0392b');
+  say(names[level]);
+  showBubble('p1',names[level]);
+  G.fase='ai_turn';
+  renderGame();
+  scheduleAI(1100);
+}
+
+function playerCanRaiseTruco(){
+  if(!G.trucoAcep||G.trucoPend||G.trucoDone||G.handDone) return null;
+  const hist=G.trucoHistory||[];
+  if(!hist.length) return null;
+  const last=hist[hist.length-1];
+  if(last.by!=='p2') return null; // la IA cantó el último → jugador puede subir
+  const next={truco:'retruco',retruco:'vale4'}[last.level];
+  return next||null; // null si ya es vale4
+}
+
+
+/* ── BURBUJAS DE CHAT ─────────────────────────────────────────
+   showBubble(who, text)
+   who = 'p1' (jugador, burbuja abajo) | 'p2' (IA, burbuja arriba)
+─────────────────────────────────────────────────────────────── */
+let _bubbleTimer=null;
+function showBubble(who, text){
+  let el=document.getElementById('bubble-'+who);
+  if(!el) return;
+  el.textContent='🗨️ '+text;
+  el.style.opacity='1';
+  el.style.transform='scale(1)';
+  if(_bubbleTimer) clearTimeout(_bubbleTimer);
+  _bubbleTimer=setTimeout(()=>{
+    el.style.opacity='0';
+    el.style.transform='scale(0.85)';
+  }, 3200);
+}
+
+/* ── AUDIO (Web Speech API) ──────────────────────────────────
+   Voz uruguaya / español rioplatense
+─────────────────────────────────────────────────────────────── */
+let _synth=window.speechSynthesis||null;
+let _audioOn=true;
+
+function say(text){
+  if(!_audioOn||!_synth) return;
+  _synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='es-UY'; // Uruguayo, fallback a es-AR o es
+  u.rate=0.92; u.pitch=1.05; u.volume=1;
+  // Try to pick a Spanish voice
+  const voices=_synth.getVoices();
+  const sp=voices.find(v=>v.lang.startsWith('es-UY')||v.lang.startsWith('es-AR')||v.lang.startsWith('es'));
+  if(sp) u.voice=sp;
+  _synth.speak(u);
+}
+
+function toggleAudio(){
+  _audioOn=!_audioOn;
+  const btn=document.getElementById('audio-toggle');
+  if(btn) btn.textContent=_audioOn?'🔊':'🔇';
+  if(!_audioOn&&_synth) _synth.cancel();
+}
+
+/* ── Wrap all addLog calls that should trigger bubbles+audio ─
+   sayAndShow(who, text, logColor, spokenText)
+──────────────────────────────────────────────────────────────── */
+function sayAndShow(who, displayText, color, spoken){
+  addLog(displayText, color);
+  showBubble(who, spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
+  say(spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
+}
+
+/* ── Mostrar puntos al final de mano ────────────────────────── */
+function logEnvidoReveal(){
+  if(!G.envDone&&!G.p1Flor&&!G.p2Flor) return;
+  if(G.p1Flor||G.p2Flor){
+    if(G.p1Flor) addLog('🌸 Tus puntos de Flor: '+G.p1Env,'#f8a5c2');
+    if(G.p2Flor) addLog('🌸 Puntos de Flor de IA: '+G.p2Env,'#f8a5c2');
+  } else if(G.envDone){
+    addLog('📊 Tus puntos de envido: '+G.p1Env+' | IA: '+G.p2Env,'#d4890a');
+  }
 }
 
 function renderGame(){
@@ -1024,9 +1148,15 @@ function renderActions(){
         <button class="btn gold sm" onclick="callEnvido('faltaenvido')">🎯 Falta Envido</button>`;
     }
 
-    // Truco — solo si no hay truco activo/pendiente
+    // Truco — inicial o subida
     if(!G.trucoDone&&!G.trucoPend&&!G.trucoAcep){
       act.innerHTML+=`<button class="btn red sm pulse" onclick="callTruco()">⚔️ Truco</button>`;
+    }
+    // ¿Puede subir? (Re-Truco / Vale Cuatro) — si la IA cantó el último nivel
+    const _canRaise=playerCanRaiseTruco();
+    if(_canRaise){
+      const _nm={retruco:'⬆️ Re-Truco',vale4:'⬆️ Vale Cuatro'}[_canRaise];
+      act.innerHTML+=`<button class="btn red sm" onclick="playerRaiseTruco('${_canRaise}')">${_nm}</button>`;
     }
 
     act.innerHTML+=`<button class="btn sm" style="color:#5a5a4a;border-color:#3a3a2a" onclick="mazo()">🃏 Al mazo</button>`;
