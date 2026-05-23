@@ -369,6 +369,61 @@ const BG    = {espadas:'#f8f5ea',bastos:'#eef6ea',oros:'#fdf8de',copas:'#f8eaea'
 const VLAB  = {1:'1',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',10:'S',11:'C',12:'R'};
 const VNOME = {1:'As',2:'Dos',3:'Tres',4:'Cuatro',5:'Cinco',6:'Seis',7:'Siete',10:'Sota',11:'Caballo',12:'Rey'};
 
+const SNAME={espadas:'Espadas',bastos:'Bastos',oros:'Oros',copas:'Copas'};
+
+// ── Jerarquía base ──────────────────────────────────────────
+const MUESTRA_ORDER=[2,4,5,11,10];
+const PIEZA_ENV={2:30,4:29,5:28,11:27,10:27};
+
+function poderBase(v,s){
+  if(v===1&&s==='espadas')return 14; if(v===1&&s==='bastos')return 13;
+  if(v===7&&s==='espadas')return 12; if(v===7&&s==='oros')return 11;
+  if(v===3)return 10; if(v===2)return 9; if(v===1)return 8;
+  if(v===12)return 7; if(v===11)return 6; if(v===10)return 5;
+  if(v===7)return 4; if(v===6)return 3; if(v===5)return 2; if(v===4)return 1;
+  return 0;
+}
+
+function esPieza(v,s,ms){ return s===ms && MUESTRA_ORDER.includes(v); }
+
+function esEspejito(v,s,ms,mc){
+  // El 12 del palo de muestra cuando la muestra es una pieza
+  return v===12 && s===ms && mc && MUESTRA_ORDER.includes(mc.v);
+}
+
+// ── Flor ───────────────────────────────────────────────────
+// Casos: 2+ piezas/espejitos; 1pieza + 2 mismo palo; 3 mismo palo
+function calcFlor(hand,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  const esPz=c=>esPieza(c.v,c.s,ms)||esEspejito(c.v,c.s,ms,mc);
+  const piezas=hand.filter(esPz);
+
+  if(piezas.length>=2) return true;
+
+  if(piezas.length===1){
+    const others=hand.filter(c=>!esPz(c));
+    if(others.length>=2 && others[0].s===others[1].s) return true;
+    if(hand.filter(c=>c.s===ms).length>=3) return true;
+  }
+
+  // 3 del mismo palo (cualquiera)
+  const bySuit={};
+  hand.forEach(c=>{(bySuit[c.s]=bySuit[c.s]||[]).push(c);});
+  if(Object.values(bySuit).some(cs=>cs.length>=3)) return true;
+
+  return false;
+}
+
+// ── Envido ─────────────────────────────────────────────────
+function calcEnvVal(v,s,ms,mc){
+  if(esEspejito(v,s,ms,mc)){const mv=mc.v;if(PIEZA_ENV[mv]!==undefined)return PIEZA_ENV[mv];}
+  if(s===ms&&PIEZA_ENV[v]!==undefined)return PIEZA_ENV[v];
+  if(v>=10)return 0;
+  return v;
+}
+
+
+
 // ═══ SVG PALOS ════════════════════════════════════════════
 function pipSVG(suit,sz){
   const c=INK[suit],s=Math.round(sz);
@@ -686,6 +741,56 @@ function nextFaseAfterInterrupt(){
 function scheduleAI(ms){
   if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
   _aiTimer=setTimeout(()=>{_aiTimer=null;aiActuar();},ms);
+}
+
+
+// ── Mazo ──────────────────────────────────────────────────
+function crearMazo(){
+  const d=SUITS.flatMap(s=>VALS.map(v=>({id:`${v}-${s}`,v,s,p:poderBase(v,s)})));
+  for(let i=d.length-1;i>0;i--){const j=0|Math.random()*(i+1);[d[i],d[j]]=[d[j],d[i]];}
+  return d;
+}
+
+function calcPoder(v,s,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  if(esEspejito(v,s,ms,mc)){const i=MUESTRA_ORDER.indexOf(mc.v);if(i!==-1)return 20-i;}
+  if(s===ms){const i=MUESTRA_ORDER.indexOf(v);if(i!==-1)return 20-i;}
+  return poderBase(v,s);
+}
+
+function aplicarMuestra(cards,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  return cards.map(c=>({...c,p:calcPoder(c.v,c.s,ms,mc)}));
+}
+
+function calcEnvVal(v,s,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  if(esEspejito(v,s,ms,mc)){const mv=mc.v;if(PIEZA_ENV[mv]!==undefined)return PIEZA_ENV[mv];}
+  if(s===ms&&PIEZA_ENV[v]!==undefined)return PIEZA_ENV[v];
+  if(v>=10)return 0;
+  return v;
+}
+
+function calcEnvido(hand,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  const flor=calcFlor(hand,ms,mc);
+  if(flor)return{score:0,flor:true};
+  const cards=hand.map(c=>({...c,ev:calcEnvVal(c.v,c.s,ms,mc)}));
+  const piezas=cards.filter(c=>esPieza(c.v,c.s,ms)||esEspejito(c.v,c.s,ms,mc));
+  let best=0;
+  if(piezas.length===1){
+    const pe=piezas[0].ev;
+    const others=cards.filter(c=>!(esPieza(c.v,c.s,ms)||esEspejito(c.v,c.s,ms,mc)));
+    best=pe+(others.length?Math.max(...others.map(c=>c.ev)):0);
+  } else {
+    const bySuit={};
+    cards.forEach(c=>{(bySuit[c.s]=bySuit[c.s]||[]).push(c);});
+    for(const cs of Object.values(bySuit)){
+      if(cs.length>=2){const vs=cs.map(c=>c.ev).sort((a,b)=>b-a);best=Math.max(best,vs[0]+vs[1]+20);}
+    }
+    best=Math.max(best,...cards.map(c=>c.ev));
+  }
+  return{score:best,flor:false};
 }
 
 function nuevoTurno(p1IsMano) {
