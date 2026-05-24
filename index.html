@@ -143,6 +143,13 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         ⚙️ Config
       </button>
     </div>
+    <div style="display:flex;gap:10px;width:100%">
+      <button onclick="show('s-voices');setTimeout(renderVoiceList,100)" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
+        background:rgba(80,20,80,.88);border:2px solid #aa44aa;
+        color:#ffaaff;font-size:12px;font-weight:700;font-family:Georgia,serif;">
+        🎙 Mis Voces
+      </button>
+    </div>
   </div>
 </div>
 
@@ -343,6 +350,73 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
     </details>
 
   </div><!-- end content -->
+
+<!-- ═══════ VOCES ═══════ -->
+<div id="s-voices" class="screen inner" style="background:#0a1208;gap:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
+    <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:Georgia,serif">✕ Volver</button>
+  </div>
+
+  <!-- Player name -->
+  <div style="background:rgba(20,40,20,.8);border:1px solid rgba(100,160,80,.3);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+    <div style="color:rgba(220,200,140,.9);font-size:11px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
+    <div style="color:rgba(160,200,140,.7);font-size:10px;font-family:Georgia,serif">Cada jugador puede grabar sus propias voces con un nombre único</div>
+    <div style="display:flex;gap:8px">
+      <input id="inp-playername" type="text" placeholder="Tu nombre (ej: Marcos)"
+        style="flex:1;background:#0a140a;border:1.5px solid rgba(80,160,60,.4);border-radius:8px;
+          color:rgba(220,230,200,.95);font-family:Georgia,serif;font-size:13px;padding:9px 12px;outline:none"/>
+      <button onclick="savePlayerName()"
+        style="padding:9px 16px;border-radius:8px;cursor:pointer;
+          background:rgba(30,120,50,.6);border:1.5px solid rgba(80,200,80,.5);
+          color:rgba(180,255,160,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
+        💾 Guardar
+      </button>
+    </div>
+    <div id="voice-name-msg" style="font-size:10px;color:rgba(160,220,130,.8);font-family:monospace"></div>
+  </div>
+
+  <!-- Instructions -->
+  <div style="background:rgba(10,30,50,.7);border:1px solid rgba(60,100,160,.3);border-radius:10px;padding:10px 12px">
+    <div style="color:rgba(160,200,255,.9);font-size:11px;font-family:Georgia,serif;line-height:1.7">
+      <b>Cómo funciona:</b><br>
+      1. Escribí tu nombre y guardalo<br>
+      2. Tocá 🎙 Grabar en cualquier canto<br>
+      3. Decí el canto en voz alta (máx 4 seg)<br>
+      4. El juego usará TU voz automáticamente<br>
+      5. Tocá ▶ para escuchar · 🗑 para borrar<br>
+      <span style="color:rgba(220,180,80,.8)">Cada jugador guarda sus voces por separado según su nombre</span>
+    </div>
+  </div>
+
+  <!-- Voice list -->
+  <div style="background:rgba(10,20,10,.8);border:1px solid rgba(80,140,60,.25);border-radius:10px;padding:10px 12px;flex:1;overflow-y:auto">
+    <div style="color:rgba(180,220,140,.8);font-size:11px;font-family:Georgia,serif;margin-bottom:8px;font-weight:700">
+      🎤 Grabá tus cantos:
+    </div>
+    <div id="voice-list">
+      <div style="color:rgba(140,180,120,.5);font-size:11px;font-family:Georgia,serif;text-align:center;padding:20px">
+        Cargando...
+      </div>
+    </div>
+  </div>
+
+  <!-- Test all button -->
+  <div style="display:flex;gap:8px">
+    <button onclick="renderVoiceList()"
+      style="flex:1;padding:10px;border-radius:10px;cursor:pointer;
+        background:rgba(20,60,100,.6);border:1.5px solid rgba(60,120,200,.4);
+        color:rgba(160,200,255,.9);font-size:12px;font-weight:700;font-family:Georgia,serif">
+      🔄 Actualizar lista
+    </button>
+    <button onclick="show('s-menu')"
+      style="flex:1;padding:10px;border-radius:10px;cursor:pointer;
+        background:rgba(30,80,30,.6);border:1.5px solid rgba(80,180,60,.4);
+        color:rgba(180,240,150,.9);font-size:13px;font-weight:700;font-family:Georgia,serif">
+      ← Volver al menú
+    </button>
+  </div>
+</div>
 
 <!-- ═══════ GAMEOVER ═══════ -->
 <div id="s-gameover" class="screen inner" style="align-items:center;justify-content:center">
@@ -655,13 +729,13 @@ function drawSVGCard(card,W,H,brd,shad,tr,op,onclick){
   const v=card.v, s=card.s;
   const ink=CINK[s];
   const isFig=v>=10;
-  const numFS=Math.round(W*0.175);
+  const numFS=Math.round(W*0.22);
   const cPipSz=Math.round(W*0.2);
   const mainPipSz=v===1?Math.round(W*0.55):v<=3?Math.round(W*0.38):v<=5?Math.round(W*0.28):Math.round(W*0.22);
 
   // Corner label
-  const cornerNum=`<text x="4" y="${numFS+2}" font-size="${numFS}" font-weight="900" font-family="Georgia,serif" fill="${ink}">${VLAB[v]}</text>`;
-  const cornerNumR=`<text x="${W-4}" y="${H-4}" font-size="${numFS}" font-weight="900" font-family="Georgia,serif" fill="${ink}" text-anchor="end" transform="rotate(180,${W/2},${H/2})">${VLAB[v]}</text>`;
+  const cornerNum=`<text x="4" y="${numFS+3}" font-size="${numFS}" font-weight="900" font-family="Georgia,serif" fill="${ink}" stroke="white" stroke-width="0.5" paint-order="stroke">${VLAB[v]}</text>`;
+  const cornerNumR=`<text x="${W-4}" y="${H-4}" font-size="${numFS}" font-weight="900" font-family="Georgia,serif" fill="${ink}" stroke="white" stroke-width="0.5" paint-order="stroke" text-anchor="end" transform="rotate(180,${W/2},${H/2})">${VLAB[v]}</text>`;
 
   // Corner pip (tiny)
   const cpx=6, cpy=numFS+5;
@@ -740,7 +814,11 @@ function nextFaseAfterInterrupt(){
 
 function scheduleAI(ms){
   if(_aiTimer){clearTimeout(_aiTimer);_aiTimer=null;}
-  _aiTimer=setTimeout(()=>{_aiTimer=null;aiActuar();},ms);
+  _aiTimer=setTimeout(()=>{
+    _aiTimer=null;
+    if(!G||G.handDone||G.fase!=='ai_turn') return; // ya terminó o cambió el turno
+    aiActuar();
+  },ms);
 }
 
 
@@ -1132,29 +1210,30 @@ function aiActuar() {
     return;
   }
 
-  // 4. Jugar carta (nunca dos seguidas el mismo jugador)
-  if (G.trucoPend || G.envPend) return;
-  const mc = G.mesa.p1; // carta del jugador (si existe)
+  // 4. Jugar carta — NUNCA si ya hay carta de IA en mesa, ni si la mano terminó
+  if(G.trucoPend||G.envPend) return;
+  if(G.handDone) return;                    // mano ya terminada
+  if(G.mesa.p2) return;                     // IA ya jugó en este round — esperar
+  if(!G.p2Hand||G.p2Hand.length===0) return; // sin cartas
+
+  const mc=G.mesa.p1;
   let chosen;
-  if (mc) {
-    // IA responde: jugar la mínima ganadora, o la mínima si no puede ganar
-    const winners = ai.filter(c => c.p > mc.p).sort((a, b) => a.p - b.p);
-    chosen = winners[0] || [...ai].sort((a, b) => a.p - b.p)[0];
+  if(mc){
+    const winners=ai.filter(c=>c.p>mc.p).sort((a,b)=>a.p-b.p);
+    chosen=winners[0]||[...ai].sort((a,b)=>a.p-b.p)[0];
   } else {
-    // IA lidera: jugar la carta del medio (táctica conservadora)
-    const sorted = [...ai].sort((a, b) => a.p - b.p);
-    chosen = sorted[Math.floor(sorted.length / 2)];
+    const sorted=[...ai].sort((a,b)=>a.p-b.p);
+    chosen=sorted[Math.floor(sorted.length/2)];
   }
-  G.p2Hand = G.p2Hand.filter(c => c.id !== chosen.id);
-  G.p2Played = [...G.p2Played, chosen];
-  G.mesa = { ...G.mesa, p2: chosen };
-  addLog('🤖 IA juega ' + cn(chosen), '#a78bca');
-  // Si la mesa del jugador estaba vacía, la IA está liderando este round
-  if (!G.mesa.p1) G.roundLeader = 'p2';
-  if (G.mesa.p1) {
+  G.p2Hand=G.p2Hand.filter(c=>c.id!==chosen.id);
+  G.p2Played=[...G.p2Played,chosen];
+  G.mesa={...G.mesa,p2:chosen};
+  addLog('🤖 IA juega '+cn(chosen),'#a78bca');
+  if(!mc) G.roundLeader='p2'; // IA lideró este round
+  if(G.mesa.p1){
     doResolveRound();
   } else {
-    G.fase = 'p_turn';
+    G.fase='p_turn';
     renderGame();
   }
 }
@@ -1393,6 +1472,158 @@ function logEnvidoReveal(){
     addLog('📊 Tus puntos de envido: '+G.p1Env+' | IA: '+G.p2Env,'#d4890a');
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   SISTEMA DE VOZ PERSONALIZADA
+   Graba y usa tus propios cantos/gritos
+══════════════════════════════════════════════════════════ */
+const VOICE_CALLS = [
+  {key:'truco',    label:'Truco',        emoji:'⚔️'},
+  {key:'retruco',  label:'Re-Truco',     emoji:'⚔️'},
+  {key:'vale4',    label:'Vale Cuatro',  emoji:'⚔️'},
+  {key:'quiero',   label:'Quiero',       emoji:'✅'},
+  {key:'noquiero', label:'No quiero',    emoji:'❌'},
+  {key:'envido',   label:'Envido',       emoji:'🎯'},
+  {key:'realenv',  label:'Real Envido',  emoji:'🎯'},
+  {key:'faltaenv', label:'Falta Envido', emoji:'🎯'},
+  {key:'flor',     label:'La mía es Flor',emoji:'🌸'},
+  {key:'truco_resp',label:'¡Truco! (respuesta)',emoji:'⚔️'},
+];
+
+let _mediaRecorder=null, _recordingKey=null, _recordingChunks=[];
+let _playerName=localStorage.getItem('playerName')||'jugador';
+const _voiceBlobs={};
+
+function getVoiceKey(key){ return `voice_${_playerName}_${key}`; }
+
+function loadVoices(){
+  VOICE_CALLS.forEach(({key})=>{
+    const stored=localStorage.getItem(getVoiceKey(key));
+    if(stored){
+      try{
+        const ab=Uint8Array.from(atob(stored),c=>c.charCodeAt(0)).buffer;
+        _voiceBlobs[key]=new Blob([ab],{type:'audio/webm'});
+      }catch(e){}
+    }
+  });
+}
+
+function saveVoice(key,blob){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const b64=btoa(String.fromCharCode(...new Uint8Array(reader.result)));
+    localStorage.setItem(getVoiceKey(key),b64);
+    _voiceBlobs[key]=blob;
+  };
+  reader.readAsArrayBuffer(blob);
+}
+
+function playVoice(key){
+  const blob=_voiceBlobs[key];
+  if(!blob) return false;
+  const url=URL.createObjectURL(blob);
+  const audio=new Audio(url);
+  audio.onended=()=>URL.revokeObjectURL(url);
+  audio.play().catch(()=>{});
+  return true;
+}
+
+// Override say() to use custom voice if available
+const _originalSay=say;
+function say(text){
+  // Map text to voice key
+  const keyMap={
+    'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
+    'Quiero':'quiero','No quiero':'noquiero',
+    'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
+    'La mía es flor':'flor','la mía es flor':'flor',
+  };
+  const k=keyMap[text];
+  if(k&&playVoice(k)) return; // usar voz grabada
+  _originalSay(text); // fallback a TTS
+}
+
+async function startRecording(key){
+  if(!navigator.mediaDevices) return alert('Tu navegador no soporta grabación');
+  stopRecording();
+  _recordingKey=key;
+  _recordingChunks=[];
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  _mediaRecorder=new MediaRecorder(stream);
+  _mediaRecorder.ondataavailable=e=>{if(e.data.size>0)_recordingChunks.push(e.data);};
+  _mediaRecorder.onstop=()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    const blob=new Blob(_recordingChunks,{type:'audio/webm'});
+    saveVoice(_recordingKey,blob);
+    renderVoiceList();
+    updateRecordBtn(_recordingKey,false);
+    _recordingKey=null;
+  };
+  _mediaRecorder.start();
+  updateRecordBtn(key,true);
+  // Auto-stop after 4 seconds
+  setTimeout(()=>stopRecording(),4000);
+}
+
+function stopRecording(){
+  if(_mediaRecorder&&_mediaRecorder.state!=='inactive'){
+    _mediaRecorder.stop();
+  }
+}
+
+function updateRecordBtn(key,isRec){
+  const btn=document.getElementById('rec-btn-'+key);
+  if(btn){
+    btn.textContent=isRec?'⏹ Detener':'🎙 Grabar';
+    btn.style.background=isRec?'rgba(200,30,30,.6)':'rgba(30,100,30,.5)';
+  }
+}
+
+function testVoice(key){
+  if(!playVoice(key)) alert('No hay voz grabada para este canto. ¡Grabá primero!');
+}
+
+function deleteVoice(key){
+  localStorage.removeItem(getVoiceKey(key));
+  delete _voiceBlobs[key];
+  renderVoiceList();
+}
+
+function savePlayerName(){
+  const nm=document.getElementById('inp-playername').value.trim();
+  if(!nm) return;
+  _playerName=nm;
+  localStorage.setItem('playerName',nm);
+  loadVoices();
+  renderVoiceList();
+  document.getElementById('voice-name-msg').textContent='✅ Nombre guardado: '+nm;
+}
+
+function renderVoiceList(){
+  const el=document.getElementById('voice-list');
+  if(!el) return;
+  el.innerHTML=VOICE_CALLS.map(({key,label,emoji})=>{
+    const has=!!_voiceBlobs[key];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <span style="flex:1;font-size:12px;color:rgba(220,200,160,.9);font-family:Georgia,serif">${emoji} ${label}</span>
+      <button id="rec-btn-${key}" onclick="startRecording('${key}')"
+        style="padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(80,180,80,.5);
+          background:rgba(30,100,30,.5);color:rgba(180,240,160,.9);font-size:11px;font-weight:700">
+        🎙 Grabar
+      </button>
+      ${has?`<button onclick="testVoice('${key}')"
+        style="padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(80,120,200,.5);
+          background:rgba(30,60,140,.5);color:rgba(160,200,255,.9);font-size:11px">▶</button>
+        <button onclick="deleteVoice('${key}')"
+        style="padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid rgba(200,50,50,.4);
+          background:rgba(100,20,20,.5);color:rgba(255,140,120,.9);font-size:11px">🗑</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// Init voices on load
+window.addEventListener('DOMContentLoaded',()=>{ setTimeout(loadVoices,500); });
 
 function renderGame(){
   if(!G.p1Hand) return;
@@ -1720,6 +1951,11 @@ function cancelRoom(){
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById(id).classList.add('on');
+  if(id==='s-voices'){
+    const inp=document.getElementById('inp-playername');
+    if(inp) inp.value=_playerName||'';
+    setTimeout(renderVoiceList,80);
+  }
 }
 
 function showMsg(id,msg,color){
