@@ -208,7 +208,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div>
 
   <div class="bar" style="gap:8px;display:flex;flex-direction:column">
-    <div style="color:#e8c84a;font-size:11px;font-weight:700">🃏 PASO 3 — Imágenes de cartas (opcional)</div>
+    <div style="color:#4a9a4a;font-size:11px;font-weight:700">✅ CARTAS — Conectadas a Supabase</div>
+    <div style="color:var(--muted);font-size:10px">Las cartas se cargan automáticamente desde:</div>
+    <div style="background:#050f05;border:1px solid #1e3a1e;border-radius:6px;padding:8px;font-family:monospace;font-size:9px;color:#6a9a6a;word-break:break-all">https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/CARTAS-TRUCO/</div>
+    <div style="color:#e8c84a;font-size:10px">Nombres de archivo esperados: <b>1-espadas.jpeg</b>, <b>12-copas.jpeg</b>, <b>reverso.jpeg</b></div>
+    <div style="color:#e8c84a;font-size:11px;font-weight:700;margin-top:4px">🃏 PASO 3 — Imágenes de cartas (opcional)</div>
     <div style="color:var(--muted);font-size:10px">Si subiste las cartas a un bucket de Supabase Storage, ingresá el nombre del bucket (ej: <b>cartas</b>). Los archivos deben llamarse <b>1-espadas.png</b>, <b>2-bastos.png</b>, etc.</div>
     <label>Nombre del bucket</label>
     <input type="text" id="inp-bucket" placeholder="cartas" value="cartas">
@@ -701,18 +705,36 @@ function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick=
   const tr=sel?'translateY(-18px) scale(1.1)':'none';
   const op=disabled&&!sel?0.55:1;
 
-  if(back||!card) return `<div style="width:${W}px;height:${H}px;border-radius:9px;flex-shrink:0;
-    background:repeating-linear-gradient(45deg,#c0392b 0,#c0392b 5px,#a93226 5px,#a93226 12px);
-    border:2.5px solid #e8c0b0;box-shadow:inset 0 0 0 4px rgba(255,200,180,.2),${shad};"></div>`;
+  if(back||!card){
+    if(CARD_IMG_BASE){
+      return `<div style="width:${W}px;height:${H}px;border-radius:9px;flex-shrink:0;
+        overflow:hidden;border:2px solid rgba(180,100,60,.5);box-shadow:${shad};">
+        <img src="${CARD_IMG_BASE}reverso.jpeg"
+          style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;"
+          onerror="this.style.display='none';this.parentElement.style.background='repeating-linear-gradient(45deg,#c0392b 0,#c0392b 5px,#a93226 5px,#a93226 12px)'"
+          alt="reverso"/>
+      </div>`;
+    }
+    return `<div style="width:${W}px;height:${H}px;border-radius:9px;flex-shrink:0;
+      background:repeating-linear-gradient(45deg,#c0392b 0,#c0392b 5px,#a93226 5px,#a93226 12px);
+      border:2.5px solid #e8c0b0;box-shadow:inset 0 0 0 4px rgba(255,200,180,.2),${shad};"></div>`;
+  }
 
   if(CARD_IMG_BASE){
+    // Try jpeg extension (Supabase bucket uses .jpeg)
+    const imgSrc=`${CARD_IMG_BASE}${card.v}-${card.s}.jpeg`;
     return `<div onclick="${onclick}" style="width:${W}px;height:${H}px;border-radius:9px;flex-shrink:0;
       border:${brd};box-shadow:${shad};transform:${tr};transition:transform .15s;
-      cursor:${onclick?'pointer':'default'};opacity:${op};overflow:hidden;background:#fff;">
-      <img src="${CARD_IMG_BASE}${card.v}-${card.s}.png"
-        style="width:100%;height:100%;object-fit:cover;border-radius:7px;"
-        onerror="this.style.display='none';this.parentElement.innerHTML+=fallbackCard(${card.v},'${card.s}',${W},${H})"
-        alt="${card.v}-${card.s}"/>
+      cursor:${onclick?'pointer':'default'};opacity:${op};overflow:hidden;background:#f8f5ea;position:relative;">
+      <img src="${imgSrc}"
+        style="width:100%;height:100%;object-fit:cover;object-position:center;border-radius:7px;display:block;"
+        onerror="this.parentElement.dataset.fallback='1';this.style.display='none'"
+        alt="${VLAB[card.v]}-${card.s}"/>
+      <!-- number overlay for readability -->
+      <div style="position:absolute;top:3px;left:4px;font-size:${Math.round(W*0.22)}px;font-weight:900;
+        font-family:Georgia,serif;color:${CINK[card.s]};
+        text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff;
+        line-height:1;pointer-events:none">${VLAB[card.v]}</div>
     </div>`;
   }
 
@@ -1625,8 +1647,11 @@ function renderVoiceList(){
 
 // Init on load
 window.addEventListener('DOMContentLoaded',()=>{
+  // Auto-load Supabase card images
+  CARD_IMG_BASE = 'https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/CARTAS-TRUCO/';
+  console.log('Card images from:', CARD_IMG_BASE);
   loadVoices();
-  window.speechSynthesis&&window.speechSynthesis.getVoices(); // warm up
+  window.speechSynthesis&&window.speechSynthesis.getVoices();
 });
 
 
