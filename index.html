@@ -352,7 +352,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div><!-- end content -->
 
 <!-- ═══════ VOCES ═══════ -->
-<div id="s-voices" class="screen inner" style="background:#0a1208;gap:10px">
+<div id="s-voices" class="screen inner" style="background:#0a1208 !important;gap:10px;overflow-y:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
     <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:Georgia,serif">✕ Volver</button>
@@ -1154,7 +1154,7 @@ function respondTruco(accept, raise = false) {
     sayAndShow('p1','▶ ¡Quiero! ('+stake+' pts)','#7fba5a','Quiero');
     G.fase = nextFaseAfterInterrupt();
     renderGame();
-    if (G.fase === 'ai_turn') scheduleAI(700);
+    if (G.fase === 'ai_turn') scheduleAI(1400);
   } else {
     // No quiero → IA (quien llamó) gana refuseVal
     sayAndShow('p1','▶ No quiero. IA +'+refuseVal+' pts.','#d4890a','No quiero');
@@ -1258,7 +1258,8 @@ function aiDecideEnvido() {
   if (checkGameOver()) return;
   G.fase = nextFaseAfterInterrupt();
   renderGame();
-  if (G.fase === 'ai_turn') scheduleAI(600);
+  if (G.fase === 'ai_turn') scheduleAI(1400); // Dar tiempo al jugador de leer el resultado
+  else renderGame(); // asegurar render si es p_turn
 }
 
 function aiDecideTruco() {
@@ -1430,28 +1431,7 @@ function hideBubbles(){
 /* ── AUDIO (Web Speech API) ──────────────────────────────────
    Voz uruguaya / español rioplatense
 ─────────────────────────────────────────────────────────────── */
-let _synth=window.speechSynthesis||null;
-let _audioOn=true;
 
-function say(text){
-  if(!_audioOn||!_synth) return;
-  _synth.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='es-UY'; // Uruguayo, fallback a es-AR o es
-  u.rate=0.92; u.pitch=1.05; u.volume=1;
-  // Try to pick a Spanish voice
-  const voices=_synth.getVoices();
-  const sp=voices.find(v=>v.lang.startsWith('es-UY')||v.lang.startsWith('es-AR')||v.lang.startsWith('es'));
-  if(sp) u.voice=sp;
-  _synth.speak(u);
-}
-
-function toggleAudio(){
-  _audioOn=!_audioOn;
-  const btn=document.getElementById('audio-toggle');
-  if(btn) btn.textContent=_audioOn?'🔊':'🔇';
-  if(!_audioOn&&_synth) _synth.cancel();
-}
 
 /* ── Wrap all addLog calls that should trigger bubbles+audio ─
    sayAndShow(who, text, logColor, spokenText)
@@ -1476,154 +1456,179 @@ function logEnvidoReveal(){
 
 /* ══════════════════════════════════════════════════════════
    SISTEMA DE VOZ PERSONALIZADA
-   Graba y usa tus propios cantos/gritos
 ══════════════════════════════════════════════════════════ */
-const VOICE_CALLS = [
-  {key:'truco',    label:'Truco',        emoji:'⚔️'},
-  {key:'retruco',  label:'Re-Truco',     emoji:'⚔️'},
-  {key:'vale4',    label:'Vale Cuatro',  emoji:'⚔️'},
-  {key:'quiero',   label:'Quiero',       emoji:'✅'},
-  {key:'noquiero', label:'No quiero',    emoji:'❌'},
-  {key:'envido',   label:'Envido',       emoji:'🎯'},
-  {key:'realenv',  label:'Real Envido',  emoji:'🎯'},
-  {key:'faltaenv', label:'Falta Envido', emoji:'🎯'},
-  {key:'flor',     label:'La mía es Flor',emoji:'🌸'},
-  {key:'truco_resp',label:'¡Truco! (respuesta)',emoji:'⚔️'},
+const VOICE_CALLS=[
+  {key:'truco',label:'⚔️ Truco'},{key:'retruco',label:'⚔️ Re-Truco'},
+  {key:'vale4',label:'⚔️ Vale Cuatro'},{key:'quiero',label:'✅ Quiero'},
+  {key:'noquiero',label:'❌ No quiero'},{key:'envido',label:'🎯 Envido'},
+  {key:'realenv',label:'🎯 Real Envido'},{key:'faltaenv',label:'🎯 Falta Envido'},
+  {key:'flor',label:'🌸 La mía es Flor'},
 ];
 
-let _mediaRecorder=null, _recordingKey=null, _recordingChunks=[];
 let _playerName=localStorage.getItem('playerName')||'jugador';
-const _voiceBlobs={};
-
-function getVoiceKey(key){ return `voice_${_playerName}_${key}`; }
+const _voiceURLs={}; // key → objectURL
+let _mediaRec=null, _recKey=null, _recChunks=[];
 
 function loadVoices(){
   VOICE_CALLS.forEach(({key})=>{
-    const stored=localStorage.getItem(getVoiceKey(key));
-    if(stored){
+    const b64=localStorage.getItem('voz_'+_playerName+'_'+key);
+    if(b64){
       try{
-        const ab=Uint8Array.from(atob(stored),c=>c.charCodeAt(0)).buffer;
-        _voiceBlobs[key]=new Blob([ab],{type:'audio/webm'});
-      }catch(e){}
+        const ab=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer;
+        const blob=new Blob([ab],{type:'audio/webm'});
+        if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
+        _voiceURLs[key]=URL.createObjectURL(blob);
+      }catch(e){ console.warn('loadVoice error',key,e); }
     }
   });
 }
 
-function saveVoice(key,blob){
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const b64=btoa(String.fromCharCode(...new Uint8Array(reader.result)));
-    localStorage.setItem(getVoiceKey(key),b64);
-    _voiceBlobs[key]=blob;
-  };
-  reader.readAsArrayBuffer(blob);
-}
-
-function playVoice(key){
-  const blob=_voiceBlobs[key];
-  if(!blob) return false;
-  const url=URL.createObjectURL(blob);
-  const audio=new Audio(url);
-  audio.onended=()=>URL.revokeObjectURL(url);
-  audio.play().catch(()=>{});
+function playCustomVoice(key){
+  const url=_voiceURLs[key];
+  if(!url) return false;
+  const a=new Audio(url);
+  a.play().catch(e=>console.warn('play error',e));
   return true;
 }
 
-// Override say() to use custom voice if available
-const _originalSay=say;
+// say() tries custom voice first, then TTS
 function say(text){
-  // Map text to voice key
+  if(!_audioOn) return;
   const keyMap={
     'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
     'Quiero':'quiero','No quiero':'noquiero',
     'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
-    'La mía es flor':'flor','la mía es flor':'flor',
+    'La mía es flor':'flor','la mía es flor':'flor','¡La mía es Flor!':'flor',
   };
-  const k=keyMap[text];
-  if(k&&playVoice(k)) return; // usar voz grabada
-  _originalSay(text); // fallback a TTS
+  const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
+  if(k && playCustomVoice(k)) return;
+  // TTS fallback
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='es-AR'; u.rate=0.95; u.pitch=1.05; u.volume=1;
+  const voices=window.speechSynthesis.getVoices();
+  const sp=voices.find(v=>v.lang.startsWith('es-AR')||v.lang.startsWith('es-UY')||v.lang.startsWith('es'));
+  if(sp) u.voice=sp;
+  window.speechSynthesis.speak(u);
+}
+
+let _audioOn=true;
+function toggleAudio(){
+  _audioOn=!_audioOn;
+  const btn=document.getElementById('audio-toggle');
+  if(btn) btn.textContent=_audioOn?'🔊':'🔇';
+  if(!_audioOn && window.speechSynthesis) window.speechSynthesis.cancel();
 }
 
 async function startRecording(key){
-  if(!navigator.mediaDevices) return alert('Tu navegador no soporta grabación');
-  stopRecording();
-  _recordingKey=key;
-  _recordingChunks=[];
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  _mediaRecorder=new MediaRecorder(stream);
-  _mediaRecorder.ondataavailable=e=>{if(e.data.size>0)_recordingChunks.push(e.data);};
-  _mediaRecorder.onstop=()=>{
-    stream.getTracks().forEach(t=>t.stop());
-    const blob=new Blob(_recordingChunks,{type:'audio/webm'});
-    saveVoice(_recordingKey,blob);
-    renderVoiceList();
-    updateRecordBtn(_recordingKey,false);
-    _recordingKey=null;
-  };
-  _mediaRecorder.start();
-  updateRecordBtn(key,true);
-  // Auto-stop after 4 seconds
-  setTimeout(()=>stopRecording(),4000);
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    alert('Tu navegador no soporta grabación de audio. Probá Chrome en Android.');
+    return;
+  }
+  // Stop any ongoing recording
+  if(_mediaRec&&_mediaRec.state!=='inactive') _mediaRec.stop();
+  _recKey=key; _recChunks=[];
+  updateRecBtn(key,'rec');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    const opts=MediaRecorder.isTypeSupported('audio/webm')?{mimeType:'audio/webm'}:{};
+    _mediaRec=new MediaRecorder(stream,opts);
+    _mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)_recChunks.push(e.data);};
+    _mediaRec.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      if(_recChunks.length===0){updateRecBtn(key,'idle');return;}
+      const blob=new Blob(_recChunks,{type:_mediaRec.mimeType||'audio/webm'});
+      // Save to localStorage as base64
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{
+          const b64=btoa(String.fromCharCode(...new Uint8Array(reader.result)));
+          localStorage.setItem('voz_'+_playerName+'_'+key,b64);
+          if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
+          _voiceURLs[key]=URL.createObjectURL(blob);
+          updateRecBtn(key,'done');
+          renderVoiceList();
+        }catch(e){ console.error('save error',e); }
+      };
+      reader.readAsArrayBuffer(blob);
+    };
+    _mediaRec.start();
+    // Auto stop after 3.5s
+    setTimeout(()=>{ if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop(); },3500);
+  }catch(e){
+    alert('Error al acceder al micrófono: '+e.message+'\nAsegurate de dar permiso de micrófono.');
+    updateRecBtn(key,'idle');
+  }
 }
 
 function stopRecording(){
-  if(_mediaRecorder&&_mediaRecorder.state!=='inactive'){
-    _mediaRecorder.stop();
-  }
+  if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop();
 }
 
-function updateRecordBtn(key,isRec){
-  const btn=document.getElementById('rec-btn-'+key);
-  if(btn){
-    btn.textContent=isRec?'⏹ Detener':'🎙 Grabar';
-    btn.style.background=isRec?'rgba(200,30,30,.6)':'rgba(30,100,30,.5)';
-  }
+function updateRecBtn(key,state){
+  const btn=document.getElementById('rec-'+key);
+  if(!btn) return;
+  if(state==='rec'){btn.textContent='⏹ Detener';btn.style.background='rgba(200,30,30,.7)';}
+  else if(state==='done'){btn.textContent='✅ Grabado';btn.style.background='rgba(20,120,20,.7)';}
+  else {btn.textContent='🎙 Grabar';btn.style.background='rgba(30,100,30,.5)';}
 }
 
 function testVoice(key){
-  if(!playVoice(key)) alert('No hay voz grabada para este canto. ¡Grabá primero!');
+  if(!_voiceURLs[key]){ alert('Sin grabación. Grabá primero.'); return; }
+  const a=new Audio(_voiceURLs[key]);
+  a.play().catch(e=>alert('Error al reproducir: '+e.message));
 }
 
 function deleteVoice(key){
-  localStorage.removeItem(getVoiceKey(key));
-  delete _voiceBlobs[key];
+  if(!confirm('¿Borrar esta grabación?')) return;
+  localStorage.removeItem('voz_'+_playerName+'_'+key);
+  if(_voiceURLs[key]){URL.revokeObjectURL(_voiceURLs[key]);delete _voiceURLs[key];}
   renderVoiceList();
 }
 
 function savePlayerName(){
-  const nm=document.getElementById('inp-playername').value.trim();
-  if(!nm) return;
-  _playerName=nm;
-  localStorage.setItem('playerName',nm);
+  const nm=(document.getElementById('inp-playername')||{}).value;
+  if(!nm||!nm.trim()){document.getElementById('voice-name-msg').textContent='⚠️ Ingresá un nombre';return;}
+  _playerName=nm.trim();
+  localStorage.setItem('playerName',_playerName);
   loadVoices();
   renderVoiceList();
-  document.getElementById('voice-name-msg').textContent='✅ Nombre guardado: '+nm;
+  document.getElementById('voice-name-msg').textContent='✅ Guardado como: '+_playerName;
 }
 
 function renderVoiceList(){
   const el=document.getElementById('voice-list');
   if(!el) return;
-  el.innerHTML=VOICE_CALLS.map(({key,label,emoji})=>{
-    const has=!!_voiceBlobs[key];
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-      <span style="flex:1;font-size:12px;color:rgba(220,200,160,.9);font-family:Georgia,serif">${emoji} ${label}</span>
-      <button id="rec-btn-${key}" onclick="startRecording('${key}')"
-        style="padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(80,180,80,.5);
-          background:rgba(30,100,30,.5);color:rgba(180,240,160,.9);font-size:11px;font-weight:700">
+  el.innerHTML=VOICE_CALLS.map(({key,label})=>{
+    const has=!!_voiceURLs[key];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+      <span style="flex:1;font-size:13px;color:rgba(230,210,170,.95);font-family:Georgia,serif">${label}</span>
+      <button id="rec-${key}" onclick="startRecording('${key}')"
+        style="padding:7px 11px;border-radius:8px;cursor:pointer;
+          border:1.5px solid rgba(80,200,80,.5);background:rgba(30,100,30,.5);
+          color:rgba(180,250,160,.95);font-size:12px;font-weight:700;white-space:nowrap">
         🎙 Grabar
       </button>
-      ${has?`<button onclick="testVoice('${key}')"
-        style="padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(80,120,200,.5);
-          background:rgba(30,60,140,.5);color:rgba(160,200,255,.9);font-size:11px">▶</button>
-        <button onclick="deleteVoice('${key}')"
-        style="padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid rgba(200,50,50,.4);
-          background:rgba(100,20,20,.5);color:rgba(255,140,120,.9);font-size:11px">🗑</button>`:''}
+      ${has?`
+      <button onclick="testVoice('${key}')"
+        style="padding:7px 10px;border-radius:8px;cursor:pointer;
+          border:1.5px solid rgba(60,120,220,.5);background:rgba(20,60,160,.5);
+          color:rgba(160,210,255,.95);font-size:13px">▶</button>
+      <button onclick="deleteVoice('${key}')"
+        style="padding:7px 10px;border-radius:8px;cursor:pointer;
+          border:1.5px solid rgba(200,50,50,.4);background:rgba(120,20,20,.5);
+          color:rgba(255,150,130,.95);font-size:13px">🗑</button>`:''}
     </div>`;
   }).join('');
 }
 
-// Init voices on load
-window.addEventListener('DOMContentLoaded',()=>{ setTimeout(loadVoices,500); });
+// Init on load
+window.addEventListener('DOMContentLoaded',()=>{
+  loadVoices();
+  window.speechSynthesis&&window.speechSynthesis.getVoices(); // warm up
+});
+
 
 function renderGame(){
   if(!G.p1Hand) return;
