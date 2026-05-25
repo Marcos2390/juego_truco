@@ -18,7 +18,7 @@ body{position:relative;}
 body{font-family:Georgia,'Times New Roman',serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
 .screen{display:none;position:fixed;inset:0;overflow-y:auto;flex-direction:column}
 .screen.on{display:flex}
-.screen.on.inner{padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box}
+.screen.on.inner{padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box;background:#070f07;overflow-y:auto;}
 h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,#7fba5a,var(--gold),#7fba5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;text-align:center;line-height:1.1}
 h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:2px}
 .btn{background:transparent;border:1.5px solid currentColor;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:1px;transition:background .15s,transform .1s;color:var(--cream)}
@@ -269,10 +269,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;
     min-height:100vh;padding:8px;gap:5px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box">
 
+    <!-- TOP BAR: menu button + scores -->
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <button onclick="show('s-menu')" title="Menú" style="
+        padding:8px 10px;border-radius:10px;cursor:pointer;flex-shrink:0;
+        background:rgba(0,0,0,.55);border:1.5px solid rgba(180,130,40,.3);
+        color:rgba(220,180,80,.9);font-size:16px;line-height:1">🏠</button>
     <!-- SCORE BAR -->
-    <div style="display:flex;justify-content:space-between;align-items:center;
+    <div style="display:flex;flex:1;justify-content:space-between;align-items:center;
       background:rgba(20,12,0,.72);backdrop-filter:blur(6px);
-      border:1.5px solid rgba(180,130,40,.4);border-radius:12px;padding:7px 12px;flex-shrink:0">
+      border:1.5px solid rgba(180,130,40,.4);border-radius:12px;padding:7px 12px">
       <div class="score-panel" id="score-me"></div>
       <div style="text-align:center;flex:1">
         <div style="display:flex;align-items:center;justify-content:center;gap:6px">
@@ -283,7 +289,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
         <div id="truco-badge" style="font-size:9px;color:#e04040;font-weight:700;font-family:Georgia,serif"></div>
       </div>
       <div class="score-panel" id="score-opp"></div>
-    </div>
+    </div></div><!-- end top bar -->
 
     <!-- IA HAND — top of table -->
     <div style="position:relative;flex-shrink:0">
@@ -356,7 +362,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div><!-- end content -->
 
 <!-- ═══════ VOCES ═══════ -->
-<div id="s-voices" class="screen inner" style="background:#0a1208 !important;gap:10px;overflow-y:auto;">
+<div id="s-voices" class="screen inner" style="background:#070f07;gap:10px;overflow-y:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
     <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:Georgia,serif">✕ Volver</button>
@@ -423,14 +429,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 </div>
 
 <!-- ═══════ GAMEOVER ═══════ -->
-<div id="s-gameover" class="screen inner" style="align-items:center;justify-content:center">
-  <div style="font-size:80px" id="go-emoji">🏆</div>
-  <div id="go-title" style="font-size:38px;font-weight:900;letter-spacing:4px;text-align:center"></div>
-  <div id="go-sub" style="color:var(--muted);font-size:12px;text-align:center"></div>
-  <div id="go-scores" style="font-size:14px;font-weight:700;margin-top:4px;text-align:center"></div>
-  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center">
-    <button class="btn green" onclick="rematch()">🔄 Revancha</button>
-    <button class="btn" onclick="show('s-menu')">🏠 Menú</button>
+<div id="s-gameover" class="screen inner" style="align-items:center;justify-content:center;background:#0a1208 !important;">
+  <div style="font-size:80px;margin-bottom:8px" id="go-emoji">🏆</div>
+  <div id="go-title" style="font-size:38px;font-weight:900;letter-spacing:4px;text-align:center;font-family:Georgia,serif"></div>
+  <div id="go-sub" style="color:rgba(160,200,140,.8);font-size:13px;text-align:center;margin-top:6px;font-family:Georgia,serif"></div>
+  <div id="go-scores" style="font-size:15px;font-weight:700;margin-top:8px;text-align:center;color:rgba(220,200,140,.9);font-family:Georgia,serif"></div>
+  <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;width:100%;max-width:300px">
+    <button onclick="rematch()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+      background:rgba(30,120,50,.7);border:2px solid rgba(80,200,80,.6);
+      color:rgba(180,255,160,.95);font-size:15px;font-weight:700;font-family:Georgia,serif">
+      🔄 Revancha
+    </button>
+    <button onclick="show('s-menu')" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+      background:rgba(20,40,80,.7);border:2px solid rgba(60,120,200,.5);
+      color:rgba(160,200,255,.9);font-size:15px;font-weight:700;font-family:Georgia,serif">
+      🏠 Menú
+    </button>
   </div>
 </div>
 
@@ -1576,8 +1590,19 @@ async function startRecording(key){
       reader.readAsArrayBuffer(blob);
     };
     _mediaRec.start();
+    // Countdown display
+    let secs=4;
+    const btn2=document.getElementById('rec-'+key);
+    const countInterval=setInterval(()=>{
+      secs--;
+      if(btn2) btn2.textContent='⏹ Grabando... '+secs+'s';
+      if(secs<=0){clearInterval(countInterval);}
+    },1000);
     // Auto stop after 3.5s
-    setTimeout(()=>{ if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop(); },3500);
+    setTimeout(()=>{
+      clearInterval(countInterval);
+      if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop();
+    },3500);
   }catch(e){
     alert('Error al acceder al micrófono: '+e.message+'\nAsegurate de dar permiso de micrófono.');
     updateRecBtn(key,'idle');
@@ -1654,6 +1679,23 @@ window.addEventListener('DOMContentLoaded',()=>{
   window.speechSynthesis&&window.speechSynthesis.getVoices();
 });
 
+
+
+// Jugador responde al envido de IA subiendo la apuesta
+function respondAndRaiseEnv(newLevel){
+  if(G.fase!=='p_resp_env'||!G.envPend) return;
+  const falta=MAX_PTS-Math.min(G.pScore,G.oScore);
+  const stakes={envido:2,realenvido:3,faltaenvido:falta};
+  const refuses={envido:1,realenvido:2,faltaenvido:Math.max(1,falta-1)};
+  const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
+  // Previous envido is "accepted" at its level
+  G.envPend={level:newLevel,by:'p1',stake:stakes[newLevel],refuseVal:refuses[newLevel]};
+  addLog('▶ Subís: ¡'+names[newLevel]+'!','#d4890a');
+  sayAndShow('p1','▶ ¡'+names[newLevel]+'!','#d4890a',names[newLevel]);
+  G.fase='ai_turn';
+  renderGame();
+  scheduleAI(1100);
+}
 
 function renderGame(){
   if(!G.p1Hand) return;
@@ -1738,15 +1780,34 @@ function renderActions(){
   // ── Responder envido de IA ─────────────────────────────
   if(fase==='p_resp_env'&&G.envPend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
-    act.style.flexDirection='column';
-    act.style.alignItems='stretch';
     act.innerHTML=`
-      <div style="color:rgba(230,180,80,.95);font-weight:700;font-size:12px;text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-        🤖 IA dice: ¡${names[G.envPend.level]}! &nbsp;• Tus puntos: ${myEnv()}
+      <div style="color:rgba(230,180,80,.95);font-weight:700;font-size:12px;text-align:center;
+        font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
+        🤖 IA dice: ¡${names[G.envPend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b>
       </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="respondEnvido(true)"  style="flex:1;padding:13px 8px;border-radius:10px;cursor:pointer;background:rgba(30,100,30,.75);border:2px solid rgba(80,200,80,.7);color:#a0f0a0;font-size:14px;font-weight:700;font-family:Georgia,serif">✅ Quiero</button>
-        <button onclick="respondEnvido(false)" style="flex:1;padding:13px 8px;border-radius:10px;cursor:pointer;background:rgba(100,20,20,.75);border:2px solid rgba(220,80,60,.7);color:#f0a0a0;font-size:14px;font-weight:700;font-family:Georgia,serif">❌ No quiero</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="respondEnvido(true)"
+          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
+            background:rgba(30,110,30,.75);border:2px solid rgba(80,210,80,.7);
+            color:#a0f8a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
+          ✅ Quiero</button>
+        <button onclick="respondEnvido(false)"
+          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
+            background:rgba(110,20,20,.75);border:2px solid rgba(230,80,60,.7);
+            color:#f8a0a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
+          ❌ No quiero</button>
+        ${G.envPend.level==='envido'?`
+        <button onclick="respondAndRaiseEnv('realenvido')"
+          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
+            background:rgba(130,80,0,.75);border:2px solid rgba(220,150,40,.7);
+            color:rgba(255,210,120,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
+          🎯 Real Env.</button>`:''}
+        ${G.envPend.level!=='faltaenvido'?`
+        <button onclick="respondAndRaiseEnv('faltaenvido')"
+          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
+            background:rgba(100,60,0,.75);border:2px solid rgba(200,130,30,.7);
+            color:rgba(255,200,100,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
+          🎯 Falta Env.</button>`:''}
       </div>`;
     return;
   }
@@ -1772,30 +1833,57 @@ function renderActions(){
 
   // ── Turno del jugador ──────────────────────────────────
   if(fase==='p_turn'){
-    act.style.flexDirection='row';
-    act.style.alignItems='center';
-    act.innerHTML=`<div class="tip">${SEL!==null?'▶ Toca de nuevo para jugar, o elegí otra':'← Tocá una carta de tu mano'}</div>`;
+    // Tip
+    act.innerHTML=`<div class="tip" style="width:100%;text-align:center;color:rgba(180,230,150,.75);font-size:10px;font-family:Georgia,serif;padding:2px 0">
+      ${SEL!==null?'▶ Tocá de nuevo para jugar':'← Tocá una carta de tu mano'}</div>`;
 
-    // Envido — solo en la primera ronda, sin flor
+    // ── BARRA DE ACCIONES PROGRESIVA ──────────────────────
+    // Fila 1: Envido (solo en primera ronda, sin flor)
     if(G.envDisp&&!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
-      act.innerHTML+=`
-        <button class="btn gold sm" onclick="callEnvido('envido')" style="background:rgba(160,100,0,.4);border-color:rgba(210,150,30,.65);color:rgba(255,210,100,.95)">🎯 Envido</button>
-        <button class="btn gold sm" onclick="callEnvido('realenvido')" style="background:rgba(160,100,0,.4);border-color:rgba(210,150,30,.65);color:rgba(255,210,100,.95)">🎯 Real Env.</button>
-        <button class="btn gold sm" onclick="callEnvido('faltaenvido')" style="background:rgba(160,100,0,.4);border-color:rgba(210,150,30,.65);color:rgba(255,210,100,.95)">🎯 Falta</button>`;
+      // Mostrar opciones de envido según lo que ya fue dicho
+      // Si nadie tocó aún → mostrar Envido, Real Envido, Falta Envido
+      const envBtns=[];
+      envBtns.push({label:'🎯 Envido',fn:"callEnvido('envido')"});
+      envBtns.push({label:'🎯 Real Envido',fn:"callEnvido('realenvido')"});
+      envBtns.push({label:'🎯 Falta Envido',fn:"callEnvido('faltaenvido')"});
+      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;flex-wrap:wrap;justify-content:center">
+        ${envBtns.map(b=>`<button onclick="${b.fn}"
+          style="flex:1;min-width:80px;padding:8px 4px;border-radius:8px;cursor:pointer;
+            background:rgba(150,90,0,.5);border:1.5px solid rgba(220,160,40,.6);
+            color:rgba(255,215,100,.95);font-size:11px;font-weight:700;font-family:Georgia,serif">
+          ${b.label}</button>`).join('')}
+      </div>`;
     }
 
-    // Truco — inicial o subida
-    if(!G.trucoDone&&!G.trucoPend&&!G.trucoAcep){
-      act.innerHTML+=`<button class="btn red sm pulse" onclick="callTruco()">⚔️ Truco</button>`;
+    // Fila 2: Truco / Re-Truco / Vale Cuatro — progresivo
+    // Solo UN botón a la vez, en el orden correcto
+    let trucoBtns=[];
+    if(!G.trucoDone&&!G.trucoPend){
+      if(!G.trucoAcep){
+        // Nadie cantó truco aún → solo "Truco"
+        trucoBtns.push({label:'⚔️ Truco',fn:'callTruco()',color:'rgba(180,40,20,.55)',border:'rgba(240,80,60,.7)',text:'rgba(255,150,130,.95)'});
+      } else {
+        // Truco fue aceptado — mostrar solo el siguiente nivel disponible
+        const _canR=playerCanRaiseTruco();
+        if(_canR==='retruco'){
+          trucoBtns.push({label:'⚔️ Re-Truco',fn:"playerRaiseTruco('retruco')",color:'rgba(160,30,100,.55)',border:'rgba(230,80,180,.7)',text:'rgba(255,160,220,.95)'});
+        } else if(_canR==='vale4'){
+          trucoBtns.push({label:'⚔️ Vale Cuatro',fn:"playerRaiseTruco('vale4')",color:'rgba(120,20,140,.55)',border:'rgba(200,80,240,.7)',text:'rgba(220,160,255,.95)'});
+        }
+      }
     }
-    // ¿Puede subir? (Re-Truco / Vale Cuatro) — si la IA cantó el último nivel
-    const _canRaise=playerCanRaiseTruco();
-    if(_canRaise){
-      const _nm={retruco:'⬆️ Re-Truco',vale4:'⬆️ Vale Cuatro'}[_canRaise];
-      act.innerHTML+=`<button class="btn red sm pulse" onclick="playerRaiseTruco('${_canRaise}')" style="background:rgba(140,20,100,.45);border-color:rgba(220,80,180,.7);color:rgba(255,160,220,.95)">${_nm}</button>`;
-    }
+    // Al mazo siempre disponible
+    trucoBtns.push({label:'🃏 Al mazo',fn:'mazo()',color:'rgba(40,30,10,.5)',border:'rgba(140,110,40,.4)',text:'rgba(200,180,120,.7)'});
 
-    act.innerHTML+=`<button class="btn sm" style="color:#5a5a4a;border-color:#3a3a2a" onclick="mazo()">🃏 Al mazo</button>`;
+    if(trucoBtns.length){
+      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;justify-content:center;flex-wrap:wrap">
+        ${trucoBtns.map(b=>`<button onclick="${b.fn}"
+          style="flex:1;min-width:80px;padding:9px 4px;border-radius:8px;cursor:pointer;
+            background:${b.color};border:1.5px solid ${b.border};
+            color:${b.text};font-size:12px;font-weight:700;font-family:Georgia,serif">
+          ${b.label}</button>`).join('')}
+      </div>`;
+    }
   }
 }
 
@@ -1821,6 +1909,9 @@ function endGame(){
   document.getElementById('go-title').style.color=won?'#7fba5a':'#c0392b';
   document.getElementById('go-sub').textContent=won?'¡La IA no te pudo ganar!':'La IA te ganó. ¿Revancha?';
   document.getElementById('go-scores').textContent='Vos: '+G.pScore+' — IA: '+G.oScore;
+  // Set background based on result
+  const el=document.getElementById('s-gameover');
+  if(el) el.style.background=won?'#071a0a':'#1a0707';
   show('s-gameover');
 }
 
@@ -1980,7 +2071,13 @@ function cancelRoom(){
 ═══════════════════════════════════════════ */
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.classList.add('on');
+  // Force backgrounds for screens that need it
+  const bgs={'s-voices':'#070f07','s-rules':'#070f07','s-setup':'#070f07',
+              's-online':'#070f07','s-gameover':null};
+  if(bgs[id]!==undefined&&bgs[id]) el.style.background=bgs[id];
   if(id==='s-voices'){
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
