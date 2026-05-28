@@ -1173,7 +1173,8 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    // Jugador sube → solo si IA fue quien llamó el nivel actual
+    // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
+    if (by === 'p1') return; // el jugador gritó este nivel, no puede subirlo él mismo
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
     const stakes2 = { retruco: 3, vale4: 4 };
@@ -1246,6 +1247,7 @@ function aiActuar() {
   if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && avg >= 9) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoCalledBy = 'p2';
+    G.trucoHistory = [{level:'truco', by:'p2'}]; // Uruguayo: registrar para respetar alternancia
     sayAndShow('p2','🤖 ¡Truco!','#e74c3c','Truco');
     G.fase = 'p_resp_truco';
     renderGame();
@@ -1306,9 +1308,10 @@ function aiDecideEnvido() {
 
 function aiDecideTruco() {
   if (!G.trucoPend) return;
-  const { level, stake, refuseVal } = G.trucoPend;
+  const { level, stake, refuseVal, by } = G.trucoPend;
   const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
-  const canRaise = level !== 'vale4';
+  // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
+  const canRaise = level !== 'vale4' && by !== 'p2';
   const willRaise = canRaise && avg >= 12;
   const willAccept = !willRaise && avg >= 5;
 
@@ -1440,10 +1443,12 @@ function playerCanRaiseTruco(){
   const hist=G.trucoHistory||[];
   if(!hist.length) return null;
   const last=hist[hist.length-1];
-  // Can raise if: AI was last to call OR AI accepted (last entry has by=p2)
+  // Reglamento uruguayo: solo puede subir quien NO fue el último en gritar
   if(last.by!=='p2') return null;
-  // What's the current level already in play?
-  const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':G.trucoStake===4?'vale4':'truco';
+  // Determinar nivel actual en juego
+  const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':'vale4';
+  // Si el jugador gritó truco originalmente, solo puede retrucar (no vale4 directo)
+  // Esto se respeta automáticamente porque currentLevel será 'truco' → next='retruco'
   const next={truco:'retruco',retruco:'vale4'}[currentLevel];
   return next||null;
 }
@@ -1825,7 +1830,8 @@ function renderActions(){
   // ── Responder truco de IA ──────────────────────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const canRaise=G.trucoPend.level!=='vale4';
+    // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
+    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by!=='p1';
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
     act.style.flexDirection='column';
     act.style.alignItems='stretch';
