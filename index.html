@@ -84,6 +84,15 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 #s-game{background:radial-gradient(ellipse at 50% 40%,#1e5c1e 0%,#0f3a0f 70%,#0a2a0a 100%)!important}
 .mesa{background:#15401588!important;border:1px solid #2a6a2a88!important}
 
+/* ── CARTA VOLANDO ── */
+.card-flying{
+  position:fixed;pointer-events:none;z-index:9999;
+  transition:left .38s cubic-bezier(.22,.8,.3,1),
+             top  .38s cubic-bezier(.22,.8,.3,1),
+             transform .38s cubic-bezier(.22,.8,.3,1),
+             opacity .38s ease;
+}
+
 /* ── BURBUJAS ── */
 .bubble{
   position:absolute;left:50%;
@@ -1092,7 +1101,9 @@ function playCard(idx) {
   // Si la mesa del rival está vacía, el jugador está liderando este round
   if (!G.mesa.p2) G.roundLeader = 'p1';
   if (G.mesa.p2) {
-    doResolveRound();
+    // Jugador respondió a la IA: mostrar ambas cartas 1.5s antes de resolver
+    renderGame();
+    setTimeout(() => doResolveRound(), 1500);
   } else {
     G.fase = 'ai_turn';
     renderGame();
@@ -1173,8 +1184,7 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
-    if (by === 'p1') return; // el jugador gritó este nivel, no puede subirlo él mismo
+    // Jugador sube → solo si IA fue quien llamó el nivel actual
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
     const stakes2 = { retruco: 3, vale4: 4 };
@@ -1247,7 +1257,6 @@ function aiActuar() {
   if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && avg >= 9) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoCalledBy = 'p2';
-    G.trucoHistory = [{level:'truco', by:'p2'}]; // Uruguayo: registrar para respetar alternancia
     sayAndShow('p2','🤖 ¡Truco!','#e74c3c','Truco');
     G.fase = 'p_resp_truco';
     renderGame();
@@ -1273,13 +1282,22 @@ function aiActuar() {
   G.p2Played=[...G.p2Played,chosen];
   G.mesa={...G.mesa,p2:chosen};
   addLog('🤖 IA juega '+cn(chosen),'#a78bca');
-  if(!mc) G.roundLeader='p2'; // IA lideró este round
-  if(G.mesa.p1){
-    doResolveRound();
-  } else {
-    G.fase='p_turn';
-    renderGame();
-  }
+  if(!mc) G.roundLeader='p2';
+
+  // Animar carta de IA volando a la mesa
+  animateAIPlay(() => {
+    // Mostrar la carta de la IA en la mesa (face-up) antes de resolver
+    if(G.mesa.p1){
+      // Ambos jugaron: bloquear input y mostrar cartas 1.5s antes de resolver
+      G.fase = 'ai_turn'; // bloquea clicks del jugador durante la pausa
+      renderGame();
+      setTimeout(() => doResolveRound(), 1500);
+    } else {
+      // IA lideró: turno del jugador, la carta ya queda visible en mesa
+      G.fase='p_turn';
+      renderGame();
+    }
+  });
 }
 
 function aiDecideEnvido() {
@@ -1308,10 +1326,9 @@ function aiDecideEnvido() {
 
 function aiDecideTruco() {
   if (!G.trucoPend) return;
-  const { level, stake, refuseVal, by } = G.trucoPend;
+  const { level, stake, refuseVal } = G.trucoPend;
   const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
-  // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
-  const canRaise = level !== 'vale4' && by !== 'p2';
+  const canRaise = level !== 'vale4';
   const willRaise = canRaise && avg >= 12;
   const willAccept = !willRaise && avg >= 5;
 
@@ -1385,7 +1402,7 @@ function fanHandHTML(cards,{disabled=false,selIdx=null,isMuestraFn=null}={}){
     const isM=isMuestraFn?isMuestraFn(card.v,card.s):false;
     const extraY=isSel?-18:0;
     const xPos=startX+i*spacing;
-    h+=`<div style="position:absolute;bottom:0;left:50%;
+    h+=`<div id="hand-card-${i}" style="position:absolute;bottom:0;left:50%;
       transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty+extraY}px) rotate(${cfg.r}deg);
       transform-origin:center bottom;z-index:${isSel?10:i+1};transition:transform .18s;
       cursor:${disabled?'default':'pointer'}" onclick="${disabled?'':('handleCardClick('+i+')')}">
@@ -1443,12 +1460,10 @@ function playerCanRaiseTruco(){
   const hist=G.trucoHistory||[];
   if(!hist.length) return null;
   const last=hist[hist.length-1];
-  // Reglamento uruguayo: solo puede subir quien NO fue el último en gritar
+  // Can raise if: AI was last to call OR AI accepted (last entry has by=p2)
   if(last.by!=='p2') return null;
-  // Determinar nivel actual en juego
-  const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':'vale4';
-  // Si el jugador gritó truco originalmente, solo puede retrucar (no vale4 directo)
-  // Esto se respeta automáticamente porque currentLevel será 'truco' → next='retruco'
+  // What's the current level already in play?
+  const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':G.trucoStake===4?'vale4':'truco';
   const next={truco:'retruco',retruco:'vale4'}[currentLevel];
   return next||null;
 }
@@ -1830,8 +1845,7 @@ function renderActions(){
   // ── Responder truco de IA ──────────────────────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    // Reglamento uruguayo: solo puede subir quien NO gritó el nivel actual
-    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by!=='p1';
+    const canRaise=G.trucoPend.level!=='vale4';
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
     act.style.flexDirection='column';
     act.style.alignItems='stretch';
@@ -1903,10 +1917,103 @@ function renderActions(){
   }
 }
 
+/* ─── ANIMACIÓN: carta vuela desde la mano hasta la mesa ─────────────────── */
+function animateCardPlay(idx, callback) {
+  const cardEl = document.getElementById('hand-card-' + idx);
+  const mesaTarget = document.getElementById('mesa-me');
+  if (!cardEl || !mesaTarget) { callback(); return; }
+
+  const cardRect  = cardEl.getBoundingClientRect();
+  const mesaRect  = mesaTarget.getBoundingClientRect();
+  const rot = Math.floor(Math.random() * 22) - 11; // -11° a +11°
+
+  // Crear clon volante con la misma apariencia
+  const fly = document.createElement('div');
+  fly.className = 'card-flying';
+  fly.innerHTML = cardEl.innerHTML;
+  fly.style.left    = cardRect.left + 'px';
+  fly.style.top     = cardRect.top  + 'px';
+  fly.style.width   = cardRect.width  + 'px';
+  fly.style.height  = cardRect.height + 'px';
+  fly.style.transform = `rotate(0deg) scale(1)`;
+  document.body.appendChild(fly);
+
+  // Ocultar la carta original
+  cardEl.style.opacity = '0';
+  cardEl.style.pointerEvents = 'none';
+
+  // Destino: centro de mesa-me
+  const destLeft = mesaRect.left + (mesaRect.width  - cardRect.width)  / 2;
+  const destTop  = mesaRect.top  + (mesaRect.height - cardRect.height) / 2;
+
+  // Forzar reflow para que la transición CSS arranque
+  fly.getBoundingClientRect();
+
+  // Disparar vuelo
+  fly.style.left      = destLeft + 'px';
+  fly.style.top       = destTop  + 'px';
+  fly.style.transform = `rotate(${rot}deg) scale(0.93)`;
+
+  setTimeout(() => {
+    fly.remove();
+    callback();
+  }, 400);
+}
+
+/* ─── ANIMACIÓN: carta de IA vuela desde el abanico rival hasta mesa-opp ─── */
+function animateAIPlay(callback) {
+  const oppHand  = document.getElementById('opp-hand');
+  const mesaTarget = document.getElementById('mesa-opp');
+  if (!oppHand || !mesaTarget) { callback(); return; }
+
+  // Tomar UNA carta individual: oppHand > wrapper > carta
+  const wrapper = oppHand.querySelector(':scope > div');
+  if (!wrapper) { callback(); return; }
+  const innerCards = Array.from(wrapper.querySelectorAll(':scope > div'));
+  if (!innerCards.length) { callback(); return; }
+  // Carta del medio del abanico para verse natural
+  const cardEl = innerCards[Math.floor(innerCards.length / 2)];
+
+  const cardRect = cardEl.getBoundingClientRect();
+  const mesaRect = mesaTarget.getBoundingClientRect();
+  const rot = Math.floor(Math.random() * 22) - 11;
+
+  const fly = document.createElement('div');
+  fly.className = 'card-flying';
+  fly.innerHTML = cardEl.innerHTML;
+  fly.style.left   = cardRect.left + 'px';
+  fly.style.top    = cardRect.top  + 'px';
+  fly.style.width  = cardRect.width  + 'px';
+  fly.style.height = cardRect.height + 'px';
+  fly.style.transform = `rotate(0deg) scale(1)`;
+  document.body.appendChild(fly);
+
+  cardEl.style.opacity = '0';
+
+  const destLeft = mesaRect.left + (mesaRect.width  - cardRect.width)  / 2;
+  const destTop  = mesaRect.top  + (mesaRect.height - cardRect.height) / 2;
+
+  fly.getBoundingClientRect();
+
+  fly.style.left      = destLeft + 'px';
+  fly.style.top       = destTop  + 'px';
+  fly.style.transform = `rotate(${rot}deg) scale(0.93)`;
+
+  setTimeout(() => {
+    fly.remove();
+    callback();
+  }, 400);
+}
+
 function handleCardClick(i){
   if(G.fase!=='p_turn'||G.handDone) return;
-  if(SEL===i){playCard(i);}
-  else{SEL=i;renderGame();}
+  if(SEL===i){
+    // Segunda vez: animar y jugar
+    animateCardPlay(i, () => playCard(i));
+  } else {
+    SEL=i;
+    renderGame();
+  }
 }
 
 /* ═══════════════════════════════════════════
