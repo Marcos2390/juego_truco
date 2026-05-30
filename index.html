@@ -82,44 +82,51 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   transition:transform .15s}
 
 /* ════════════════════════════════
-   DESKTOP: todo el juego centrado a 520px
-   Los laterales quedan en negro
+   DESKTOP: centrar contenido, lados negros
    ════════════════════════════════ */
 @media (min-width:540px){
 
-  /* Todas las pantallas: centrar contenido a 520px */
-  .screen.on {
-    background:#000 !important;
-    align-items:center;
-  }
-  .screen.on > *:not(.bg-img):not(.bg-img-game) {
-    max-width:520px;
-    width:100%;
-  }
-
-  /* Menú desktop: imagen centrada a 520px con cover */
+  /* s-menu: la imagen ya está position:absolute dentro del screen
+     Solo limitamos el ancho del screen para que no se vea con zoom */
   #s-menu{
     background:#000 !important;
+    justify-content:center !important;
+    align-items:center !important;
+  }
+  /* Wrapper de imagen: centrar a 520px */
+  #s-menu::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:#000;
+    z-index:-1;
   }
   #s-menu .bg-img{
-    position:fixed !important;
-    top:0 !important; bottom:0 !important;
+    inset:unset !important;
+    position:absolute !important;
+    top:0 !important;
+    bottom:0 !important;
     left:50% !important;
-    transform:translateX(-50%) !important;
     width:520px !important;
     height:100% !important;
+    transform:translateX(-50%) !important;
     object-fit:cover !important;
     object-position:center 15% !important;
   }
+  /* El gradiente y botones también se centran */
+  #s-menu > div[style*="position:absolute;bottom"]{
+    inset:unset !important;
+    position:absolute !important;
+    bottom:0 !important;
+    left:50% !important;
+    width:520px !important;
+    transform:translateX(-50%) !important;
+    height:52% !important;
+  }
 
-  /* Juego: limitar a 520px con fondo oscuro lateral */
+  /* s-game: centrar a 520px */
   #s-game{
     background:#000 !important;
-    align-items:center;
-  }
-  #s-game > *{
-    max-width:520px;
-    width:100%;
   }
   #s-game .bg-img-game{
     position:fixed !important;
@@ -133,7 +140,6 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     z-index:0 !important;
   }
 }
-
 /* ── PANTALLA VOCES: fondo negro absoluto ── */
 #s-voices{
   background:#070f07 !important;
