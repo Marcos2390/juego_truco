@@ -15,7 +15,7 @@ body{position:relative;}
   --gold:#d4a017;--cream:#e0d5b0;--green:#4a9a4a;
   --red:#c0392b;--blue:#2980b9;--muted:#3a6a3a;
 }
-body{font-family:Georgia,'Times New Roman',serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
+body{font-family:Georgia,'Times New Roman',serif;background:#000;color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
 .screen{display:none;position:fixed;inset:0;overflow-y:auto;flex-direction:column}
 .screen.on{display:flex!important;flex-direction:column}
 .screen.inner{padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box;background:#070f07;overflow-y:auto;}
@@ -81,29 +81,57 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 .fan-wrap .card-slot{position:absolute;bottom:0;transform-origin:center bottom;
   transition:transform .15s}
 
-/* ── FONDO MENU: sin zoom en desktop ── */
+/* ════════════════════════════════
+   DESKTOP: todo el juego centrado a 520px
+   Los laterales quedan en negro
+   ════════════════════════════════ */
 @media (min-width:540px){
-  /* Centrar y limitar imagen de fondo del menú */
-  /* En desktop la imagen se mantiene contain centrada */
+
+  /* Todas las pantallas: centrar contenido a 520px */
+  .screen.on {
+    background:#000 !important;
+    align-items:center;
+  }
+  .screen.on > *:not(.bg-img):not(.bg-img-game) {
+    max-width:520px;
+    width:100%;
+  }
+
+  /* Menú: imagen contain centrada */
+  #s-menu{
+    background:#000 !important;
+    justify-content:center !important;
+  }
   #s-menu .bg-img{
+    position:absolute !important;
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
     object-fit:contain !important;
     object-position:center 20% !important;
   }
-  #s-menu{ background:#000 !important; }
 
-  /* Juego: limitar imagen de mesa */
+  /* Juego: limitar a 520px con fondo oscuro lateral */
+  #s-game{
+    background:#000 !important;
+    align-items:center;
+  }
+  #s-game > *{
+    max-width:520px;
+    width:100%;
+  }
   #s-game .bg-img-game{
-    position:absolute !important;
-    inset:unset !important;
-    top:0; bottom:0;
+    position:fixed !important;
+    top:0 !important; bottom:0 !important;
     left:50% !important;
     transform:translateX(-50%) !important;
     width:520px !important;
     height:100% !important;
     object-fit:cover !important;
     object-position:center 70% !important;
+    z-index:0 !important;
   }
-  #s-game{ background:#0a1a0a !important; }
+}
 
 /* ── PANTALLA VOCES: fondo negro absoluto ── */
 #s-voices{
@@ -114,10 +142,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 #s-voices > div {
   background:#070f07 !important;
 }
-}
 
 /* ── MESA VERDE ── */
-#s-game{background:radial-gradient(ellipse at 50% 40%,#1e5c1e 0%,#0f3a0f 70%,#0a2a0a 100%)!important}
+/* s-game background set via JS and inline */
 .mesa{background:#15401588!important;border:1px solid #2a6a2a88!important}
 
 /* ── CARTA VOLANDO ── */
@@ -294,7 +321,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 </div>
 
 <!-- ═══════ GAME ═══════ -->
-<div id="s-game" class="screen" style="background:#1a0f05;overflow-y:auto;">
+<div id="s-game" class="screen" style="background:#000;overflow-y:auto;">
 
   <!-- TABLE BACKGROUND — zoomed out, full table visible -->
   <div style="position:fixed;inset:0;z-index:0;pointer-events:none">
