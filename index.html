@@ -407,102 +407,68 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div><!-- end content -->
 
 <!-- ═══════ VOCES ═══════ -->
-<div id="s-voices" class="screen" style="display:none;flex-direction:column;background:#070f07;overflow-y:auto;align-items:stretch;">
-  <!-- Full-screen dark backdrop to prevent green body gradient showing through -->
-  <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:8px;max-width:520px;width:100%;margin:0 auto;box-sizing:border-box;min-height:100vh;background:#070f07;">
+<div id="s-voices" style="display:none;position:fixed;inset:0;background:#070f07;flex-direction:column;overflow-y:auto;z-index:10;">
+  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100%;box-sizing:border-box;">
 
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
-    <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:Georgia,serif">✕ Volver</button>
-  </div>
-
-  <!-- Player name -->
-  <div style="background:rgba(20,40,20,.8);border:1px solid rgba(100,160,80,.3);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
-    <div style="color:rgba(220,200,140,.9);font-size:11px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
-    <div style="color:rgba(160,200,140,.7);font-size:10px;font-family:Georgia,serif">Cada jugador puede grabar sus propias voces con un nombre único</div>
-    <div style="display:flex;gap:8px">
-      <input id="inp-playername" type="text" placeholder="Tu nombre (ej: Marcos)"
-        style="flex:1;background:#0a140a;border:1.5px solid rgba(80,160,60,.4);border-radius:8px;
-          color:rgba(220,230,200,.95);font-family:Georgia,serif;font-size:13px;padding:9px 12px;outline:none"/>
-      <button onclick="savePlayerName()"
-        style="padding:9px 16px;border-radius:8px;cursor:pointer;
-          background:rgba(30,120,50,.6);border:1.5px solid rgba(80,200,80,.5);
-          color:rgba(180,255,160,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
-        💾 Guardar
-      </button>
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px">
+      <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
+      <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px">✕ Volver</button>
     </div>
-    <div id="voice-name-msg" style="font-size:10px;color:rgba(160,220,130,.8);font-family:monospace"></div>
-  </div>
 
-  <!-- Instructions -->
-  <div style="background:rgba(10,30,50,.7);border:1px solid rgba(60,100,160,.3);border-radius:10px;padding:10px 12px">
-    <div style="color:rgba(160,200,255,.9);font-size:11px;font-family:Georgia,serif;line-height:1.7">
-      <b>Cómo funciona:</b><br>
-      1. Escribí tu nombre y guardalo<br>
-      2. Tocá 🎙 Grabar en cualquier canto<br>
-      3. Decí el canto en voz alta (máx 4 seg)<br>
-      4. El juego usará TU voz automáticamente<br>
-      5. Tocá ▶ para escuchar · 🗑 para borrar<br>
-      <span style="color:rgba(220,180,80,.8)">⚠️ El navegador pedirá permiso de micrófono — aceptalo</span>
+    <!-- Nombre jugador -->
+    <div style="background:rgba(20,40,20,.9);border:1px solid rgba(100,160,80,.4);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="color:rgba(220,200,140,.95);font-size:12px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
+      <div style="color:rgba(160,200,140,.75);font-size:11px;font-family:Georgia,serif">Cada jugador puede grabar sus propias voces con un nombre único</div>
+      <div style="display:flex;gap:8px">
+        <input id="inp-playername" type="text" placeholder="Tu nombre (ej: Marcos)"
+          style="flex:1;background:#0a140a;border:1.5px solid rgba(80,160,60,.5);border-radius:8px;
+            color:#dce8c8;font-family:Georgia,serif;font-size:13px;padding:9px 12px;outline:none;box-sizing:border-box"/>
+        <button onclick="savePlayerName()"
+          style="padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;
+            background:rgba(30,120,50,.7);border:1.5px solid rgba(80,200,80,.6);
+            color:#b8ffa8;font-size:12px;font-weight:700;font-family:Georgia,serif">
+          💾 Guardar
+        </button>
+      </div>
+      <div id="voice-name-msg" style="font-size:10px;color:rgba(160,220,130,.9);font-family:monospace;min-height:14px"></div>
     </div>
-  </div>
 
-  <!-- Supabase SQL info panel -->
-  <details style="background:rgba(10,20,40,.8);border:1px solid rgba(60,100,180,.3);border-radius:10px;padding:10px 12px">
-    <summary style="color:rgba(140,180,255,.85);font-size:11px;font-family:Georgia,serif;cursor:pointer;font-weight:700">
-      🗄 SQL para Supabase (expandir si usás audio en la nube)
-    </summary>
-    <div style="margin-top:8px;color:rgba(120,160,120,.8);font-size:10px;font-family:monospace;line-height:1.6;white-space:pre-wrap;overflow-x:auto">-- 1. Crear bucket de storage para audios
--- Ir a: Storage → New bucket
--- Nombre: voces-truco
--- Public: SI
-
--- 2. Crear tabla de voces
-CREATE TABLE IF NOT EXISTS voice_recordings (
-  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  player_name text NOT NULL,
-  voice_key   text NOT NULL,
-  audio_url   text NOT NULL,
-  created_at  timestamptz DEFAULT now(),
-  UNIQUE(player_name, voice_key)
-);
-
--- 3. Habilitar RLS
-ALTER TABLE voice_recordings ENABLE ROW LEVEL SECURITY;
-
--- 4. Política: cualquiera puede leer/escribir (multijugador)
-CREATE POLICY "public_access" ON voice_recordings
-  FOR ALL USING (true) WITH CHECK (true);
-    </div>
-  </details>
-
-  <!-- Voice list -->
-  <div style="background:rgba(10,20,10,.8);border:1px solid rgba(80,140,60,.25);border-radius:10px;padding:10px 12px;flex:1;overflow-y:auto">
-    <div style="color:rgba(180,220,140,.8);font-size:11px;font-family:Georgia,serif;margin-bottom:8px;font-weight:700">
-      🎤 Grabá tus cantos:
-    </div>
-    <div id="voice-list">
-      <div style="color:rgba(140,180,120,.5);font-size:11px;font-family:Georgia,serif;text-align:center;padding:20px">
-        Cargando...
+    <!-- Instrucciones -->
+    <div style="background:rgba(10,30,50,.85);border:1px solid rgba(60,100,160,.4);border-radius:10px;padding:10px 12px">
+      <div style="color:rgba(160,200,255,.95);font-size:11px;font-family:Georgia,serif;line-height:1.8">
+        <b>Cómo grabar:</b><br>
+        1. Escribí tu nombre arriba y guardalo<br>
+        2. Tocá <b>🎙 Grabar</b> en el canto que querés<br>
+        3. Decí el canto en voz alta (graba 3.5 seg)<br>
+        4. El juego usará <b>tu voz</b> automáticamente<br>
+        <span style="color:rgba(255,200,80,.9)">⚠️ El navegador pedirá permiso de micrófono — aceptalo</span>
       </div>
     </div>
-  </div>
 
-  <!-- Buttons -->
-  <div style="display:flex;gap:8px;padding-bottom:12px">
-    <button onclick="renderVoiceList()"
-      style="flex:1;padding:10px;border-radius:10px;cursor:pointer;
-        background:rgba(20,60,100,.6);border:1.5px solid rgba(60,120,200,.4);
-        color:rgba(160,200,255,.9);font-size:12px;font-weight:700;font-family:Georgia,serif">
-      🔄 Actualizar lista
-    </button>
-    <button onclick="show('s-menu')"
-      style="flex:1;padding:10px;border-radius:10px;cursor:pointer;
-        background:rgba(30,80,30,.6);border:1.5px solid rgba(80,180,60,.4);
-        color:rgba(180,240,150,.9);font-size:13px;font-weight:700;font-family:Georgia,serif">
-      ← Volver al menú
-    </button>
-  </div>
+    <!-- Lista de cantos -->
+    <div style="background:rgba(10,20,10,.9);border:1px solid rgba(80,140,60,.3);border-radius:10px;padding:10px 12px;flex:1">
+      <div style="color:rgba(180,220,140,.9);font-size:12px;font-family:Georgia,serif;margin-bottom:10px;font-weight:700">
+        🎤 Grabá tus cantos:
+      </div>
+      <div id="voice-list" style="display:flex;flex-direction:column;gap:2px"></div>
+    </div>
+
+    <!-- Botones inferiores -->
+    <div style="display:flex;gap:8px;padding-bottom:16px">
+      <button onclick="renderVoiceList()"
+        style="flex:1;padding:11px;border-radius:10px;cursor:pointer;
+          background:rgba(20,60,100,.7);border:1.5px solid rgba(60,120,200,.5);
+          color:rgba(160,200,255,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
+        🔄 Actualizar
+      </button>
+      <button onclick="show('s-menu')"
+        style="flex:1;padding:11px;border-radius:10px;cursor:pointer;
+          background:rgba(30,80,30,.7);border:1.5px solid rgba(80,180,60,.5);
+          color:rgba(180,240,150,.95);font-size:13px;font-weight:700;font-family:Georgia,serif">
+        ← Menú
+      </button>
+    </div>
 
   </div><!-- /inner -->
 </div>
@@ -2273,28 +2239,38 @@ function cancelRoom(){
    UTILS
 ═══════════════════════════════════════════ */
 function show(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  // Ocultar todas las pantallas .screen
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('on');
+    s.style.display='none';
+  });
+  // Ocultar s-voices separado (ya no tiene clase .screen)
+  const sv=document.getElementById('s-voices');
+  if(sv) sv.style.display='none';
+
   const el=document.getElementById(id);
-  if(!el){ console.error('show(): elemento no encontrado:',id); return; }
-  el.classList.add('on');
-  // Forzar display:flex siempre, sin depender del CSS
-  el.style.display='flex';
-  el.style.flexDirection='column';
-  // Forzar fondos oscuros para evitar que el body verde se vea
-  const bgs={
-    's-voices':'#070f07','s-rules':'#0a1208','s-setup':'#070f07',
-    's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000'
-  };
-  if(bgs[id]) el.style.background=bgs[id];
+  if(!el){ console.error('show(): no encontrado:',id); return; }
+
   if(id==='s-voices'){
+    // s-voices usa position:fixed propio
+    el.style.display='flex';
+    el.style.flexDirection='column';
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    // Esperar render del DOM antes de poblar la lista
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        try{ renderVoiceList(); }catch(e){ console.error('renderVoiceList:',e); }
-      });
-    });
+    // Poblar lista después de que el browser pinte el elemento
+    setTimeout(()=>{
+      try{ renderVoiceList(); }
+      catch(e){ console.error('renderVoiceList:',e); }
+    },50);
+  } else {
+    el.classList.add('on');
+    el.style.display='flex';
+    el.style.flexDirection='column';
+    const bgs={
+      's-rules':'#0a1208','s-setup':'#070f07',
+      's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000'
+    };
+    if(bgs[id]) el.style.background=bgs[id];
   }
 }
 
