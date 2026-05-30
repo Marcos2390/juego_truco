@@ -17,8 +17,9 @@ body{position:relative;}
 }
 body{font-family:Georgia,'Times New Roman',serif;background:radial-gradient(ellipse at 50% 30%,var(--bg2) 0%,var(--bg) 100%);color:var(--cream);min-height:100vh;overflow-x:hidden;user-select:none}
 .screen{display:none;position:fixed;inset:0;overflow-y:auto;flex-direction:column}
-.screen.on{display:flex}
-.screen.on.inner{padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box;background:#070f07;overflow-y:auto;}
+.screen.on{display:flex!important;flex-direction:column}
+.screen.inner{padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box;background:#070f07;overflow-y:auto;}
+.screen.on.inner{display:flex!important;flex-direction:column;padding:8px;gap:7px;max-width:520px;margin:0 auto;box-sizing:border-box;overflow-y:auto;}
 h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,#7fba5a,var(--gold),#7fba5a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;text-align:center;line-height:1.1}
 h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:2px}
 .btn{background:transparent;border:1.5px solid currentColor;border-radius:8px;padding:10px 20px;cursor:pointer;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:1px;transition:background .15s,transform .1s;color:var(--cream)}
@@ -407,6 +408,35 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       <span style="color:rgba(220,180,80,.8)">Cada jugador guarda sus voces por separado según su nombre</span>
     </div>
   </div>
+
+  <!-- Supabase SQL info panel -->
+  <details style="background:rgba(10,20,40,.8);border:1px solid rgba(60,100,180,.3);border-radius:10px;padding:10px 12px">
+    <summary style="color:rgba(140,180,255,.85);font-size:11px;font-family:Georgia,serif;cursor:pointer;font-weight:700">
+      🗄 SQL para Supabase (expandir si usás audio en la nube)
+    </summary>
+    <div style="margin-top:8px;color:rgba(120,160,120,.8);font-size:10px;font-family:monospace;line-height:1.6;white-space:pre-wrap;overflow-x:auto">-- 1. Crear bucket de storage para audios
+-- Ir a: Storage → New bucket
+-- Nombre: voces-truco
+-- Public: SI
+
+-- 2. Crear tabla de voces
+CREATE TABLE IF NOT EXISTS voice_recordings (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  player_name text NOT NULL,
+  voice_key   text NOT NULL,
+  audio_url   text NOT NULL,
+  created_at  timestamptz DEFAULT now(),
+  UNIQUE(player_name, voice_key)
+);
+
+-- 3. Habilitar RLS
+ALTER TABLE voice_recordings ENABLE ROW LEVEL SECURITY;
+
+-- 4. Política: cualquiera puede leer/escribir (multijugador)
+CREATE POLICY "public_access" ON voice_recordings
+  FOR ALL USING (true) WITH CHECK (true);
+    </div>
+  </details>
 
   <!-- Voice list -->
   <div style="background:rgba(10,20,10,.8);border:1px solid rgba(80,140,60,.25);border-radius:10px;padding:10px 12px;flex:1;overflow-y:auto">
@@ -1675,29 +1705,39 @@ function savePlayerName(){
 }
 
 function renderVoiceList(){
-  const el=document.getElementById('voice-list');
-  if(!el) return;
-  el.innerHTML=VOICE_CALLS.map(({key,label})=>{
-    const has=!!_voiceURLs[key];
-    return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)">
-      <span style="flex:1;font-size:13px;color:rgba(230,210,170,.95);font-family:Georgia,serif">${label}</span>
-      <button id="rec-${key}" onclick="startRecording('${key}')"
-        style="padding:7px 11px;border-radius:8px;cursor:pointer;
-          border:1.5px solid rgba(80,200,80,.5);background:rgba(30,100,30,.5);
-          color:rgba(180,250,160,.95);font-size:12px;font-weight:700;white-space:nowrap">
-        🎙 Grabar
-      </button>
-      ${has?`
-      <button onclick="testVoice('${key}')"
-        style="padding:7px 10px;border-radius:8px;cursor:pointer;
-          border:1.5px solid rgba(60,120,220,.5);background:rgba(20,60,160,.5);
-          color:rgba(160,210,255,.95);font-size:13px">▶</button>
-      <button onclick="deleteVoice('${key}')"
-        style="padding:7px 10px;border-radius:8px;cursor:pointer;
-          border:1.5px solid rgba(200,50,50,.4);background:rgba(120,20,20,.5);
-          color:rgba(255,150,130,.95);font-size:13px">🗑</button>`:''}
-    </div>`;
-  }).join('');
+  try{
+    const el=document.getElementById('voice-list');
+    if(!el){ console.warn('renderVoiceList: #voice-list no encontrado'); return; }
+    if(!Array.isArray(VOICE_CALLS)||VOICE_CALLS.length===0){
+      el.innerHTML='<div style="color:rgba(200,80,80,.8);font-size:11px;text-align:center;padding:20px">⚠️ Sin cantos definidos</div>';
+      return;
+    }
+    el.innerHTML=VOICE_CALLS.map(({key,label})=>{
+      const has=!!_voiceURLs[key];
+      return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+        <span style="flex:1;font-size:13px;color:rgba(230,210,170,.95);font-family:Georgia,serif">${label}</span>
+        <button id="rec-${key}" onclick="startRecording('${key}')"
+          style="padding:7px 11px;border-radius:8px;cursor:pointer;
+            border:1.5px solid rgba(80,200,80,.5);background:rgba(30,100,30,.5);
+            color:rgba(180,250,160,.95);font-size:12px;font-weight:700;white-space:nowrap">
+          🎙 Grabar
+        </button>
+        ${has?`
+        <button onclick="testVoice('${key}')"
+          style="padding:7px 10px;border-radius:8px;cursor:pointer;
+            border:1.5px solid rgba(60,120,220,.5);background:rgba(20,60,160,.5);
+            color:rgba(160,210,255,.95);font-size:13px">▶</button>
+        <button onclick="deleteVoice('${key}')"
+          style="padding:7px 10px;border-radius:8px;cursor:pointer;
+            border:1.5px solid rgba(200,50,50,.4);background:rgba(120,20,20,.5);
+            color:rgba(255,150,130,.95);font-size:13px">🗑</button>`:''}
+      </div>`;
+    }).join('');
+  }catch(err){
+    console.error('renderVoiceList error:',err);
+    const el=document.getElementById('voice-list');
+    if(el) el.innerHTML='<div style="color:rgba(255,100,100,.8);font-size:11px;padding:10px">⚠️ Error al cargar lista de voces</div>';
+  }
 }
 
 // Init on load
@@ -2195,16 +2235,21 @@ function cancelRoom(){
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   const el=document.getElementById(id);
-  if(!el) return;
+  if(!el){ console.error('show(): elemento no encontrado:',id); return; }
   el.classList.add('on');
+  // Forzar display:flex en caso de conflicto CSS
+  el.style.display='flex';
   // Force backgrounds for screens that need it
-  const bgs={'s-voices':'#070f07','s-rules':'#070f07','s-setup':'#070f07',
-              's-online':'#070f07','s-gameover':null};
-  if(bgs[id]!==undefined&&bgs[id]) el.style.background=bgs[id];
+  const bgs={'s-voices':'#070f07','s-rules':'#0a1208','s-setup':'#070f07',
+              's-online':'#070f07','s-gameover':'#0a1208'};
+  if(bgs[id]) el.style.background=bgs[id];
   if(id==='s-voices'){
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    setTimeout(renderVoiceList,80);
+    // Doble timeout por seguridad: esperar que el display:flex esté activo
+    setTimeout(()=>{
+      try{ renderVoiceList(); }catch(e){ console.error('renderVoiceList delayed:',e); }
+    },120);
   }
 }
 
@@ -2227,6 +2272,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('inp-code').addEventListener('input',function(){
     this.value=this.value.toUpperCase();
   });
+  // Cargar voces guardadas en localStorage al iniciar
+  try{ loadVoices(); }catch(e){ console.warn('loadVoices init:',e); }
 });
 
 </script>
