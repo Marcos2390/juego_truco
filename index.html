@@ -104,6 +104,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     object-position:center 70% !important;
   }
   #s-game{ background:#0a1a0a !important; }
+}
 
 /* ── PANTALLA VOCES: fondo negro absoluto ── */
 #s-voices{
@@ -113,7 +114,6 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 }
 #s-voices > div {
   background:#070f07 !important;
-}
 }
 
 /* ── MESA VERDE ── */
@@ -2255,13 +2255,14 @@ function show(id){
     // s-voices usa position:fixed propio
     el.style.display='flex';
     el.style.flexDirection='column';
+    el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
     // Poblar lista después de que el browser pinte el elemento
     setTimeout(()=>{
       try{ renderVoiceList(); }
       catch(e){ console.error('renderVoiceList:',e); }
-    },50);
+    },150);
   } else {
     el.classList.add('on');
     el.style.display='flex';
