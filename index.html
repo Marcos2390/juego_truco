@@ -106,11 +106,20 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   #s-game{ background:#0a1a0a !important; }
 }
 
-/* ── PANTALLA VOCES: fondo negro absoluto ── */
+/* ── PANTALLA VOCES: estilos globales (mobile-first) ── */
 #s-voices{
+  display:none;
+  position:fixed;
+  inset:0;
   background:#070f07 !important;
-  min-height:100vh !important;
-  min-height:100dvh !important;
+  flex-direction:column;
+  overflow-y:auto;
+  z-index:999;
+  -webkit-overflow-scrolling:touch;
+}
+#s-voices.active{
+  display:flex !important;
+  flex-direction:column !important;
 }
 #s-voices > div {
   background:#070f07 !important;
@@ -407,65 +416,67 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   </div><!-- end content -->
 
 <!-- ═══════ VOCES ═══════ -->
-<div id="s-voices" style="display:none;position:fixed;inset:0;background:#070f07;flex-direction:column;overflow-y:auto;z-index:10;">
-  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100%;box-sizing:border-box;">
+<div id="s-voices">
+  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100vh;box-sizing:border-box;background:#070f07;">
 
     <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
       <div style="color:#d4a017;font-size:17px;font-weight:700;font-family:Georgia,serif">🎙 Mis Cantos y Gritos</div>
-      <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px">✕ Volver</button>
+      <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px;font-family:Georgia,serif">✕ Volver</button>
     </div>
+
+    <!-- Diagnóstico / estado -->
+    <div id="voice-status" style="background:rgba(30,50,30,.9);border:1px solid rgba(100,200,80,.4);border-radius:8px;padding:10px 12px;font-size:11px;font-family:monospace;color:rgba(180,255,150,.9);line-height:1.6;display:none;"></div>
 
     <!-- Nombre jugador -->
     <div style="background:rgba(20,40,20,.9);border:1px solid rgba(100,160,80,.4);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
-      <div style="color:rgba(220,200,140,.95);font-size:12px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
-      <div style="color:rgba(160,200,140,.75);font-size:11px;font-family:Georgia,serif">Cada jugador puede grabar sus propias voces con un nombre único</div>
+      <div style="color:rgba(220,200,140,.95);font-size:13px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
       <div style="display:flex;gap:8px">
         <input id="inp-playername" type="text" placeholder="Tu nombre (ej: Marcos)"
           style="flex:1;background:#0a140a;border:1.5px solid rgba(80,160,60,.5);border-radius:8px;
-            color:#dce8c8;font-family:Georgia,serif;font-size:13px;padding:9px 12px;outline:none;box-sizing:border-box"/>
+            color:#dce8c8;font-family:Georgia,serif;font-size:14px;padding:10px 12px;outline:none;box-sizing:border-box"/>
         <button onclick="savePlayerName()"
-          style="padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;
+          style="padding:10px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;
             background:rgba(30,120,50,.7);border:1.5px solid rgba(80,200,80,.6);
-            color:#b8ffa8;font-size:12px;font-weight:700;font-family:Georgia,serif">
+            color:#b8ffa8;font-size:13px;font-weight:700;font-family:Georgia,serif">
           💾 Guardar
         </button>
       </div>
-      <div id="voice-name-msg" style="font-size:10px;color:rgba(160,220,130,.9);font-family:monospace;min-height:14px"></div>
+      <div id="voice-name-msg" style="font-size:11px;color:rgba(160,220,130,.9);font-family:monospace;min-height:14px"></div>
     </div>
 
     <!-- Instrucciones -->
     <div style="background:rgba(10,30,50,.85);border:1px solid rgba(60,100,160,.4);border-radius:10px;padding:10px 12px">
-      <div style="color:rgba(160,200,255,.95);font-size:11px;font-family:Georgia,serif;line-height:1.8">
+      <div style="color:rgba(160,200,255,.95);font-size:12px;font-family:Georgia,serif;line-height:1.9">
         <b>Cómo grabar:</b><br>
         1. Escribí tu nombre arriba y guardalo<br>
         2. Tocá <b>🎙 Grabar</b> en el canto que querés<br>
         3. Decí el canto en voz alta (graba 3.5 seg)<br>
         4. El juego usará <b>tu voz</b> automáticamente<br>
-        <span style="color:rgba(255,200,80,.9)">⚠️ El navegador pedirá permiso de micrófono — aceptalo</span>
+        <span style="color:rgba(255,200,80,.9)">⚠️ Requiere HTTPS y permiso de micrófono</span>
       </div>
     </div>
 
     <!-- Lista de cantos -->
     <div style="background:rgba(10,20,10,.9);border:1px solid rgba(80,140,60,.3);border-radius:10px;padding:10px 12px;flex:1">
-      <div style="color:rgba(180,220,140,.9);font-size:12px;font-family:Georgia,serif;margin-bottom:10px;font-weight:700">
+      <div style="color:rgba(180,220,140,.9);font-size:13px;font-family:Georgia,serif;margin-bottom:10px;font-weight:700">
         🎤 Grabá tus cantos:
       </div>
-      <div id="voice-list" style="display:flex;flex-direction:column;gap:2px"></div>
+      <div id="voice-list" style="display:flex;flex-direction:column;gap:4px"></div>
     </div>
 
     <!-- Botones inferiores -->
-    <div style="display:flex;gap:8px;padding-bottom:16px">
+    <div style="display:flex;gap:8px;padding-bottom:20px">
       <button onclick="renderVoiceList()"
-        style="flex:1;padding:11px;border-radius:10px;cursor:pointer;
+        style="flex:1;padding:12px;border-radius:10px;cursor:pointer;
           background:rgba(20,60,100,.7);border:1.5px solid rgba(60,120,200,.5);
-          color:rgba(160,200,255,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
+          color:rgba(160,200,255,.95);font-size:13px;font-weight:700;font-family:Georgia,serif">
         🔄 Actualizar
       </button>
       <button onclick="show('s-menu')"
-        style="flex:1;padding:11px;border-radius:10px;cursor:pointer;
+        style="flex:1;padding:12px;border-radius:10px;cursor:pointer;
           background:rgba(30,80,30,.7);border:1.5px solid rgba(80,180,60,.5);
-          color:rgba(180,240,150,.95);font-size:13px;font-weight:700;font-family:Georgia,serif">
+          color:rgba(180,240,150,.95);font-size:14px;font-weight:700;font-family:Georgia,serif">
         ← Menú
       </button>
     </div>
@@ -1624,24 +1635,51 @@ function toggleAudio(){
 }
 
 async function startRecording(key){
+  const st=document.getElementById('voice-status');
+  function statusMsg(msg,color){
+    if(st){st.style.display='block';st.style.color=color||'rgba(180,255,150,.9)';st.innerHTML=msg;}
+  }
+
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    alert('Tu navegador no soporta grabación de audio. Probá Chrome en Android.');
+    statusMsg('❌ Tu navegador no soporta grabación. Usá Chrome en Android con HTTPS.','rgba(255,100,100,.9)');
+    alert('Tu navegador no soporta grabación de audio. Usá Chrome en Android con HTTPS.');
     return;
   }
+
+  // Verificar HTTPS
+  if(location.protocol!=='https:' && location.hostname!=='localhost'){
+    statusMsg('❌ Se necesita HTTPS para acceder al micrófono. Abrí la página por https://','rgba(255,200,80,.9)');
+    alert('Se necesita HTTPS para acceder al micrófono.\nAbrí el sitio con https://');
+    return;
+  }
+
   // Stop any ongoing recording
   if(_mediaRec&&_mediaRec.state!=='inactive') _mediaRec.stop();
   _recKey=key; _recChunks=[];
   updateRecBtn(key,'rec');
+  statusMsg('⏳ Solicitando acceso al micrófono...','rgba(255,220,80,.9)');
+
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    const opts=MediaRecorder.isTypeSupported('audio/webm')?{mimeType:'audio/webm'}:{};
+    // Elegir el mejor formato disponible
+    let mimeType='';
+    const formats=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg',''];
+    for(const f of formats){
+      if(f===''||MediaRecorder.isTypeSupported(f)){mimeType=f;break;}
+    }
+    const opts=mimeType?{mimeType}:{};
     _mediaRec=new MediaRecorder(stream,opts);
+    statusMsg(`✅ Micrófono activo — formato: ${_mediaRec.mimeType||'default'} — hablá ahora!`,'rgba(100,255,150,.9)');
+
     _mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)_recChunks.push(e.data);};
     _mediaRec.onstop=()=>{
       stream.getTracks().forEach(t=>t.stop());
-      if(_recChunks.length===0){updateRecBtn(key,'idle');return;}
+      if(_recChunks.length===0){
+        updateRecBtn(key,'idle');
+        statusMsg('⚠️ No se capturó audio. Intentá de nuevo.','rgba(255,180,80,.9)');
+        return;
+      }
       const blob=new Blob(_recChunks,{type:_mediaRec.mimeType||'audio/webm'});
-      // Save to localStorage as base64
       const reader=new FileReader();
       reader.onload=()=>{
         try{
@@ -1650,13 +1688,17 @@ async function startRecording(key){
           if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
           _voiceURLs[key]=URL.createObjectURL(blob);
           updateRecBtn(key,'done');
+          statusMsg('✅ ¡Grabación guardada! Tocá ▶ para escucharla.','rgba(100,255,150,.9)');
           renderVoiceList();
-        }catch(e){ console.error('save error',e); }
+        }catch(e){
+          statusMsg('❌ Error al guardar: '+e.message,'rgba(255,100,100,.9)');
+          console.error('save error',e);
+        }
       };
       reader.readAsArrayBuffer(blob);
     };
     _mediaRec.start();
-    // Countdown display
+    // Countdown
     let secs=4;
     const btn2=document.getElementById('rec-'+key);
     const countInterval=setInterval(()=>{
@@ -1664,13 +1706,14 @@ async function startRecording(key){
       if(btn2) btn2.textContent='⏹ Grabando... '+secs+'s';
       if(secs<=0){clearInterval(countInterval);}
     },1000);
-    // Auto stop after 3.5s
     setTimeout(()=>{
       clearInterval(countInterval);
       if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop();
     },3500);
   }catch(e){
-    alert('Error al acceder al micrófono: '+e.message+'\nAsegurate de dar permiso de micrófono.');
+    const msg='❌ Error al acceder al micrófono: '+e.message;
+    statusMsg(msg+' — Verificá los permisos en Ajustes del navegador','rgba(255,100,100,.9)');
+    alert(msg+'\n\nVerificá que:\n1. La página se abre con https://\n2. El navegador tiene permiso de micrófono\n3. Estás usando Chrome en Android');
     updateRecBtn(key,'idle');
   }
 }
@@ -2244,25 +2287,31 @@ function show(id){
     s.classList.remove('on');
     s.style.display='none';
   });
-  // Ocultar s-voices separado (ya no tiene clase .screen)
+  // Ocultar s-voices separado (usa clase CSS)
   const sv=document.getElementById('s-voices');
-  if(sv) sv.style.display='none';
+  if(sv) sv.classList.remove('active');
 
   const el=document.getElementById(id);
   if(!el){ console.error('show(): no encontrado:',id); return; }
 
   if(id==='s-voices'){
-    // s-voices usa position:fixed propio
-    el.style.display='flex';
-    el.style.flexDirection='column';
+    el.classList.add('active');
     el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    // Poblar lista después de que el browser pinte el elemento
+    // Diagnóstico
+    const st=document.getElementById('voice-status');
+    if(st){
+      const https=location.protocol==='https:' || location.hostname==='localhost';
+      const hasMR=typeof MediaRecorder!=='undefined';
+      const hasMD=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+      st.style.display='block';
+      st.innerHTML=`🔒 HTTPS: ${https?'✅':'❌ (necesario para micrófono)'} | MediaRecorder: ${hasMR?'✅':'❌'} | getUserMedia: ${hasMD?'✅':'❌'}`;
+    }
     setTimeout(()=>{
       try{ renderVoiceList(); }
       catch(e){ console.error('renderVoiceList:',e); }
-    },150);
+    },100);
   } else {
     el.classList.add('on');
     el.style.display='flex';
