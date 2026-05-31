@@ -85,8 +85,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
    DESKTOP: centrar contenido, lados negros
    ════════════════════════════════ */
 @media (min-width:540px){
-  /* Desktop: imagen de fondo centrada, botones sin tocar */
   #s-menu{ background:#000 !important; }
+  #s-game{ background:#000 !important; }
+}
   #s-menu .bg-img{
     inset:unset !important;
     position:absolute !important;
@@ -1721,13 +1722,6 @@ function renderVoiceList(){
 
 
 // Init on load
-window.addEventListener('DOMContentLoaded',()=>{
-  // Auto-load Supabase card images
-  CARD_IMG_BASE = 'https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/CARTAS-TRUCO/';
-  console.log('Card images from:', CARD_IMG_BASE);
-  loadVoices();
-  window.speechSynthesis&&window.speechSynthesis.getVoices();
-});
 
 
 
@@ -2229,7 +2223,10 @@ function show(id){
     el.style.display='block';
     var inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    renderVoiceList();
+    // rAF asegura que el display:block ya fue pintado antes de inyectar HTML
+    requestAnimationFrame(function(){
+      renderVoiceList();
+    });
   } else {
     el.classList.add('on');
     el.style.display='flex';
@@ -2249,18 +2246,18 @@ function showMsg(id,msg,color){
    INIT
 ═══════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded',()=>{
+  CARD_IMG_BASE='https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/CARTAS-TRUCO/';
   const{url,key}=getSBConfig();
   if(url) document.getElementById('inp-url').value=url;
   if(key) document.getElementById('inp-key').value=key;
   if(url&&key) initSB();
   const savedBucket=localStorage.getItem('sb_bucket');
-  if(url&&savedBucket) setCardImages(url,savedBucket);
   if(savedBucket) document.getElementById('inp-bucket').value=savedBucket;
   document.getElementById('inp-code').addEventListener('input',function(){
     this.value=this.value.toUpperCase();
   });
-  // Cargar voces guardadas en localStorage al iniciar
-  try{ loadVoices(); }catch(e){ console.warn('loadVoices init:',e); }
+  loadVoices();
+  window.speechSynthesis&&window.speechSynthesis.getVoices();
 });
 
 </script>
