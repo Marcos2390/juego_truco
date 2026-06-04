@@ -1251,6 +1251,9 @@ function respondTruco(accept, raise = false) {
   G.trucoPend = null;
   if (accept) {
     G.trucoAcep = true; G.trucoStake = stake;
+    // Registrar que el jugador aceptó, para que playerCanRaiseTruco sepa
+    // que el último movimiento fue del jugador (p1) y no permita subir de vuelta
+    G.trucoHistory = [...(G.trucoHistory||[]), {level, by:'p1', accepted:true}];
     sayAndShow('p1','▶ ¡Quiero! ('+stake+' pts)','#7fba5a','Quiero');
     G.fase = nextFaseAfterInterrupt();
     renderGame();
