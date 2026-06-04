@@ -158,6 +158,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 </head>
 <body>
 
+<!-- ═══════ MÚSICA DE CORTINA ═══════ -->
+<audio id="menu-music" src="ma_ana_en_el_altiplano.mp3" loop preload="auto"></audio>
+
 <!-- ═══════ MENU ═══════ -->
 <div id="s-menu" class="screen on" style="background:#000;align-items:center;justify-content:flex-end;overflow:hidden;">
 
@@ -1629,12 +1632,43 @@ function say(text){
   window.speechSynthesis.speak(u);
 }
 
+// ── Música de cortina (menú) ──────────────────────────────────
+let _menuMusicStarted=false;
+
+function startMenuMusic(){
+  const m=document.getElementById('menu-music');
+  if(!m) return;
+  m.volume=0.55;
+  m.currentTime=0;
+  m.play().catch(()=>{
+    // Autoplay bloqueado: se activará con el primer toque del usuario
+    document.addEventListener('pointerdown', ()=>m.play().catch(()=>{}), {once:true});
+  });
+}
+
+function stopMenuMusic(){
+  const m=document.getElementById('menu-music');
+  if(!m) return;
+  // Fade out suave en 800ms
+  let vol=m.volume;
+  const step=vol/20;
+  const fade=setInterval(()=>{
+    vol=Math.max(0, vol-step);
+    m.volume=vol;
+    if(vol<=0){ clearInterval(fade); m.pause(); m.currentTime=0; m.volume=0.55; }
+  },40);
+}
+
+// ─────────────────────────────────────────────────────────────
 let _audioOn=true;
 function toggleAudio(){
   _audioOn=!_audioOn;
   const btn=document.getElementById('audio-toggle');
   if(btn) btn.textContent=_audioOn?'🔊':'🔇';
   if(!_audioOn && window.speechSynthesis) window.speechSynthesis.cancel();
+  // También silenciar/restaurar música de menú si por alguna razón estuviera activa
+  const m=document.getElementById('menu-music');
+  if(m && !m.paused) m.volume=_audioOn?0.55:0;
 }
 
 async function startRecording(key){
@@ -2285,6 +2319,13 @@ function cancelRoom(){
    UTILS
 ═══════════════════════════════════════════ */
 function show(id){
+  // ── Control música de cortina ──
+  if(id==='s-menu' || id==='s-rules' || id==='s-setup' || id==='s-online' || id==='s-voices'){
+    startMenuMusic();
+  } else {
+    stopMenuMusic();
+  }
+
   // Ocultar todas las pantallas .screen
   document.querySelectorAll('.screen').forEach(s=>{
     s.classList.remove('on');
@@ -2348,6 +2389,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
   // Cargar voces guardadas en localStorage al iniciar
   try{ loadVoices(); }catch(e){ console.warn('loadVoices init:',e); }
+
+  // ── Música de cortina: arrancar en menú ──
+  // El primer click del usuario desbloquea el autoplay
+  document.addEventListener('pointerdown', ()=>{
+    if(!_menuMusicStarted){
+      _menuMusicStarted=true;
+      startMenuMusic();
+    }
+  }, {once:true});
 });
 
 </script>
