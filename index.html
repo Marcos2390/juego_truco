@@ -111,18 +111,22 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   display:none;
   position:fixed;
   inset:0;
-  background:#070f07 !important;
+  background:#070f07;
   flex-direction:column;
   overflow-y:auto;
   z-index:999;
   -webkit-overflow-scrolling:touch;
+  box-sizing:border-box;
 }
 #s-voices.active{
-  display:flex !important;
-  flex-direction:column !important;
+  display:flex;
+  flex-direction:column;
 }
 #s-voices > div {
-  background:#070f07 !important;
+  background:#070f07;
+  flex:1;
+  min-height:100%;
+  box-sizing:border-box;
 }
 
 /* ── MESA VERDE ── */
@@ -420,7 +424,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 
 <!-- ═══════ VOCES ═══════ -->
 <div id="s-voices">
-  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100vh;box-sizing:border-box;background:#070f07;">
+  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px 12px 40px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;background:#070f07;">
 
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
@@ -1144,11 +1148,10 @@ function playCard(idx) {
     G.p2Hand = G.p2Hand.filter((_, i) => i !== idx);
     G.p2Played = [...G.p2Played, card];
   }
-  const aiAlreadyPlayed = !!G.mesa.p2; // capturar ANTES de actualizar la mesa
+  const aiAlreadyPlayed = !!G.mesa.p2;
   G.mesa = { ...G.mesa, [MY_ROLE]: card };
   addLog('▶ Jugás ' + cn(card), '#7fba5a');
   SEL = null;
-  // Solo actualizar roundLeader si el jugador juega PRIMERO (IA no tenía carta)
   if (!aiAlreadyPlayed) G.roundLeader = 'p1';
   if (G.mesa.p2) {
     // Jugador respondió a la IA: mostrar ambas cartas 1.5s antes de resolver
@@ -1233,7 +1236,6 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    // Jugador sube → solo si la IA fue la última en cantar (trucoLastCaller === 'p2')
     if (G.trucoLastCaller !== 'p2') return;
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
@@ -1254,8 +1256,6 @@ function respondTruco(accept, raise = false) {
   G.trucoPend = null;
   if (accept) {
     G.trucoAcep = true; G.trucoStake = stake;
-    // El jugador aceptó: trucoLastCaller no cambia (sigue siendo p2, quien cantó)
-    // Esto permite que el jugador pueda subir más adelante si hay nivel disponible
     sayAndShow('p1','▶ ¡Quiero! ('+stake+' pts)','#7fba5a','Quiero');
     G.fase = nextFaseAfterInterrupt();
     renderGame();
@@ -1380,7 +1380,6 @@ function aiDecideTruco() {
   if (!G.trucoPend) return;
   const { level, stake, refuseVal } = G.trucoPend;
   const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
-  // IA solo puede subir si el jugador fue el último en cantar (trucoLastCaller === 'p1')
   const canRaise = level !== 'vale4' && G.trucoLastCaller === 'p1';
   const willRaise = canRaise && avg >= 12;
   const willAccept = !willRaise && avg >= 5;
@@ -1400,8 +1399,6 @@ function aiDecideTruco() {
   } else if (willAccept) {
     G.trucoPend = null;
     G.trucoAcep = true; G.trucoStake = stake;
-    // IA aceptó: trucoLastCaller no cambia (sigue siendo p1, quien cantó)
-    // Esto permite que la IA pueda subir si el jugador cantó primero
     sayAndShow('p2','🤖 ¡Quiero! ('+stake+' pts)','#a78bca','Quiero');
     G.fase = 'ai_turn';
     renderGame();
@@ -1509,11 +1506,8 @@ function playerRaiseTruco(level){
 }
 
 function playerCanRaiseTruco(){
-  // Puede subir si: truco aceptado, no hay pendiente, no terminó la mano
-  // Y la IA fue la última en CANTAR un nivel (trucoLastCaller === 'p2')
-  // Aceptar no cambia el lastCaller → quien aceptó puede subir
   if(!G.trucoAcep||G.trucoPend||G.trucoDone||G.handDone) return null;
-  if(G.trucoLastCaller !== 'p2') return null; // el jugador fue el último en cantar
+  if(G.trucoLastCaller !== 'p2') return null;
   const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':G.trucoStake===4?'vale4':'truco';
   const next={truco:'retruco',retruco:'vale4'}[currentLevel];
   return next||null;
@@ -1970,7 +1964,6 @@ function renderActions(){
   // ── Responder truco de IA ──────────────────────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    // Solo puede subir si la IA fue quien gritó este nivel (no se sube el propio grito)
     const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by==='p2';
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
     act.style.flexDirection='column';
@@ -2331,19 +2324,29 @@ function show(id){
     s.classList.remove('on');
     s.style.display='none';
   });
-  // Ocultar s-voices separado (usa clase CSS)
+  // Ocultar s-voices (limpiar clase Y style inline)
   const sv=document.getElementById('s-voices');
-  if(sv) sv.classList.remove('active');
+  if(sv){
+    sv.classList.remove('active');
+    sv.style.display='none';
+  }
 
   const el=document.getElementById(id);
   if(!el){ console.error('show(): no encontrado:',id); return; }
 
   if(id==='s-voices'){
     el.classList.add('active');
+    el.style.display='flex';       // forzar sobre cualquier inline display:none
+    el.style.flexDirection='column';
+    el.style.position='fixed';
+    el.style.inset='0';
+    el.style.overflowY='auto';
+    el.style.zIndex='999';
+    el.style.background='#070f07';
     el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    // Diagnóstico
+    // Estado del micrófono
     const st=document.getElementById('voice-status');
     if(st){
       const https=location.protocol==='https:' || location.hostname==='localhost';
@@ -2355,7 +2358,7 @@ function show(id){
     setTimeout(()=>{
       try{ renderVoiceList(); }
       catch(e){ console.error('renderVoiceList:',e); }
-    },100);
+    },50);
   } else {
     el.classList.add('on');
     el.style.display='flex';
