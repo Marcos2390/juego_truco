@@ -1145,11 +1145,12 @@ function playCard(idx) {
     G.p2Hand = G.p2Hand.filter((_, i) => i !== idx);
     G.p2Played = [...G.p2Played, card];
   }
+  const aiAlreadyPlayed = !!G.mesa.p2; // capturar ANTES de actualizar la mesa
   G.mesa = { ...G.mesa, [MY_ROLE]: card };
   addLog('▶ Jugás ' + cn(card), '#7fba5a');
   SEL = null;
-  // Si la mesa del rival está vacía, el jugador está liderando este round
-  if (!G.mesa.p2) G.roundLeader = 'p1';
+  // Actualizar roundLeader solo si el jugador juega PRIMERO (IA aún no tenía carta)
+  if (!aiAlreadyPlayed) G.roundLeader = 'p1';
   if (G.mesa.p2) {
     // Jugador respondió a la IA: mostrar ambas cartas 1.5s antes de resolver
     renderGame();
@@ -1234,7 +1235,8 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    // Jugador sube → solo si IA fue quien llamó el nivel actual
+    // Jugador sube → solo si IA fue quien llamó el nivel actual (by === p2)
+    if (by !== 'p2') return; // defensa: no se puede subir un grito propio
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
     const stakes2 = { retruco: 3, vale4: 4 };
@@ -1977,7 +1979,8 @@ function renderActions(){
   // ── Responder truco de IA ──────────────────────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const canRaise=G.trucoPend.level!=='vale4';
+    // Solo puede subir si la IA fue quien llamó este nivel (no el jugador mismo)
+    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by==='p2';
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
     act.style.flexDirection='column';
     act.style.alignItems='stretch';
