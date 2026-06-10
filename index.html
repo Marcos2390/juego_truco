@@ -159,7 +159,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 <body>
 
 <!-- ═══════ MÚSICA DE CORTINA ═══════ -->
-<audio id="menu-music" src="ma_ana_en_el_altiplano.mp3" loop preload="auto"></audio>
+<audio id="menu-music" src="ma_ana_en_el_altiplano_mp3.mpeg" loop preload="auto"></audio>
 
 <!-- ═══════ MENU ═══════ -->
 <div id="s-menu" class="screen on" style="background:#000;align-items:center;justify-content:flex-end;overflow:hidden;">
@@ -1637,13 +1637,19 @@ let _menuMusicStarted=false;
 
 function startMenuMusic(){
   const m=document.getElementById('menu-music');
-  if(!m) return;
-  m.volume=0.55;
+  if(!m||!m.paused) return;
+  m.volume=0;
   m.currentTime=0;
-  m.play().catch(()=>{
-    // Autoplay bloqueado: se activará con el primer toque del usuario
-    document.addEventListener('pointerdown', ()=>m.play().catch(()=>{}), {once:true});
-  });
+  m.play().then(()=>{
+    // Fade-in suave en 2 segundos
+    const target=0.55, steps=40, interval=2000/steps;
+    let v=0;
+    const fi=setInterval(()=>{
+      v=Math.min(target, v+target/steps);
+      m.volume=v;
+      if(v>=target) clearInterval(fi);
+    }, interval);
+  }).catch(()=>{});
 }
 
 function stopMenuMusic(){
