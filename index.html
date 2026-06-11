@@ -111,22 +111,18 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   display:none;
   position:fixed;
   inset:0;
-  background:#070f07;
+  background:#070f07 !important;
   flex-direction:column;
   overflow-y:auto;
   z-index:999;
   -webkit-overflow-scrolling:touch;
-  box-sizing:border-box;
 }
 #s-voices.active{
-  display:flex;
-  flex-direction:column;
+  display:flex !important;
+  flex-direction:column !important;
 }
 #s-voices > div {
-  background:#070f07;
-  flex:1;
-  min-height:100%;
-  box-sizing:border-box;
+  background:#070f07 !important;
 }
 
 /* ── MESA VERDE ── */
@@ -424,7 +420,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 
 <!-- ═══════ VOCES ═══════ -->
 <div id="s-voices">
-  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px 12px 40px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;background:#070f07;">
+  <div style="max-width:520px;width:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100vh;box-sizing:border-box;background:#070f07;">
 
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
@@ -1305,8 +1301,9 @@ function aiActuar() {
     return;
   }
 
-  // 3. IA llama truco (solo si no hay nada activo)
-  if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && avg >= 9) {
+  // 3. IA llama truco (solo si no hay nada activo Y no tiene carta en mesa)
+  // Si ya jugó carta en este round, no interrumpe con truco
+  if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && !G.mesa.p2 && avg >= 9) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoLastCaller = 'p2';
     sayAndShow('p2','🤖 ¡Truco!','#e74c3c','Truco');
@@ -1400,9 +1397,12 @@ function aiDecideTruco() {
     G.trucoPend = null;
     G.trucoAcep = true; G.trucoStake = stake;
     sayAndShow('p2','🤖 ¡Quiero! ('+stake+' pts)','#a78bca','Quiero');
-    G.fase = 'ai_turn';
+    if (checkGameOver()) return;
+    // Usar nextFaseAfterInterrupt: si la IA ya tiene carta en mesa
+    // (ronda 2/3) el turno vuelve al jugador; si mesa vacía, va por roundLeader
+    G.fase = nextFaseAfterInterrupt();
     renderGame();
-    scheduleAI(700);
+    if (G.fase === 'ai_turn') scheduleAI(700);
   } else {
     G.trucoPend = null; G.trucoDone = true;
     sayAndShow('p2','🤖 No quiero.','#a78bca','No quiero');
@@ -2324,19 +2324,15 @@ function show(id){
     s.classList.remove('on');
     s.style.display='none';
   });
-  // Ocultar s-voices (limpiar clase Y style inline)
   const sv=document.getElementById('s-voices');
-  if(sv){
-    sv.classList.remove('active');
-    sv.style.display='none';
-  }
+  if(sv){ sv.classList.remove('active'); sv.style.display='none'; }
 
   const el=document.getElementById(id);
   if(!el){ console.error('show(): no encontrado:',id); return; }
 
   if(id==='s-voices'){
     el.classList.add('active');
-    el.style.display='flex';       // forzar sobre cualquier inline display:none
+    el.style.display='flex';
     el.style.flexDirection='column';
     el.style.position='fixed';
     el.style.inset='0';
@@ -2346,7 +2342,6 @@ function show(id){
     el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    // Estado del micrófono
     const st=document.getElementById('voice-status');
     if(st){
       const https=location.protocol==='https:' || location.hostname==='localhost';
