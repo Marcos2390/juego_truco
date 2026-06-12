@@ -206,11 +206,70 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         color:#ffaaff;font-size:12px;font-weight:700;font-family:Georgia,serif;">
         🎙 Mis Voces
       </button>
+      <button onclick="show('s-decks')" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
+        background:rgba(80,50,10,.88);border:2px solid #cc9933;
+        color:#ffdd88;font-size:12px;font-weight:700;font-family:Georgia,serif;">
+        🃏 Mazos
+      </button>
     </div>
   </div>
 </div>
 
 <!-- ═══════ RULES ═══════ -->
+<!-- ===== MAZOS ===== -->
+<div id="s-decks" class="screen" style="display:none;position:fixed;inset:0;background:#0a0f08;
+  flex-direction:column;overflow-y:auto;z-index:999;-webkit-overflow-scrolling:touch;">
+  <div style="max-width:520px;width:100%;margin:0 auto;padding:14px 14px 40px;
+    display:flex;flex-direction:column;gap:12px;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="color:#d4a017;font-size:16px;font-weight:700;font-family:Georgia,serif">🃏 Elegi tu Mazo</div>
+      <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;
+        color:#7fba5a;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:Georgia,serif">
+        ✕ Volver
+      </button>
+    </div>
+    <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.25);
+      border-radius:10px;padding:10px 12px;font-size:11px;color:rgba(220,190,100,.85);
+      font-family:Georgia,serif;line-height:1.6;">
+      El mazo se guarda automaticamente. Para agregar un diseno nuevo subi las imagenes
+      a un bucket de Supabase con el nombre exacto de la carpeta. Ver guia abajo. 👇
+    </div>
+    <div id="deck-selector-list"></div>
+    <div style="background:#050f05;border:1px solid #1e3a1e;border-radius:10px;padding:14px;
+      font-family:Georgia,serif;font-size:11px;color:#8aaa8a;line-height:1.75">
+      <div style="color:#7fba5a;font-weight:700;font-size:13px;margin-bottom:8px">📦 Como agregar un mazo nuevo</div>
+      <div style="margin-bottom:6px">1. Entra a <b style="color:#a0d080">supabase.com → Storage</b> y crea un bucket publico, por ejemplo: <code style="background:#0a1a0a;padding:2px 6px;border-radius:4px;color:#c0e0a0">CARTAS-MADERA</code></div>
+      <div style="margin-bottom:6px">2. Subi las <b style="color:#a0d080">40 imagenes</b> con estos nombres exactos:</div>
+      <div style="background:#0a1a0a;border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:#6a9a6a;line-height:1.8;margin-bottom:6px">
+        1-espadas.jpeg &nbsp; 2-espadas.jpeg &nbsp; ... &nbsp; 7-espadas.jpeg<br>
+        1-bastos.jpeg &nbsp;&nbsp; 2-bastos.jpeg &nbsp;&nbsp; ... &nbsp; 7-bastos.jpeg<br>
+        1-oros.jpeg &nbsp;&nbsp;&nbsp; 2-oros.jpeg &nbsp;&nbsp;&nbsp; ... &nbsp; 7-oros.jpeg<br>
+        1-copas.jpeg &nbsp;&nbsp; 2-copas.jpeg &nbsp;&nbsp; ... &nbsp; 7-copas.jpeg<br>
+        sota-espadas.jpeg &nbsp; caballo-espadas.jpeg &nbsp; rey-espadas.jpeg<br>
+        sota-bastos.jpeg &nbsp;&nbsp; caballo-bastos.jpeg &nbsp;&nbsp; rey-bastos.jpeg<br>
+        sota-oros.jpeg &nbsp;&nbsp;&nbsp; caballo-oros.jpeg &nbsp;&nbsp;&nbsp; rey-oros.jpeg<br>
+        sota-copas.jpeg &nbsp;&nbsp; caballo-copas.jpeg &nbsp;&nbsp; rey-copas.jpeg<br>
+        reverso.jpeg
+      </div>
+      <div style="margin-bottom:6px">3. Edita el array <code style="background:#0a1a0a;padding:2px 6px;border-radius:4px;color:#c0e0a0">MAZOS</code> en el codigo JS y agrega tu entrada:</div>
+      <div style="background:#0a1a0a;border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:#6a9a6a;line-height:1.8">
+        { id: 'madera',<br>
+        &nbsp;&nbsp;nombre: 'Madera',<br>
+        &nbsp;&nbsp;desc: 'Diseno rustico',<br>
+        &nbsp;&nbsp;folder: 'CARTAS-MADERA', &nbsp;← nombre del bucket<br>
+        &nbsp;&nbsp;ext: 'jpeg',<br>
+        &nbsp;&nbsp;color: '#5D4037',<br>
+        &nbsp;&nbsp;preview: '🪵' }
+      </div>
+      <div style="margin-top:8px;color:rgba(180,200,160,.6)">
+        ⚠️ El bucket debe ser <b>publico</b> (Public bucket) y las imagenes deben ser accesibles sin autenticacion.
+        Si usas .png en vez de .jpeg, cambia el campo ext.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RULES ===== -->
 <div id="s-rules" class="screen inner" style="flex-direction:column;padding:14px;gap:10px;background:#0a1208;max-width:520px;margin:0 auto;">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div style="color:#d4a017;font-size:16px;font-weight:700;font-family:Georgia,serif">📖 Reglas del Truco</div>
@@ -607,6 +666,61 @@ function pipPositions(val){
 let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
+// ===== SISTEMA DE MAZOS =====
+const MAZOS = [
+  { id: 'TATU', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
+  { id: 'URUGUAYO', nombre: 'mazo uruguayo', desc: 'Diseno tematica uruguaya', folder: 'CARTAS-URUGUAYAS', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
+  { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
+];
+
+let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
+
+function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
+
+function applyDeck(id){
+  _selectedDeck = id;
+  localStorage.setItem('truco_deck', id);
+  const deck = getDeckById(id);
+  const baseUrl = CARD_IMG_BASE.split('/storage/')[0];
+  if(baseUrl && baseUrl.startsWith('http')){
+    CARD_IMG_BASE = baseUrl + '/storage/v1/object/public/' + deck.folder + '/';
+  }
+  renderDeckSelector();
+}
+
+function renderDeckSelector(){
+  const el = document.getElementById('deck-selector-list');
+  if(!el) return;
+  el.innerHTML = MAZOS.map(m => {
+    const sel = m.id === _selectedDeck;
+    const sbUrl = (CARD_IMG_BASE||'').split('/storage/')[0];
+    const previewSrc = (sbUrl && sbUrl.startsWith('http'))
+      ? sbUrl + '/storage/v1/object/public/' + m.folder + '/1-espadas.' + m.ext
+      : '';
+    const imgHtml = previewSrc
+      ? '<img src="'+previewSrc+'" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\''+m.preview+'\'" alt=""/>'
+      : m.preview;
+    return '<div onclick="applyDeck(\''+m.id+'\')" style="'
+      + 'display:flex;align-items:center;gap:12px;padding:12px 14px;'
+      + 'border-radius:12px;cursor:pointer;transition:all .15s;'
+      + 'background:' + (sel ? 'rgba(80,160,80,.18)' : 'rgba(255,255,255,.04)') + ';'
+      + 'border:2px solid ' + (sel ? '#5aba5a' : 'rgba(255,255,255,.1)') + ';'
+      + 'margin-bottom:8px;">'
+      + '<div style="width:44px;height:60px;border-radius:7px;overflow:hidden;flex-shrink:0;'
+      + 'background:' + m.color + ';border:1.5px solid rgba(255,255,255,.2);'
+      + 'display:flex;align-items:center;justify-content:center;font-size:22px;">'
+      + imgHtml
+      + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="color:' + (sel?'#a0e0a0':'#d0d0d0') + ';font-weight:700;font-family:Georgia,serif;font-size:14px">' + m.nombre + '</div>'
+      + '<div style="color:rgba(180,180,180,.7);font-size:11px;margin-top:2px">' + m.desc + '</div>'
+      + '</div>'
+      + '<div style="font-size:20px">' + (sel ? '\u2705' : '') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 // Colores por palo (estilo Tatú)
 const CINK={espadas:'#1a3a7a',bastos:'#8b2200',oros:'#b8860b',copas:'#8b0000'};
 const CBG={espadas:'#ffffff',bastos:'#ffffff',oros:'#ffffff',copas:'#ffffff'};
@@ -986,7 +1100,7 @@ function nuevoTurno(p1IsMano) {
     p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
     // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano
     trucoPend: null, trucoAcep: false, trucoStake: 0, trucoDone: false,
-    trucoLastCaller: null, // quién cantó el último nivel (para saber quién puede subir)
+    trucoLastCaller: null,
     handDone: false, handWinner: null, _scored: false,
   };
 }
@@ -1302,7 +1416,6 @@ function aiActuar() {
   }
 
   // 3. IA llama truco (solo si no hay nada activo Y no tiene carta en mesa)
-  // Si ya jugó carta en este round, no interrumpe con truco
   if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && !G.mesa.p2 && avg >= 9) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoLastCaller = 'p2';
@@ -1398,8 +1511,6 @@ function aiDecideTruco() {
     G.trucoAcep = true; G.trucoStake = stake;
     sayAndShow('p2','🤖 ¡Quiero! ('+stake+' pts)','#a78bca','Quiero');
     if (checkGameOver()) return;
-    // Usar nextFaseAfterInterrupt: si la IA ya tiene carta en mesa
-    // (ronda 2/3) el turno vuelve al jugador; si mesa vacía, va por roundLeader
     G.fase = nextFaseAfterInterrupt();
     renderGame();
     if (G.fase === 'ai_turn') scheduleAI(700);
@@ -1822,8 +1933,11 @@ function renderVoiceList(){
 // Init on load
 window.addEventListener('DOMContentLoaded',()=>{
   // Auto-load Supabase card images
-  CARD_IMG_BASE = 'https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/CARTAS-TRUCO/';
-  console.log('Card images from:', CARD_IMG_BASE);
+  const _savedDeck = localStorage.getItem('truco_deck') || 'clasico';
+  const _deckInfo = getDeckById(_savedDeck);
+  CARD_IMG_BASE = 'https://ebwnlkfxlphliuwvyzfm.supabase.co/storage/v1/object/public/' + _deckInfo.folder + '/';
+  _selectedDeck = _savedDeck;
+  console.log('Card images from:', CARD_IMG_BASE, '(deck:', _savedDeck, ')');
   loadVoices();
   window.speechSynthesis&&window.speechSynthesis.getVoices();
 });
@@ -2326,19 +2440,24 @@ function show(id){
   });
   const sv=document.getElementById('s-voices');
   if(sv){ sv.classList.remove('active'); sv.style.display='none'; }
+  const sd=document.getElementById('s-decks');
+  if(sd) sd.style.display='none';
 
   const el=document.getElementById(id);
   if(!el){ console.error('show(): no encontrado:',id); return; }
 
-  if(id==='s-voices'){
-    el.classList.add('active');
+  if(id==='s-decks'){
     el.style.display='flex';
     el.style.flexDirection='column';
-    el.style.position='fixed';
-    el.style.inset='0';
-    el.style.overflowY='auto';
-    el.style.zIndex='999';
-    el.style.background='#070f07';
+    el.scrollTop=0;
+    setTimeout(()=>renderDeckSelector(), 50);
+    return;
+  }
+  if(id==='s-voices'){
+    el.classList.add('active');
+    el.style.display='flex'; el.style.flexDirection='column';
+    el.style.position='fixed'; el.style.inset='0';
+    el.style.overflowY='auto'; el.style.zIndex='999'; el.style.background='#070f07';
     el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
@@ -2350,10 +2469,7 @@ function show(id){
       st.style.display='block';
       st.innerHTML=`🔒 HTTPS: ${https?'✅':'❌ (necesario para micrófono)'} | MediaRecorder: ${hasMR?'✅':'❌'} | getUserMedia: ${hasMD?'✅':'❌'}`;
     }
-    setTimeout(()=>{
-      try{ renderVoiceList(); }
-      catch(e){ console.error('renderVoiceList:',e); }
-    },50);
+    setTimeout(()=>{ try{ renderVoiceList(); } catch(e){ console.error('renderVoiceList:',e); } },50);
   } else {
     el.classList.add('on');
     el.style.display='flex';
