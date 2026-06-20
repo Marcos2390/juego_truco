@@ -172,23 +172,59 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     background:linear-gradient(to top,rgba(0,0,0,.93) 0%,rgba(0,0,0,.55) 65%,transparent 100%);
     pointer-events:none;"></div>
 
-  <div style="position:relative;z-index:2;width:100%;padding:0 22px 34px;
-    display:flex;flex-direction:column;align-items:center;gap:11px;max-width:420px;margin:0 auto">
+  <div style="position:absolute;inset:0;z-index:2;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;padding:24px 22px;max-width:420px;margin:0 auto;box-sizing:border-box;
+    overflow-y:auto;">
+
     <button onclick="startAI()" style="
       width:100%;padding:16px;border-radius:14px;cursor:pointer;
       background:linear-gradient(135deg,#177025,#25a035,#177025);
-      border:3px solid #55dd65;color:#fff;font-size:20px;font-weight:900;
-      font-family:Georgia,serif;letter-spacing:2px;
+      border:3px solid #55dd65;color:#fff;font-size:18px;font-weight:900;
+      font-family:Georgia,serif;letter-spacing:1px;
       box-shadow:0 0 28px rgba(80,220,100,.55),inset 0 1px 0 rgba(255,255,255,.2);
       text-shadow:0 2px 4px rgba(0,0,0,.5);">
-      ✦ ¡JUGAR AHORA! ✦
+      🤖 Contra la IA
     </button>
+
+    <button onclick="show('s-online')" style="
+      width:100%;padding:14px;border-radius:12px;cursor:pointer;
+      background:rgba(15,45,90,.9);border:2px solid #3a7acc;
+      color:#90c8ff;font-size:15px;font-weight:800;font-family:Georgia,serif;
+      box-shadow:0 0 14px rgba(58,122,204,.35);">
+      🌐 Partida en Línea
+    </button>
+
+    <button onclick="show('s-campaign')" style="
+      width:100%;padding:14px;border-radius:12px;cursor:pointer;
+      background:rgba(75,20,90,.9);border:2px solid #9944cc;
+      color:#dcaaff;font-size:15px;font-weight:800;font-family:Georgia,serif;
+      box-shadow:0 0 14px rgba(153,68,204,.35);">
+      🗺️ Modo Campaña
+    </button>
+
+    <button onclick="show('s-ranking')" style="
+      width:100%;padding:14px;border-radius:12px;cursor:pointer;
+      background:rgba(90,70,10,.9);border:2px solid #ddaa22;
+      color:#ffe39a;font-size:15px;font-weight:800;font-family:Georgia,serif;
+      box-shadow:0 0 14px rgba(221,170,34,.35);">
+      🏆 Ranking
+    </button>
+
     <div style="display:flex;gap:10px;width:100%">
-      <button onclick="show('s-online')" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
-        background:rgba(15,45,90,.88);border:2px solid #3a7acc;
-        color:#90c8ff;font-size:12px;font-weight:700;font-family:Georgia,serif;">
-        🌐 Online
+      <button onclick="show('s-decks')" style="flex:1;padding:12px 6px;border-radius:10px;cursor:pointer;
+        background:rgba(80,50,10,.88);border:2px solid #cc9933;
+        color:#ffdd88;font-size:13px;font-weight:700;font-family:Georgia,serif;">
+        🃏 Mazos
       </button>
+      <button onclick="show('s-voices')" style="flex:1;padding:12px 6px;border-radius:10px;cursor:pointer;
+        background:rgba(80,20,80,.88);border:2px solid #aa44aa;
+        color:#ffaaff;font-size:13px;font-weight:700;font-family:Georgia,serif;">
+        🎙 Voces
+      </button>
+    </div>
+
+    <div style="display:flex;gap:10px;width:100%">
       <button onclick="show('s-rules')" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
         background:rgba(55,28,8,.88);border:2px solid #aa6622;
         color:#ffcc88;font-size:12px;font-weight:700;font-family:Georgia,serif;">
@@ -200,19 +236,39 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         ⚙️ Config
       </button>
     </div>
-    <div style="display:flex;gap:10px;width:100%">
-      <button onclick="show('s-voices')" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
-        background:rgba(80,20,80,.88);border:2px solid #aa44aa;
-        color:#ffaaff;font-size:12px;font-weight:700;font-family:Georgia,serif;">
-        🎙 Mis Voces
-      </button>
-      <button onclick="show('s-decks')" style="flex:1;padding:11px 6px;border-radius:10px;cursor:pointer;
-        background:rgba(80,50,10,.88);border:2px solid #cc9933;
-        color:#ffdd88;font-size:12px;font-weight:700;font-family:Georgia,serif;">
-        🃏 Mazos
-      </button>
-    </div>
   </div>
+</div>
+
+<!-- ===== CAMPAÑA (placeholder) ===== -->
+<div id="s-campaign" class="screen" style="display:none;position:fixed;inset:0;background:#0a0518;
+  align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;z-index:5;">
+  <div style="font-size:54px;">🗺️</div>
+  <div style="color:#dcaaff;font-family:Georgia,serif;font-size:22px;font-weight:800;text-align:center;">
+    Modo Campaña
+  </div>
+  <div style="color:#b8a0d0;font-family:Georgia,serif;font-size:14px;text-align:center;max-width:320px;">
+    Próximamente: una serie de desafíos y rivales para superar en orden, con recompensas y progreso guardado.
+  </div>
+  <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;
+    border-radius:8px;padding:10px 22px;cursor:pointer;font-size:14px;font-family:Georgia,serif">
+    ✕ Volver
+  </button>
+</div>
+
+<!-- ===== RANKING (placeholder) ===== -->
+<div id="s-ranking" class="screen" style="display:none;position:fixed;inset:0;background:#140f02;
+  align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;z-index:5;">
+  <div style="font-size:54px;">🏆</div>
+  <div style="color:#ffe39a;font-family:Georgia,serif;font-size:22px;font-weight:800;text-align:center;">
+    Ranking
+  </div>
+  <div style="color:#d8c08a;font-family:Georgia,serif;font-size:14px;text-align:center;max-width:320px;">
+    Próximamente: tabla de posiciones global y estadísticas de tus partidas.
+  </div>
+  <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;
+    border-radius:8px;padding:10px 22px;cursor:pointer;font-size:14px;font-family:Georgia,serif">
+    ✕ Volver
+  </button>
 </div>
 
 <!-- ═══════ RULES ═══════ -->
@@ -668,8 +724,8 @@ function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object
 
 // ===== SISTEMA DE MAZOS =====
 const MAZOS = [
-  { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
-  { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'clasico', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
+  { id: 'madera', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-MADERA', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
@@ -2427,7 +2483,7 @@ function cancelRoom(){
 ═══════════════════════════════════════════ */
 function show(id){
   // ── Control música de cortina ──
-  if(id==='s-menu' || id==='s-rules' || id==='s-setup' || id==='s-online' || id==='s-voices'){
+  if(id==='s-menu' || id==='s-rules' || id==='s-setup' || id==='s-online' || id==='s-voices' || id==='s-campaign' || id==='s-ranking'){
     startMenuMusic();
   } else {
     stopMenuMusic();
