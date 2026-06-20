@@ -38,6 +38,51 @@ h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spa
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 5px transparent}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes think{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ═══ JUICE: efectos visuales y tactiles ═══ */
+@keyframes tensionShake{
+  0%,100%{transform:translate(0,0)}
+  10%{transform:translate(-2px,-1px) rotate(-.3deg)}
+  20%{transform:translate(2px,1px) rotate(.3deg)}
+  30%{transform:translate(-3px,1px) rotate(-.4deg)}
+  40%{transform:translate(3px,-1px) rotate(.4deg)}
+  50%{transform:translate(-2px,0) rotate(-.2deg)}
+  60%{transform:translate(2px,1px) rotate(.2deg)}
+  70%{transform:translate(-1px,-1px) rotate(-.1deg)}
+  80%{transform:translate(1px,0)}
+  90%{transform:translate(-1px,0)}
+}
+.tension-shake{animation:tensionShake .42s cubic-bezier(.36,.07,.19,.97) both}
+
+@keyframes cardImpact{
+  0%{transform:scale(1.22);filter:brightness(1.35)}
+  55%{transform:scale(.97);filter:brightness(1.05)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+.card-impact{animation:cardImpact .26s cubic-bezier(.22,.9,.4,1) both}
+
+@keyframes impactRing{
+  0%{transform:translate(-50%,-50%) scale(.2);opacity:.85}
+  100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}
+}
+.impact-ring{position:absolute;top:50%;left:50%;width:60px;height:60px;border-radius:50%;
+  border:2.5px solid rgba(255,215,120,.85);pointer-events:none;
+  animation:impactRing .42s ease-out forwards;z-index:30}
+
+@keyframes impactDust{
+  0%{transform:translate(-50%,-50%) translate(0,0) scale(1);opacity:.95}
+  100%{transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(.2);opacity:0}
+}
+.impact-dust{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
+  background:rgba(255,225,150,.9);pointer-events:none;
+  animation:impactDust .38s ease-out forwards;z-index:30}
+
+.scene-blur{filter:blur(4px) brightness(.7);transition:filter .25s ease}
+
+.hand-card-wrap{transition:transform .16s cubic-bezier(.2,.8,.3,1),filter .16s ease}
+.hand-card-wrap:hover{transform:translateY(-10px) scale(1.05);z-index:50!important;filter:drop-shadow(0 14px 18px rgba(0,0,0,.55))}
+.hand-card-wrap:active{transform:translateY(-4px) scale(1.02)}
+
 input[type=text],input[type=password]{background:#0a140a;border:1.5px solid var(--bg3);border-radius:8px;color:var(--cream);font-family:Georgia,serif;font-size:13px;padding:10px 12px;width:100%;outline:none;transition:border-color .15s}
 input:focus{border-color:var(--green)}
 label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;display:block}
@@ -481,6 +526,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       <!-- Call notice top-right -->
       <div id="mesa-notice" style="position:absolute;top:4px;right:4px;display:none;z-index:2"></div>
 
+      <div id="mesa-cards-wrap" style="display:flex;align-items:center;justify-content:center;gap:10px">
       <!-- IA card (played on table) -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
         <div id="mesa-opp" style="filter:drop-shadow(2px 4px 10px rgba(0,0,0,.7))"></div>
@@ -499,6 +545,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
         <div id="mesa-me" style="filter:drop-shadow(2px 4px 10px rgba(0,0,0,.7))"></div>
         <span style="color:rgba(200,240,180,.75);font-size:9px;font-family:Georgia,serif;text-shadow:0 1px 3px rgba(0,0,0,.8)">VOS</span>
+      </div>
       </div>
     </div>
 
@@ -724,8 +771,8 @@ function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object
 
 // ===== SISTEMA DE MAZOS =====
 const MAZOS = [
-  { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
-  { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'clasico', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
+  { id: 'madera', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-MADERA', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
@@ -1413,6 +1460,7 @@ function respondTruco(accept, raise = false) {
     G.trucoLastCaller = 'p1';
     addLog('▶ Subís: ¡' + names[next] + '!', '#c0392b');
     say(names[next]);
+    triggerTensionShake();
     G.fase = 'ai_turn';
     renderGame();
     scheduleAI(1100);
@@ -1623,7 +1671,9 @@ function fanHandHTML(cards,{disabled=false,selIdx=null,isMuestraFn=null}={}){
       transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty+extraY}px) rotate(${cfg.r}deg);
       transform-origin:center bottom;z-index:${isSel?10:i+1};transition:transform .18s;
       cursor:${disabled?'default':'pointer'}" onclick="${disabled?'':('handleCardClick('+i+')')}">
-      ${cardHTML(card,{sel:isSel,disabled,isMuestra:isM})}
+      <div class="${disabled?'':'hand-card-wrap'}">
+        ${cardHTML(card,{sel:isSel,disabled,isMuestra:isM})}
+      </div>
     </div>`;
   });
   h+='</div>';
@@ -1667,6 +1717,7 @@ function playerRaiseTruco(level){
   addLog('▶ Subís: ¡'+names[level]+'!','#c0392b');
   say(names[level]);
   showBubble('p1',names[level]);
+  triggerTensionShake();
   G.fase='ai_turn';
   renderGame();
   scheduleAI(1100);
@@ -1714,10 +1765,53 @@ function hideBubbles(){
 /* ── Wrap all addLog calls that should trigger bubbles+audio ─
    sayAndShow(who, text, logColor, spokenText)
 ──────────────────────────────────────────────────────────────── */
+/* ── JUICE: vibración de tensión al cantar truco/envido ────── */
+function triggerTensionShake(){
+  const el=document.getElementById('s-game');
+  if(!el) return;
+  el.classList.remove('tension-shake');
+  // forzar reflow para poder re-disparar la animación en cantos seguidos
+  void el.offsetWidth;
+  el.classList.add('tension-shake');
+  if(navigator.vibrate){ try{ navigator.vibrate(35); }catch(e){} }
+  setTimeout(()=>el.classList.remove('tension-shake'),450);
+}
+
+/* ── JUICE: partículas/impacto cuando una carta "aterriza" en la mesa ── */
+function spawnImpact(targetId){
+  const host=document.getElementById(targetId);
+  if(!host) return;
+  if(getComputedStyle(host).position==='static') host.style.position='relative';
+  // golpe de escala en la carta recién aparecida
+  const inner=host.firstElementChild;
+  if(inner){
+    inner.classList.remove('card-impact');
+    void inner.offsetWidth;
+    inner.classList.add('card-impact');
+  }
+  // anillo de impacto
+  const ring=document.createElement('div');
+  ring.className='impact-ring';
+  host.appendChild(ring);
+  setTimeout(()=>ring.remove(),450);
+  // polvillo de partículas
+  for(let i=0;i<7;i++){
+    const d=document.createElement('div');
+    d.className='impact-dust';
+    const ang=(Math.PI*2*i/7)+Math.random()*0.5;
+    const dist=22+Math.random()*18;
+    d.style.setProperty('--dx',(Math.cos(ang)*dist)+'px');
+    d.style.setProperty('--dy',(Math.sin(ang)*dist)+'px');
+    host.appendChild(d);
+    setTimeout(()=>d.remove(),400);
+  }
+}
+
 function sayAndShow(who, displayText, color, spoken){
   addLog(displayText, color);
   showBubble(who, spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
   say(spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
+  triggerTensionShake();
 }
 
 /* ── Mostrar puntos al final de mano ────────────────────────── */
@@ -2070,11 +2164,16 @@ function renderGame(){
   // Mesa notice
   const mn=document.getElementById('mesa-notice');
   const pend=G.envPend||G.trucoPend;
+  const mesaArea=document.getElementById('mesa-cards-wrap');
   if(pend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
     mn.style.display='block';mn.className='notice';
     mn.textContent=(G.envPend?'🎯 ':'⚔️ ')+names[pend.level];
-  } else mn.style.display='none';
+    if(mesaArea) mesaArea.classList.add('scene-blur');
+  } else {
+    mn.style.display='none';
+    if(mesaArea) mesaArea.classList.remove('scene-blur');
+  }
 
   // Log
   const logEl=document.getElementById('game-log');
@@ -2246,10 +2345,9 @@ function animateCardPlay(idx, callback) {
   setTimeout(() => {
     fly.remove();
     callback();
+    spawnImpact('mesa-me');
   }, 400);
 }
-
-/* ─── ANIMACIÓN: carta de IA vuela desde el abanico rival hasta mesa-opp ─── */
 function animateAIPlay(callback) {
   const oppHand  = document.getElementById('opp-hand');
   const mesaTarget = document.getElementById('mesa-opp');
@@ -2291,6 +2389,7 @@ function animateAIPlay(callback) {
   setTimeout(() => {
     fly.remove();
     callback();
+    spawnImpact('mesa-opp');
   }, 400);
 }
 
