@@ -591,7 +591,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
     </div>
 
     <!-- Diagnóstico / estado -->
-    <div id="voice-status" style="background:rgba(30,50,30,.9);border:1px solid rgba(100,200,80,.4);border-radius:8px;padding:10px 12px;font-size:11px;font-family:monospace;color:rgba(180,255,150,.9);line-height:1.6;display:none;"></div>
+    <div id="voice-status" style="background:rgba(30,50,30,.9);border:1px solid rgba(100,200,80,.4);border-radius:8px;padding:10px 12px;font-size:12px;font-family:Georgia,serif;line-height:1.6;display:none;"></div>
+    <button onclick="testMicAccess()"
+      style="padding:11px;border-radius:10px;cursor:pointer;
+        background:rgba(20,70,110,.7);border:1.5px solid rgba(70,150,220,.6);
+        color:rgba(170,215,255,.95);font-size:13px;font-weight:700;font-family:Georgia,serif">
+      🔓 Probar / Pedir permiso de micrófono
+    </button>
 
     <!-- Nombre jugador -->
     <div style="background:rgba(20,40,20,.9);border:1px solid rgba(100,160,80,.4);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
@@ -670,6 +676,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 </div>
 
 <script>
+
+/* ── Captura global de errores: mostrar en pantalla en vez de fallar en silencio ── */
+window.addEventListener('error', function(e){
+  console.error('Error global:', e.error || e.message);
+  try{
+    let dbg=document.getElementById('debug-error-box');
+    if(!dbg){
+      dbg=document.createElement('div');
+      dbg.id='debug-error-box';
+      dbg.style.cssText='position:fixed;inset:0;z-index:99999;background:#1a0808;color:#ffb0a0;font-family:monospace;font-size:12px;padding:20px;overflow:auto;white-space:pre-wrap;';
+      document.body.appendChild(dbg);
+    }
+    const stack=(e.error&&e.error.stack)?e.error.stack:e.message;
+    dbg.textContent='⚠️ Error en el juego:\n\n'+stack+'\n\n(en '+e.filename+':'+e.lineno+')\n\nTocá para cerrar.';
+    dbg.onclick=()=>dbg.remove();
+  }catch(_){}
+});
 
 /* ═══════════════════════════════════════════
    CONSTANTES & LÓGICA DE CARTAS
@@ -1925,6 +1948,56 @@ function toggleAudio(){
   if(m && !m.paused) m.volume=_audioOn?0.55:0;
 }
 
+/* ── Diagnóstico claro de por qué el micrófono puede no andar ── */
+function refreshVoiceDiagnostics(){
+  const st=document.getElementById('voice-status');
+  if(!st) return;
+  const https=location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+  const hasMR=typeof MediaRecorder!=='undefined';
+  const hasMD=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+  st.style.display='block';
+
+  if(!https){
+    st.style.color='rgba(255,140,100,.95)';
+    st.innerHTML='❌ Esta página no está en HTTPS.<br>El navegador bloquea el micrófono por seguridad en sitios sin https://.<br>Abrí el juego desde una URL que empiece con <b>https://</b>.';
+    return;
+  }
+  if(!hasMD || !hasMR){
+    st.style.color='rgba(255,140,100,.95)';
+    st.innerHTML='❌ Este navegador/app no permite grabar audio aquí.<br>Probá abriendo el juego directamente en <b>Chrome</b> (no dentro de otra app, como Instagram/Facebook/un asistente) y volvé a intentar.';
+    return;
+  }
+  st.style.color='rgba(180,255,150,.9)';
+  st.innerHTML='✅ Todo listo para grabar. Tocá <b>🎙 Grabar</b> en el canto que quieras y luego permitile al navegador usar el micrófono cuando te lo pida.';
+}
+
+async function testMicAccess(){
+  const st=document.getElementById('voice-status');
+  function statusMsg(msg,color){ if(st){st.style.display='block';st.style.color=color;st.innerHTML=msg;} }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    statusMsg('❌ Este navegador no soporta acceso al micrófono desde esta página.','rgba(255,120,100,.95)');
+    return;
+  }
+  statusMsg('⏳ Pidiendo permiso de micrófono... (mirá si aparece un cartel arriba del navegador)','rgba(255,220,80,.9)');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    stream.getTracks().forEach(t=>t.stop());
+    statusMsg('✅ ¡Permiso concedido! Ya podés grabar tus cantos abajo.','rgba(120,255,150,.95)');
+  }catch(e){
+    let reason='Error desconocido: '+e.message;
+    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
+      reason='❌ Bloqueaste el permiso de micrófono. Tocá el ícono 🔒 o ⓘ junto a la URL del navegador, buscá "Micrófono" y ponelo en "Permitir". Después volvé a intentar.';
+    } else if(e.name==='NotFoundError'||e.name==='DevicesNotFoundError'){
+      reason='❌ No se encontró ningún micrófono en este dispositivo.';
+    } else if(e.name==='NotReadableError'||e.name==='TrackStartError'){
+      reason='❌ El micrófono está siendo usado por otra app. Cerrá otras apps que usen el micrófono e intentá de nuevo.';
+    } else if(e.name==='SecurityError'){
+      reason='❌ El navegador bloqueó el micrófono por seguridad (sitio no confiable o sin HTTPS).';
+    }
+    statusMsg(reason,'rgba(255,120,100,.95)');
+  }
+}
+
 async function startRecording(key){
   const st=document.getElementById('voice-status');
   function statusMsg(msg,color){
@@ -1982,7 +2055,11 @@ async function startRecording(key){
           statusMsg('✅ ¡Grabación guardada! Tocá ▶ para escucharla.','rgba(100,255,150,.9)');
           renderVoiceList();
         }catch(e){
-          statusMsg('❌ Error al guardar: '+e.message,'rgba(255,100,100,.9)');
+          let msg='❌ Error al guardar: '+e.message;
+          if(e.name==='QuotaExceededError'){
+            msg='❌ No hay espacio para guardar más grabaciones. Borrá alguna grabación vieja (🗑) e intentá de nuevo.';
+          }
+          statusMsg(msg,'rgba(255,100,100,.9)');
           console.error('save error',e);
         }
       };
@@ -2002,9 +2079,17 @@ async function startRecording(key){
       if(_mediaRec&&_mediaRec.state==='recording') _mediaRec.stop();
     },3500);
   }catch(e){
-    const msg='❌ Error al acceder al micrófono: '+e.message;
-    statusMsg(msg+' — Verificá los permisos en Ajustes del navegador','rgba(255,100,100,.9)');
-    alert(msg+'\n\nVerificá que:\n1. La página se abre con https://\n2. El navegador tiene permiso de micrófono\n3. Estás usando Chrome en Android');
+    let reason='❌ Error al acceder al micrófono: '+e.message;
+    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
+      reason='❌ Bloqueaste el permiso de micrófono. Tocá el ícono 🔒/ⓘ junto a la URL y permitilo, o tocá "Probar micrófono" arriba.';
+    } else if(e.name==='NotFoundError'||e.name==='DevicesNotFoundError'){
+      reason='❌ No se encontró micrófono en este dispositivo.';
+    } else if(e.name==='NotReadableError'||e.name==='TrackStartError'){
+      reason='❌ El micrófono está siendo usado por otra app. Cerrala e intentá de nuevo.';
+    } else if(e.name==='SecurityError'){
+      reason='❌ El navegador bloqueó el micrófono por seguridad (necesita HTTPS).';
+    }
+    statusMsg(reason,'rgba(255,100,100,.9)');
     updateRecBtn(key,'idle');
   }
 }
@@ -2164,15 +2249,12 @@ function renderGame(){
   // Mesa notice
   const mn=document.getElementById('mesa-notice');
   const pend=G.envPend||G.trucoPend;
-  const mesaArea=document.getElementById('mesa-cards-wrap');
   if(pend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
     mn.style.display='block';mn.className='notice';
     mn.textContent=(G.envPend?'🎯 ':'⚔️ ')+names[pend.level];
-    if(mesaArea) mesaArea.classList.add('scene-blur');
   } else {
     mn.style.display='none';
-    if(mesaArea) mesaArea.classList.remove('scene-blur');
   }
 
   // Log
@@ -2581,11 +2663,12 @@ function cancelRoom(){
    UTILS
 ═══════════════════════════════════════════ */
 function show(id){
+ try{
   // ── Control música de cortina ──
   if(id==='s-menu' || id==='s-rules' || id==='s-setup' || id==='s-online' || id==='s-voices' || id==='s-campaign' || id==='s-ranking'){
-    startMenuMusic();
+    try{ startMenuMusic(); }catch(e){ console.warn('startMenuMusic:',e); }
   } else {
-    stopMenuMusic();
+    try{ stopMenuMusic(); }catch(e){ console.warn('stopMenuMusic:',e); }
   }
 
   // Ocultar todas las pantallas .screen
@@ -2616,14 +2699,7 @@ function show(id){
     el.scrollTop=0;
     const inp=document.getElementById('inp-playername');
     if(inp) inp.value=_playerName||'';
-    const st=document.getElementById('voice-status');
-    if(st){
-      const https=location.protocol==='https:' || location.hostname==='localhost';
-      const hasMR=typeof MediaRecorder!=='undefined';
-      const hasMD=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
-      st.style.display='block';
-      st.innerHTML=`🔒 HTTPS: ${https?'✅':'❌ (necesario para micrófono)'} | MediaRecorder: ${hasMR?'✅':'❌'} | getUserMedia: ${hasMD?'✅':'❌'}`;
-    }
+    try{ refreshVoiceDiagnostics(); }catch(e){ console.error('refreshVoiceDiagnostics:',e); }
     setTimeout(()=>{ try{ renderVoiceList(); } catch(e){ console.error('renderVoiceList:',e); } },50);
   } else {
     el.classList.add('on');
@@ -2635,6 +2711,21 @@ function show(id){
     };
     if(bgs[id]) el.style.background=bgs[id];
   }
+ }catch(err){
+  console.error('show() error:',err);
+  // Mostrar el error en pantalla en vez de dejar todo negro/en blanco
+  const el=document.getElementById(id);
+  if(el){ el.style.display='flex'; el.style.background='#1a0808'; }
+  let dbg=document.getElementById('debug-error-box');
+  if(!dbg){
+    dbg=document.createElement('div');
+    dbg.id='debug-error-box';
+    dbg.style.cssText='position:fixed;inset:0;z-index:99999;background:#1a0808;color:#ffb0a0;font-family:monospace;font-size:12px;padding:20px;overflow:auto;white-space:pre-wrap;';
+    document.body.appendChild(dbg);
+  }
+  dbg.textContent='⚠️ Error al mostrar "'+id+'":\n\n'+(err&&err.stack?err.stack:err)+'\n\nTocá para cerrar.';
+  dbg.onclick=()=>dbg.remove();
+ }
 }
 
 function showMsg(id,msg,color){
