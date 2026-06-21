@@ -1667,9 +1667,13 @@ function mazo() {
 ═══════════════════════════════════════════════════════════ */
 function aiActuar() {
   if (G.fase !== 'ai_turn') return;
-  const ai = G.p2Hand;
-  if (!ai || !ai.length) return;
-  const avg = ai.reduce((s, c) => s + c.p, 0) / ai.length;
+  const ai = G.p2Hand || [];
+  // OJO: en la última ronda de la mano, la IA puede haberse quedado sin
+  // cartas (ya jugó la suya) mientras el jugador todavía puede cantar
+  // Truco/Envido antes de jugar la última carta. La IA tiene que poder
+  // responder esos cantos igual, así que el chequeo de "sin cartas" NO
+  // puede cortar la función antes de revisar los pendientes.
+  const avg = ai.length ? ai.reduce((s, c) => s + c.p, 0) / ai.length : 0;
 
   // 0. Responder/decidir batalla de Flor (tiene prioridad sobre todo lo demás)
   if (G.florPend) {
@@ -1678,9 +1682,13 @@ function aiActuar() {
     return; // batalla de flor pendiente pero no le toca actuar a la IA todavía
   }
 
-  // 1. Responder pendiente del jugador (primero)
+  // 1. Responder pendiente del jugador (incluso con la mano ya vacía)
   if (G.trucoPend && G.trucoPend.by === 'p1') { aiDecideTruco(); return; }
   if (G.envPend && G.envPend.by === 'p1') { aiDecideEnvido(); return; }
+
+  // A partir de acá, las acciones que siguen (cantar envido/truco por
+  // iniciativa propia, jugar carta) sí requieren tener cartas en mano.
+  if (!ai.length) return;
 
   // 2. IA llama envido (solo si envDisp y primera ronda)
   if (G.envDisp && !G.envDone && !G.envPend && !G.trucoPend && !G.trucoDone &&
