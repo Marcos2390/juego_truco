@@ -386,9 +386,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <p style="margin:0 0 6px">Solo en la <b>primera ronda</b>, incluso si ya se gritó Truco. Opciones: Envido (2pts), Real Envido (3pts), Falta Envido (pts que faltan al que va primero).</p>
     <div style="color:#e8c84a;font-size:10px;background:#0a1a0a;border-radius:6px;padding:6px;margin-bottom:10px">Pieza 2=30 · 4=29 · 5=28 · Cba/Sota=27 · Dos mismo palo +20 · Negras (S/C/R)=0</div>
     <div style="color:#f8a5c2;font-weight:700;font-size:13px;margin-bottom:6px">🌸 Flor (Cantos)</div>
-    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos. Cancela el envido. Si ambos tienen flor se resuelve al final de la mano.</p>
+    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual.</p>
     <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🃏 Al Mazo · Mano y Pie</div>
-    <p style="margin:0 0 0">Tirarse al mazo = ceder 1 pt al rival. Gana la mano quien gana 2 de 3 rondas. En caso de parda, lidera la siguiente ronda quien lideró esa. La mano se alterna cada partida.</p>
+    <p style="margin:0 0 0">Tirarse al mazo = ceder 1 pt al rival. Gana la mano quien gana 2 de 3 rondas. En caso de parda, lidera la siguiente ronda quien lideró esa. La mano se alterna cada partida. Si se discutió Envido o Flor, las cartas que no se llegaron a jugar se dan vuelta automáticamente al final de la mano para verificar los puntos.</p>
   </div>
   <button onclick="show('s-menu')" style="background:linear-gradient(135deg,#1b4a1b,#2e6e2e);border:2px solid #4a9a4a;color:#a5d5a5;border-radius:10px;padding:12px;cursor:pointer;font-family:Georgia,serif;font-size:14px;font-weight:700">← Volver al menú</button>
 </div>
@@ -765,6 +765,29 @@ function calcFlor(hand,ms,mc){
   if(Object.values(bySuit).some(cs=>cs.length>=3)) return true;
 
   return false;
+}
+
+// Valor numérico de la Flor para comparar cuando hay dos flores enfrentadas.
+// Estándar más común: 20 + suma de los valores "ajustados" de las 3 cartas,
+// donde una pieza aporta (su valor de envido - 20) y una carta común aporta
+// su número (las figuras 10/11/12 que no son pieza aportan 0).
+// Esto reproduce los valores de referencia habituales: mínima = 20 (3 figuras
+// del mismo palo, ninguna pieza), máxima sin pieza = 38 (7-6-5 del mismo palo),
+// máxima con piezas = 47 (2-4-5 de la muestra).
+function calcFlorPts(hand,ms,mc){
+  mc=mc||{v:0,s:'_'};
+  const esPz=c=>esPieza(c.v,c.s,ms)||esEspejito(c.v,c.s,ms,mc);
+  let total=20;
+  hand.forEach(c=>{
+    if(esPz(c)){
+      const ev=calcEnvVal(c.v,c.s,ms,mc); // 30/29/28/27/27
+      total+=ev-20;
+    } else if(c.v<10){
+      total+=c.v;
+    }
+    // figuras (10/11/12) que no son pieza no suman nada
+  });
+  return total;
 }
 
 // ── Envido ─────────────────────────────────────────────────
@@ -1241,7 +1264,10 @@ function nuevoTurno(p1IsMano) {
     envDisp: true,  // disponible hasta que alguien juegue la primera carta de la mano
     envPend: null, envDone: false,
     p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
-    // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano
+    p1FlorPts: calcFlorPts(p1H, ms, mc), p2FlorPts: calcFlorPts(p2H, ms, mc),
+    // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano.
+    // Si ambos tienen flor, se resuelve con la batalla de Contra Flor al Resto (florPend/florStage).
+    florPend: null, florStage: 'none', florDone: false, revealHands: false,
     trucoPend: null, trucoAcep: false, trucoStake: 0, trucoDone: false,
     trucoLastCaller: null,
     handDone: false, handWinner: null, _scored: false,
@@ -1259,12 +1285,14 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
 
   // ── FLOR: detectar y anunciar con burbuja + audio ──────────
   if(h.p1Flor && h.p2Flor){
-    // Ambos tienen flor → enfrentamiento al cantar
-    // Simplificado: se anotan al final de la mano (3pts al ganador)
-    G.envDone=true;
-    setTimeout(()=>{ sayAndShow('p1','🌸 ¡La mía es Flor!','#f8a5c2','La mía es flor'); },300);
-    setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor!','#f8a5c2','La mía es flor'); },1400);
-    addLog('🌸 Ambos tienen Flor. Se resuelve al final de la mano.','#f8a5c2');
+    // Ambos tienen flor → batalla de Flor / Contra Flor al Resto
+    G.envDone = true;
+    const manoRole = G.mano, respRole = opp(manoRole);
+    G.florPend = { level: 'flor_resp', by: manoRole };
+    G.florStage = 'await_response';
+    setTimeout(()=>{ sayAndShow(manoRole,'🌸 ¡La mía es Flor!','#f8a5c2','La mía es flor'); },300);
+    addLog('🌸 Ambos tienen Flor. ' + (respRole==='p1' ? 'Tenés' : 'La IA tiene') + ' que responder.','#f8a5c2');
+    G.fase = respRole === 'p1' ? 'p_resp_flor' : 'ai_turn';
   } else if(h.p1Flor){
     G.envDone=true;
     G.pScore=Math.min(MAX_PTS,G.pScore+3);
@@ -1314,13 +1342,17 @@ function finalizeHand(g) {
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
   else G.oScore = Math.min(MAX_PTS, G.oScore + pts);
 
-  // If both had flor, winner of mano scores 3 extra
-  if (G.p1Flor && G.p2Flor) {
-    if (myWin) { G.pScore = Math.min(MAX_PTS, G.pScore + 3); addLog('🌸 +3 pts por Flor!', '#f8a5c2'); }
-    else { G.oScore = Math.min(MAX_PTS, G.oScore + 3); addLog('🌸 IA +3 pts por Flor!', '#f8a5c2'); }
+  logEnvidoReveal();
+
+  // ── Mostrar cartas no jugadas automáticamente ──────────────
+  // Si se disputó envido o flor, y a alguno le quedaron cartas sin jugar,
+  // se dan vuelta para verificar los puntos cantados.
+  if (G.envDone && (G.p1Hand.length > 0 || G.p2Hand.length > 0)) {
+    G.revealHands = true;
+    if (G.p1Hand.length) addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
+    if (G.p2Hand.length) addLog('🔍 Cartas sin jugar de IA: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
   }
 
-  logEnvidoReveal();
   addLog(
     (myWin ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
     (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : 'IA +' + pts + ' pts → IA: ' + G.oScore) + '/' + MAX_PTS,
@@ -1329,7 +1361,7 @@ function finalizeHand(g) {
   renderGame();
   if (checkGameOver()) return;
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
-  setTimeout(() => initGame(nm === 'p1', ps, os), 2200);
+  setTimeout(() => initGame(nm === 'p1', ps, os), G.revealHands ? 3200 : 2200);
 }
 
 function resRound(p1c, p2c) {
@@ -1436,6 +1468,103 @@ function callEnvido(level) {
   scheduleAI(1100);
 }
 
+// ── FLOR: batalla de Flor / Contra Flor al Resto (cuando ambos tienen Flor) ─
+// Estándar más común aplicado:
+//  · Si nadie escala: gana el de mayor puntaje de Flor y se anota 6 pts (3+3).
+//  · "Contra Flor al Resto": el que la canta arriesga/ofrece todo lo que le
+//    falta al que va ganando para llegar a 30, más 3 pts por cada Flor (6 fijo
+//    en 1 vs 1) → stake = falta + 6. Si se rechaza, quien cantó se lleva 6 pts.
+function getFalta() { return MAX_PTS - Math.min(G.pScore, G.oScore); }
+
+function resolveFlorBattle(stake) {
+  const winner = G.p1FlorPts >= G.p2FlorPts ? 'p1' : 'p2';
+  const myWin = winner === 'p1';
+  addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' la Flor! Vos: ' + G.p1FlorPts + ' vs IA: ' + G.p2FlorPts +
+    '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), '#f8a5c2');
+  if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
+  else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
+  finishFlorBattle();
+}
+
+function resolveFlorReject(winnerRole, pts) {
+  const myWin = winnerRole === 'p1';
+  addLog((myWin ? '✅ Ganás la Flor por no querer: +' : '❌ IA gana la Flor por no querer: +') + pts + ' pts.', '#f8a5c2');
+  if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
+  else G.oScore = Math.min(MAX_PTS, G.oScore + pts);
+  finishFlorBattle();
+}
+
+function finishFlorBattle() {
+  G.florPend = null; G.florStage = 'done'; G.florDone = true;
+  if (checkGameOver()) return;
+  G.fase = nextFaseAfterInterrupt();
+  renderGame();
+  if (G.fase === 'ai_turn') scheduleAI(900);
+}
+
+// El jugador (respondedor) acepta la Flor-Flor sin escalar
+function florAccept() {
+  if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
+  sayAndShow('p1','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+  resolveFlorBattle(6);
+}
+
+// El jugador (respondedor) escala a Contra Flor al Resto
+function florCallContraflorResto() {
+  if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
+  const stake = getFalta() + 6;
+  G.florPend = { level: 'contraflor_resto', by: 'p1', stake, refuseVal: 6 };
+  G.florStage = 'await_resto_response';
+  sayAndShow('p1','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+  G.fase = 'ai_turn';
+  renderGame();
+  scheduleAI(1100);
+}
+
+// El jugador, como mano original, responde a la Contra Flor al Resto de la IA
+function respondContraflorResto(accept) {
+  if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'contraflor_resto') return;
+  const { stake, refuseVal, by } = G.florPend;
+  if (accept) {
+    sayAndShow('p1','▶ ¡Quiero!','#7fba5a','Quiero');
+    resolveFlorBattle(stake);
+  } else {
+    sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
+    resolveFlorReject(by, refuseVal);
+  }
+}
+
+// La IA, como respondedora, decide entre aceptar Flor-Flor o escalar
+function aiDecideFlorResponse() {
+  if (!G.florPend || G.florPend.level !== 'flor_resp') return;
+  const strong = G.p2FlorPts >= 30;
+  if (strong) {
+    const stake = getFalta() + 6;
+    G.florPend = { level: 'contraflor_resto', by: 'p2', stake, refuseVal: 6 };
+    G.florStage = 'await_resto_response';
+    sayAndShow('p2','🤖 ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+    G.fase = 'p_resp_flor';
+    renderGame();
+  } else {
+    sayAndShow('p2','🤖 ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+    resolveFlorBattle(6);
+  }
+}
+
+// La IA, como mano original, decide aceptar o rechazar la Contra Flor al Resto
+function aiDecideContraflorResto() {
+  if (!G.florPend || G.florPend.level !== 'contraflor_resto') return;
+  const { stake, refuseVal, by } = G.florPend;
+  const accept = G.p2FlorPts >= 28;
+  if (accept) {
+    sayAndShow('p2','🤖 ¡Quiero!','#a78bca','Quiero');
+    resolveFlorBattle(stake);
+  } else {
+    sayAndShow('p2','🤖 No quiero.','#a78bca','No quiero');
+    resolveFlorReject(by, refuseVal);
+  }
+}
+
 // ── Truco ─────────────────────────────────────────────────────
 // Regla clave:
 //   Truco → adversario puede: quiero / no quiero / RETRUCO
@@ -1527,7 +1656,7 @@ function respondTruco(accept, raise = false) {
 // ── Al mazo ───────────────────────────────────────────────────
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
-  addLog('▶ Te tirás al mazo. IA +1 pt.', '#d4890a');
+  sayAndShow('p1','▶ Me voy al mazo. IA +1 pt.','#d4890a','Me voy al mazo');
   G.oScore = Math.min(MAX_PTS, G.oScore + 1);
   G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
   finalizeHand();
@@ -1541,6 +1670,13 @@ function aiActuar() {
   const ai = G.p2Hand;
   if (!ai || !ai.length) return;
   const avg = ai.reduce((s, c) => s + c.p, 0) / ai.length;
+
+  // 0. Responder/decidir batalla de Flor (tiene prioridad sobre todo lo demás)
+  if (G.florPend) {
+    if (G.florPend.level === 'flor_resp') { aiDecideFlorResponse(); return; }
+    if (G.florPend.level === 'contraflor_resto' && G.florPend.by === 'p1') { aiDecideContraflorResto(); return; }
+    return; // batalla de flor pendiente pero no le toca actuar a la IA todavía
+  }
 
   // 1. Responder pendiente del jugador (primero)
   if (G.trucoPend && G.trucoPend.by === 'p1') { aiDecideTruco(); return; }
@@ -1741,6 +1877,31 @@ function fanFaceDown(n){
   return h;
 }
 
+// Igual que fanFaceDown pero mostrando las cartas reales boca arriba (sin clic),
+// usado para revelar automáticamente las cartas sin jugar al final de la mano.
+function fanFaceUpSmall(cards){
+  if(!cards||!cards.length) return '<div style="height:90px"></div>';
+  const n=cards.length;
+  const cfgs={1:[{r:0,ty:0}],2:[{r:-7,ty:7},{r:7,ty:7}],3:[{r:-10,ty:10},{r:0,ty:0},{r:10,ty:10}]};
+  const config=cfgs[n]||cfgs[3];
+  const CW=62,spacing=44;
+  const totalW=(n-1)*spacing+CW;
+  const startX=-(totalW/2)+(CW/2);
+  let h='<div style="position:relative;height:90px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
+  cards.forEach((card,i)=>{
+    const cfg=config[i]||{r:0,ty:0};
+    const xPos=startX+i*spacing;
+    h+=`<div style="position:absolute;bottom:0;left:50%;
+      transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty}px) rotate(${cfg.r}deg);
+      transform-origin:center bottom;z-index:${i+1}">
+      ${cardHTML(card,{disabled:true,small:true})}
+    </div>`;
+  });
+  h+='</div>';
+  return h;
+}
+
+
 
 // ¿Puede el jugador subir el truco ahora?
 // Solo si el último nivel fue cantado por la IA (p2) y aún hay nivel para subir
@@ -1858,8 +2019,8 @@ function sayAndShow(who, displayText, color, spoken){
 function logEnvidoReveal(){
   if(!G.envDone&&!G.p1Flor&&!G.p2Flor) return;
   if(G.p1Flor||G.p2Flor){
-    if(G.p1Flor) addLog('🌸 Tus puntos de Flor: '+G.p1Env,'#f8a5c2');
-    if(G.p2Flor) addLog('🌸 Puntos de Flor de IA: '+G.p2Env,'#f8a5c2');
+    if(G.p1Flor) addLog('🌸 Tus puntos de Flor: '+G.p1FlorPts,'#f8a5c2');
+    if(G.p2Flor) addLog('🌸 Puntos de Flor de IA: '+G.p2FlorPts,'#f8a5c2');
   } else if(G.envDone){
     addLog('📊 Tus puntos de envido: '+G.p1Env+' | IA: '+G.p2Env,'#d4890a');
   }
@@ -1875,6 +2036,8 @@ const VOICE_CALLS=[
   {key:'noquiero',label:'❌ No quiero'},{key:'envido',label:'🎯 Envido'},
   {key:'realenv',label:'🎯 Real Envido'},{key:'faltaenv',label:'🎯 Falta Envido'},
   {key:'flor',label:'🌸 La mía es Flor'},
+  {key:'contraflor',label:'🌺 Contra Flor al Resto'},
+  {key:'mazo',label:'🃏 Me voy al mazo'},
 ];
 
 let _playerName=localStorage.getItem('playerName')||'jugador';
@@ -1911,6 +2074,8 @@ function say(text){
     'Quiero':'quiero','No quiero':'noquiero',
     'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
     'La mía es flor':'flor','la mía es flor':'flor','¡La mía es Flor!':'flor',
+    'Contra Flor al Resto':'contraflor','¡Contra Flor al Resto!':'contraflor',
+    'Me voy al mazo':'mazo','Me voy al mazo.':'mazo',
   };
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
   if(k && playCustomVoice(k)) return;
@@ -2234,6 +2399,8 @@ function renderGame(){
   else if(fase==='p_turn')    tb.innerHTML='<span style="color:rgba(140,230,140,.95);font-weight:700">⚔️ Tu turno</span>';
   else if(fase==='p_resp_env')   tb.innerHTML='<span style="color:rgba(230,180,80,.95);font-weight:700">🎯 Respondé el envido</span>';
   else if(fase==='p_resp_truco') tb.innerHTML='<span style="color:rgba(230,100,80,.95);font-weight:700">⚔️ Respondé el truco</span>';
+  else if(fase==='p_resp_flor')  tb.innerHTML='<span style="color:rgba(248,165,194,.95);font-weight:700">🌸 '+
+    (G.florPend&&G.florPend.level==='contraflor_resto'?'Respondé Contra Flor al Resto':'Ambos tienen Flor')+'</span>';
 
   // Truco badge
   const tb2=document.getElementById('truco-badge');
@@ -2242,8 +2409,8 @@ function renderGame(){
     tb2.textContent='⚔ '+tn[G.trucoStake]+' ('+G.trucoStake+' pts)';
   } else tb2.textContent='';
 
-  // Opponent hand (face down)
-  document.getElementById('opp-hand').innerHTML=fanFaceDown(oppH.length);
+  // Opponent hand (face down, salvo cuando se revela al final de la mano)
+  document.getElementById('opp-hand').innerHTML = G.revealHands ? fanFaceUpSmall(oppH) : fanFaceDown(oppH.length);
   document.getElementById('opp-count').textContent=oppH.length+'✦';
 
   // Muestra
@@ -2265,11 +2432,11 @@ function renderGame(){
 
   // Mesa notice
   const mn=document.getElementById('mesa-notice');
-  const pend=G.envPend||G.trucoPend;
+  const pend=G.envPend||G.trucoPend||G.florPend;
   if(pend){
-    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
+    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro',flor_resp:'Flor',contraflor_resto:'Contra Flor al Resto'};
     mn.style.display='block';mn.className='notice';
-    mn.textContent=(G.envPend?'🎯 ':'⚔️ ')+names[pend.level];
+    mn.textContent=(G.envPend?'🎯 ':G.florPend?'🌸 ':'⚔️ ')+names[pend.level];
   } else {
     mn.style.display='none';
   }
@@ -2293,6 +2460,50 @@ function renderActions(){
   const act=document.getElementById('actions');
   act.innerHTML='';
   const fase=G.fase;
+
+  // ── Responder Flor (ambos tienen Flor) ─────────────────
+  if(fase==='p_resp_flor'&&G.florPend){
+    if(G.florPend.level==='flor_resp'){
+      act.innerHTML=`
+        <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
+          font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
+          🌸 ${G.mano==='p1'?'Cantaste':'La IA cantó'} ¡Flor! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="florAccept()"
+            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
+              background:rgba(120,40,90,.6);border:2px solid rgba(230,120,180,.7);
+              color:#f8c0e0;font-size:12px;font-weight:700;font-family:Georgia,serif">
+            🌸 También Flor</button>
+          <button onclick="florCallContraflorResto()"
+            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
+              background:rgba(150,30,70,.6);border:2px solid rgba(240,100,160,.7);
+              color:#ffc0e0;font-size:12px;font-weight:700;font-family:Georgia,serif">
+            🌺 Contra Flor al Resto</button>
+        </div>`;
+      return;
+    }
+    if(G.florPend.level==='contraflor_resto'&&G.florPend.by==='p2'){
+      act.innerHTML=`
+        <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
+          font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
+          🤖 IA dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="respondContraflorResto(true)"
+            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
+              background:rgba(30,110,30,.75);border:2px solid rgba(80,210,80,.7);
+              color:#a0f8a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
+            ✅ Quiero</button>
+          <button onclick="respondContraflorResto(false)"
+            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
+              background:rgba(110,20,20,.75);border:2px solid rgba(230,80,60,.7);
+              color:#f8a0a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
+            ❌ No quiero (–${G.florPend.refuseVal})</button>
+        </div>`;
+      return;
+    }
+  }
 
   // ── Responder envido de IA ─────────────────────────────
   if(fase==='p_resp_env'&&G.envPend){
