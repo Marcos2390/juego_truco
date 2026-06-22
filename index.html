@@ -443,21 +443,40 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 <!-- ═══════ ONLINE LOBBY ═══════ -->
 <div id="s-online" class="screen inner">
   <h2 style="margin-top:10px">🌐 Partida Online</h2>
-  <div id="online-cfg-warn" class="notice" style="display:none">⚠️ Primero configurá Supabase en ⚙️ Configuración</div>
 
+  <!-- Estado de conexión -->
+  <div id="online-status-bar" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(20,40,20,.7);border:1px solid rgba(80,180,60,.3);font-size:12px;font-family:Georgia,serif">
+    <span id="online-conn-dot" style="width:10px;height:10px;border-radius:50%;background:#e04040;display:inline-block;flex-shrink:0"></span>
+    <span id="online-conn-label" style="color:rgba(200,220,180,.9)">Sin conexión — configurá Supabase en ⚙️</span>
+  </div>
+
+  <!-- Crear sala -->
   <div class="bar" style="gap:10px;display:flex;flex-direction:column">
     <div style="color:var(--gold);font-size:12px;font-weight:700;text-align:center">Crear nueva sala</div>
-    <button class="btn green" onclick="createRoom()">🏠 Crear sala</button>
-    <div id="room-created" style="display:none;flex-direction:column;gap:8px">
-      <div style="color:var(--muted);font-size:10px;text-align:center">Compartí este código con tu rival:</div>
-      <div class="code-box" id="room-code-display">----</div>
-      <div class="thinking" id="waiting-msg">Esperando que se una el rival...</div>
+    <button class="btn green" onclick="createRoom()" id="btn-create-room">🏠 Crear sala</button>
+
+    <!-- Estado de sala creada -->
+    <div id="room-created" style="display:none;flex-direction:column;gap:10px">
+      <div style="text-align:center">
+        <div style="color:rgba(160,200,140,.8);font-size:11px;font-family:Georgia,serif;margin-bottom:6px">Compartí este código:</div>
+        <div class="code-box" id="room-code-display" style="font-size:28px;letter-spacing:8px;padding:12px 20px;cursor:pointer;user-select:all" title="Tocá para copiar" onclick="copyRoomCode()">----</div>
+        <div style="color:rgba(140,180,120,.7);font-size:10px;margin-top:4px;font-family:monospace">Tocá el código para copiarlo</div>
+      </div>
+      <div id="room-player-count" style="display:flex;align-items:center;justify-content:center;gap:8px;font-family:Georgia,serif;font-size:12px;color:rgba(180,220,160,.9)">
+        <span style="font-size:16px">👤</span> <span>Vos</span>
+        <span style="color:rgba(140,160,120,.5);font-size:18px;margin:0 4px">·</span>
+        <span style="font-size:16px;opacity:0.4">👤</span> <span style="color:rgba(140,160,120,.6)">Esperando rival...</span>
+      </div>
+      <div class="thinking" id="waiting-msg" style="text-align:center;font-family:Georgia,serif;font-size:11px">Esperando que se una el rival...</div>
     </div>
   </div>
 
+  <!-- Unirse a sala -->
   <div class="bar" style="gap:10px;display:flex;flex-direction:column">
     <div style="color:var(--gold);font-size:12px;font-weight:700;text-align:center">Unirse a sala existente</div>
-    <input type="text" id="inp-code" placeholder="Código de 4 letras" maxlength="4" style="text-align:center;font-size:20px;letter-spacing:6px;text-transform:uppercase">
+    <input type="text" id="inp-code" placeholder="Código de 4 letras" maxlength="4"
+      style="text-align:center;font-size:22px;letter-spacing:8px;text-transform:uppercase"
+      oninput="this.value=this.value.toUpperCase()">
     <button class="btn gold" onclick="joinRoom()">🚪 Unirse</button>
     <div id="join-msg" style="font-size:10px;text-align:center;color:var(--muted)"></div>
   </div>
@@ -600,7 +619,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       🔓 Probar / Pedir permiso de micrófono
     </button>
 
-    <!-- Nombre jugador -->
+    <!-- Nombre jugador + rol activo -->
     <div style="background:rgba(20,40,20,.9);border:1px solid rgba(100,160,80,.4);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
       <div style="color:rgba(220,200,140,.95);font-size:13px;font-family:Georgia,serif;font-weight:700">👤 Tu nombre de jugador</div>
       <div style="display:flex;gap:8px">
@@ -615,6 +634,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
         </button>
       </div>
       <div id="voice-name-msg" style="font-size:11px;color:rgba(160,220,130,.9);font-family:monospace;min-height:14px"></div>
+      <!-- Indicador de rol activo -->
+      <div id="voice-role-badge" style="font-size:11px;font-family:monospace;padding:6px 10px;border-radius:6px;background:rgba(10,30,50,.7);border:1px solid rgba(60,120,200,.4);color:rgba(160,210,255,.9);display:none"></div>
     </div>
 
     <!-- Instrucciones -->
@@ -834,8 +855,8 @@ function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object
 
 // ===== SISTEMA DE MAZOS =====
 const MAZOS = [
-  { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
-  { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'clasico', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
+  { id: 'madera', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-MADERA', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
@@ -2019,7 +2040,7 @@ function spawnImpact(targetId){
 function sayAndShow(who, displayText, color, spoken){
   addLog(displayText, color);
   showBubble(who, spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
-  say(spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
+  say(spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim(), who);
   triggerTensionShake();
 }
 
@@ -2052,9 +2073,15 @@ let _playerName=localStorage.getItem('playerName')||'jugador';
 const _voiceURLs={}; // key → objectURL
 let _mediaRec=null, _recKey=null, _recChunks=[];
 
+// Voice prefix: p1_ when playing as p1 (local or online host), p2_ when joining as p2
+function voicePrefix(){ return MY_ROLE||'p1'; }
+
 function loadVoices(){
+  const prefix=voicePrefix();
   VOICE_CALLS.forEach(({key})=>{
-    const b64=localStorage.getItem('voz_'+_playerName+'_'+key);
+    // Try role-based key first, then legacy playerName key for backwards compat
+    let b64=localStorage.getItem('voz_'+prefix+'_'+key);
+    if(!b64) b64=localStorage.getItem('voz_'+_playerName+'_'+key);
     if(b64){
       try{
         const ab=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer;
@@ -2075,7 +2102,8 @@ function playCustomVoice(key){
 }
 
 // say() tries custom voice first, then TTS
-function say(text){
+// who: 'p1' = local player, 'p2' = AI/remote (no custom voice for AI)
+function say(text, who){
   if(!_audioOn) return;
   const keyMap={
     'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
@@ -2086,7 +2114,9 @@ function say(text){
     'Me voy al mazo':'mazo','Me voy al mazo.':'mazo',
   };
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
-  if(k && playCustomVoice(k)) return;
+  // Custom voice: only for local player (who === MY_ROLE), not for AI
+  const isLocalPlayer = !who || who === MY_ROLE || (who === 'p1' && MODE !== 'online');
+  if(k && isLocalPlayer && playCustomVoice(k)) return;
   // TTS fallback
   if(!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -2238,7 +2268,7 @@ async function startRecording(key){
       reader.onload=()=>{
         try{
           const b64=btoa(String.fromCharCode(...new Uint8Array(reader.result)));
-          localStorage.setItem('voz_'+_playerName+'_'+key,b64);
+          localStorage.setItem('voz_'+voicePrefix()+'_'+key,b64);
           if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
           _voiceURLs[key]=URL.createObjectURL(blob);
           updateRecBtn(key,'done');
@@ -2304,7 +2334,8 @@ function testVoice(key){
 
 function deleteVoice(key){
   if(!confirm('¿Borrar esta grabación?')) return;
-  localStorage.removeItem('voz_'+_playerName+'_'+key);
+  localStorage.removeItem('voz_'+voicePrefix()+'_'+key);
+  localStorage.removeItem('voz_'+_playerName+'_'+key); // also remove legacy key
   if(_voiceURLs[key]){URL.revokeObjectURL(_voiceURLs[key]);delete _voiceURLs[key];}
   renderVoiceList();
 }
@@ -2323,6 +2354,15 @@ function renderVoiceList(){
   try{
     const el=document.getElementById('voice-list');
     if(!el){ console.warn('renderVoiceList: #voice-list no encontrado'); return; }
+    // Update role badge
+    const badge=document.getElementById('voice-role-badge');
+    if(badge){
+      const prefix=voicePrefix();
+      const roleLabel=prefix==='p2'?'Jugador 2 (online)':'Jugador 1 (local)';
+      const modeLabel=MODE==='online'?'🌐 Modo online':'🤖 Modo vs IA';
+      badge.style.display='block';
+      badge.innerHTML=`${modeLabel} · Grabando como <b>${roleLabel}</b> · Prefijo: <code>${prefix}_</code>`;
+    }
     if(!Array.isArray(VOICE_CALLS)||VOICE_CALLS.length===0){
       el.innerHTML='<div style="color:rgba(200,80,80,.8);font-size:11px;text-align:center;padding:20px">⚠️ Sin cantos definidos</div>';
       return;
@@ -2773,8 +2813,9 @@ function getSBConfig(){
 
 function initSB(){
   const {url,key}=getSBConfig();
-  if(!url||!key) return false;
+  if(!url||!key){ window.SUPABASE_CONFIGURED=false; return false; }
   SB=window.supabase.createClient(url,key);
+  window.SUPABASE_CONFIGURED=true;
   return true;
 }
 
@@ -2859,6 +2900,7 @@ async function joinRoom(){
   if(error||!data){showMsg('join-msg','❌ Sala no encontrada.','#e06060');return;}
 
   ROOM=code;MY_ROLE='p2';MODE='online';
+  loadVoices(); // reload with p2_ prefix
   G={...data.state,p2Joined:true};
   addLog('🟢 Te uniste a la sala. ¡Que empiece el truco!','#7fba5a');
 
@@ -2893,6 +2935,32 @@ function cancelRoom(){
   if(roomChannel){SB&&SB.removeChannel(roomChannel);roomChannel=null;}
   document.getElementById('room-created').style.display='none';
   document.getElementById('room-code-display').textContent='----';
+}
+
+function copyRoomCode(){
+  const code=document.getElementById('room-code-display').textContent;
+  if(!code||code==='----') return;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>{ showMsg('join-msg','✅ Código copiado: '+code,'#7fba5a'); }).catch(()=>{});
+  } else {
+    // fallback
+    const el=document.getElementById('room-code-display');
+    el.style.outline='2px solid #7fba5a';
+    setTimeout(()=>el.style.outline='',800);
+  }
+}
+
+function updateOnlineStatusUI(){
+  const dot=document.getElementById('online-conn-dot');
+  const label=document.getElementById('online-conn-label');
+  if(!dot||!label) return;
+  const connected=!!(SB&&typeof SB.from==='function'&&window.SUPABASE_CONFIGURED);
+  dot.style.background=connected?'#7fba5a':'#e04040';
+  dot.style.boxShadow=connected?'0 0 6px #7fba5a':'none';
+  label.style.color=connected?'rgba(180,240,150,.9)':'rgba(200,180,130,.8)';
+  label.textContent=connected
+    ?'Conectado — listo para jugar'
+    :'Sin conexión — configurá Supabase en ⚙️ Configuración';
 }
 
 /* ═══════════════════════════════════════════
@@ -2948,6 +3016,7 @@ function show(id){
       's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000'
     };
     if(bgs[id]) el.style.background=bgs[id];
+    if(id==='s-online'){ initSB(); setTimeout(updateOnlineStatusUI,50); }
   }
  }catch(err){
   console.error('show() error:',err);
