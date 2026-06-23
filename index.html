@@ -1649,7 +1649,8 @@ function respondTruco(accept, raise = false) {
     G.trucoPend = { level: next, by: 'p1', stake: stakes2[next], refuseVal: refuses2[next] };
     G.trucoLastCaller = 'p1';
     addLog('▶ Subís: ¡' + names[next] + '!', '#c0392b');
-    say(names[next]);
+    showBubble('p1', names[next]);
+    say(names[next], 'p1');
     triggerTensionShake();
     G.fase = 'ai_turn';
     renderGame();
@@ -1661,6 +1662,7 @@ function respondTruco(accept, raise = false) {
   if (accept) {
     G.trucoAcep = true; G.trucoStake = stake;
     sayAndShow('p1','▶ ¡Quiero! ('+stake+' pts)','#7fba5a','Quiero');
+    if (checkGameOver()) return;
     G.fase = nextFaseAfterInterrupt();
     renderGame();
     if (G.fase === 'ai_turn') scheduleAI(1400);
@@ -1800,7 +1802,9 @@ function aiDecideTruco() {
   const { level, stake, refuseVal } = G.trucoPend;
   const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
   const canRaise = level !== 'vale4' && G.trucoLastCaller === 'p1';
-  const willRaise = canRaise && avg >= 12;
+  // Raise threshold: lower for retruco (avg>=9), higher for vale4 (avg>=10)
+  const raiseThresh = level === 'truco' ? 9 : 10;
+  const willRaise = canRaise && avg >= raiseThresh;
   const willAccept = !willRaise && avg >= 5;
 
   if (willRaise) {
