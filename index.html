@@ -904,6 +904,7 @@ const MAZOS = [
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
 
+
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -1371,6 +1372,7 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   }
 
   renderGame();
+  syncOnline(); // Send new hand state to P2
   if (G.fase === 'ai_turn') scheduleAI(900);
 }
 
@@ -1487,10 +1489,11 @@ function finalizeHand(g) {
 
   addLog(
     (myWin ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
-    (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : 'IA +' + pts + ' pts → IA: ' + G.oScore) + '/' + MAX_PTS,
+    (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : (MODE==='online'?'Rival':'IA') + ' +' + pts + ' pts → ' + (MODE==='online'?'Rival':'IA') + ': ' + G.oScore) + '/' + MAX_PTS,
     myWin ? '#7fba5a' : '#e06060'
   );
   renderGame();
+  syncOnline(); // Send hand result to P2
   if (checkGameOver()) return;
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
   setTimeout(() => initGame(nm === 'p1', ps, os), G.revealHands ? 3200 : 2200);
@@ -1546,6 +1549,7 @@ function doResolveRound() {
   } else {
     G.fase = G.roundLeader === 'p1' ? 'p_turn' : 'ai_turn';
     renderGame();
+    syncOnline(); // Tell P2 who plays next
     if (G.fase === 'ai_turn') scheduleAI(800);
   }
 }
@@ -1572,12 +1576,14 @@ function playCard(idx) {
   SEL = null;
   if (!aiAlreadyPlayed) G.roundLeader = 'p1';
   if (G.mesa.p2) {
-    // Jugador respondió a la IA: mostrar ambas cartas 1.5s antes de resolver
+    // Both played — show cards then resolve
     renderGame();
+    syncOnline();
     setTimeout(() => doResolveRound(), 1500);
   } else {
     G.fase = 'ai_turn';
     renderGame();
+    syncOnline();
     scheduleAI(800);
   }
 }
@@ -1599,6 +1605,7 @@ function callEnvido(level) {
   sayAndShow('p1','▶ ¡'+names[level]+'!','#d4890a',names[level]);
   G.fase = 'ai_turn';
   renderGame();
+  syncOnline();
   scheduleAI(1100);
 }
 
@@ -1641,6 +1648,7 @@ function florAccept() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
   if (MODE==='online' && MY_ROLE==='p2') { sendAction('florAccept',{}); return; }
   sayAndShow('p1','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+  syncOnline();
   resolveFlorBattle(6);
 }
 
@@ -1654,6 +1662,7 @@ function florCallContraflorResto() {
   sayAndShow('p1','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
   G.fase = 'ai_turn';
   renderGame();
+  syncOnline();
   scheduleAI(1100);
 }
 
@@ -1721,6 +1730,7 @@ function callTruco() {
   sayAndShow('p1','▶ ¡Truco!','#e04040','Truco');
   G.fase = 'ai_turn';
   renderGame();
+  syncOnline();
   scheduleAI(1100);
 }
 
@@ -1748,6 +1758,7 @@ function respondEnvido(accept) {
   if (checkGameOver()) return;
   G.fase = nextFaseAfterInterrupt();
   renderGame();
+  syncOnline();
   if (G.fase === 'ai_turn') scheduleAI(700);
 }
 
@@ -1774,6 +1785,7 @@ function respondTruco(accept, raise = false) {
     triggerTensionShake();
     G.fase = 'ai_turn';
     renderGame();
+    syncOnline();
     scheduleAI(1100);
     return;
   }
@@ -1785,13 +1797,15 @@ function respondTruco(accept, raise = false) {
     if (checkGameOver()) return;
     G.fase = nextFaseAfterInterrupt();
     renderGame();
+    syncOnline();
     if (G.fase === 'ai_turn') scheduleAI(1400);
   } else {
     // No quiero → IA (quien llamó) gana refuseVal
-    sayAndShow('p1','▶ No quiero. IA +'+refuseVal+' pts.','#d4890a','No quiero');
+    sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
     G.trucoDone = true;
     G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
     G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
+    syncOnline();
     finalizeHand();
   }
 }
@@ -1800,10 +1814,11 @@ function respondTruco(accept, raise = false) {
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
   if (MODE==='online' && MY_ROLE==='p2') { sendAction('mazo',{}); return; }
-  sayAndShow('p1','▶ Me voy al mazo. IA +1 pt.','#d4890a','Me voy al mazo');
+  sayAndShow('p1','▶ Me voy al mazo.','#d4890a','Me voy al mazo');
   campTrackMazo();
   G.oScore = Math.min(MAX_PTS, G.oScore + 1);
   G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
+  syncOnline();
   finalizeHand();
 }
 
@@ -2557,8 +2572,6 @@ function respondAndRaiseEnv(newLevel){
 
 function renderGame(){
   if(!G.p1Hand) return;
-  // Sync state to P2 after every render (P1 is the source of truth)
-  if(MODE==='online' && MY_ROLE==='p1') { setTimeout(syncOnline, 0); }
   const myH=myHand(),oppH=oppHand(),myIsMano=G.mano===MY_ROLE;
 
   // Scores
@@ -2723,7 +2736,7 @@ function renderActions(){
   // ── Responder truco de IA ──────────────────────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by==='p2';
+    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by!==MY_ROLE;
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
     act.style.flexDirection='column';
     act.style.alignItems='stretch';
@@ -3435,7 +3448,7 @@ function handleRemoteAction(action, payload){
       const playerAlreadyPlayed = !!G.mesa.p1;
       G.mesa = {...G.mesa, p2: card};
       addLog('▶ Rival jugó ' + cn(card), '#f0a060');
-      sayAndShow('p2','▶ '+cn(card),'#f0a060','');
+      sayAndShow('p2','▶ Rival jugó','#f0a060','');
       if(!playerAlreadyPlayed) G.roundLeader = 'p2';
       if(G.mesa.p1){
         // Both played — resolve round
@@ -3444,6 +3457,7 @@ function handleRemoteAction(action, payload){
       } else {
         G.fase = 'p_turn';
         renderGame();
+        syncOnline();
       }
       break;
     }
@@ -3462,6 +3476,7 @@ function handleRemoteAction(action, payload){
       sayAndShow('p2','▶ ¡'+names[level]+'!','#d4890a',names[level]);
       G.fase = 'p_resp_env';
       renderGame();
+      syncOnline();
       break;
     }
     case 'callTruco': {
@@ -3475,6 +3490,7 @@ function handleRemoteAction(action, payload){
       triggerTensionShake();
       G.fase = 'p_resp_truco';
       renderGame();
+      syncOnline();
       break;
     }
     case 'respondEnvido': {
@@ -3497,6 +3513,7 @@ function handleRemoteAction(action, payload){
       if(checkGameOver()) return;
       G.fase = nextFaseAfterInterrupt();
       renderGame();
+      syncOnline();
       if(G.fase==='ai_turn') scheduleAI(700);
       break;
     }
@@ -3516,6 +3533,7 @@ function handleRemoteAction(action, payload){
         triggerTensionShake();
         G.fase='p_resp_truco';
         renderGame();
+        syncOnline();
         return;
       }
       G.trucoPend=null;
@@ -3525,6 +3543,7 @@ function handleRemoteAction(action, payload){
         if(checkGameOver()) return;
         G.fase=nextFaseAfterInterrupt();
         renderGame();
+        syncOnline();
       } else {
         sayAndShow('p2','▶ No quiero. +'+refuseVal+' pts.','#d4890a','No quiero');
         G.trucoDone=true;
@@ -3553,6 +3572,7 @@ function handleRemoteAction(action, payload){
       sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
       G.fase='p_resp_flor';
       renderGame();
+      syncOnline();
       break;
     }
     case 'respondContraflorResto': {
@@ -3571,8 +3591,41 @@ function handleRemoteAction(action, payload){
 }
 
 function syncOnline(){
-  if(MODE!=='online'||!_conn||!_conn.open) return;
-  try{ _conn.send({type:'state', state:G}); }
+  if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
+  // Build a P2-perspective state: swap p1/p2 fields and invert fase
+  const faseMap = {
+    'p_turn':       'ai_turn',   // P1's turn → P2 sees opponent's turn
+    'ai_turn':      'p_turn',    // P2's turn (called ai_turn in engine) → P2 sees their own turn
+    'p_resp_env':   'p_resp_env',// P1 responds envido → keep (P1 handles it)
+    'p_resp_truco': 'p_resp_truco',
+    'p_resp_flor':  'p_resp_flor',
+    'hand_done':    'hand_done',
+  };
+  // Build P2-perspective state. MY_ROLE='p2' so myHand()=G.p2Hand, myMesa()=G.mesa.p2.
+  // Keep p1Hand/p2Hand/mesa in original positions — P2's myHand() already reads G.p2Hand.
+  // Only invert: fase, scores (pScore=opponent's score from P2's view), mano, roundLeader,
+  // handWinner, pending by fields.
+  const p2state = {
+    ...G,
+    // Scores from P2's perspective: pScore=their score, oScore=P1's score
+    pScore: G.oScore,
+    oScore: G.pScore,
+    // Invert fase: p_turn↔ai_turn (P2 needs to know when it's THEIR turn)
+    fase: faseMap[G.fase] || G.fase,
+    // Invert handWinner
+    handWinner: G.handWinner === 'p1' ? 'p2' : (G.handWinner === 'p2' ? 'p1' : G.handWinner),
+    // Invert round winners so P2 sees their wins as 'p1' (renderGame checks r.w==='p1')
+    rounds: (G.rounds||[]).map(r=>({...r, w: r.w==='p1'?'p2': r.w==='p2'?'p1': r.w})),
+    // Pending by fields: invert so P2's respondEnvido etc. see the right challenger
+    envPend: G.envPend ? {...G.envPend, by: G.envPend.by==='p1'?'p2':'p1'} : null,
+    trucoPend: G.trucoPend ? {...G.trucoPend, by: G.trucoPend.by==='p1'?'p2':'p1'} : null,
+    florPend: G.florPend ? {...G.florPend, by: G.florPend.by==='p1'?'p2':'p1'} : null,
+    trucoLastCaller: G.trucoLastCaller === 'p1' ? 'p2' : (G.trucoLastCaller === 'p2' ? 'p1' : G.trucoLastCaller),
+    // Invert mano and roundLeader for correct UI indicators
+    mano: G.mano === 'p1' ? 'p2' : 'p1',
+    roundLeader: G.roundLeader === 'p1' ? 'p2' : (G.roundLeader === 'p2' ? 'p1' : G.roundLeader),
+  };
+  try{ _conn.send({type:'state', state:p2state}); }
   catch(e){ console.error('sync error',e); }
 }
 
