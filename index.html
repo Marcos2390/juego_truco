@@ -3044,8 +3044,8 @@ function renderCampaign(){
   sub.textContent = 'Superá cada rival para avanzar al siguiente nivel.';
 
   lst.innerHTML = CAMPAIGN_LEVELS.map((lv, i) => {
-    const p = prog[lv.id] || {};
-    const unlocked = i === 0 || prog[CAMPAIGN_LEVELS[i-1].id]?.completed;
+    const p = prog[String(lv.id)] || {};
+    const unlocked = i === 0 || prog[String(CAMPAIGN_LEVELS[i-1].id)]?.completed;
     const completed = !!p.completed;
     const objs = lv.objectives.map(o => {
       const done = p.objectives?.[o.id] >= o.target || (o.id==='no_mazo'&&p.objectives?.[o.id]===0&&p.completed);
@@ -3057,7 +3057,7 @@ function renderCampaign(){
     }).join('');
 
     return `<div onclick="${unlocked?`openCampDetail(${lv.id})`:'void 0'}"
-      style="border-radius:14px;overflow:hidden;cursor:${unlocked?'pointer':'default'};
+      style="position:relative;border-radius:14px;overflow:hidden;cursor:${unlocked?'pointer':'default'};
         opacity:${unlocked?1:.45};transition:transform .15s;
         background:${lv.cardBg};border:1.5px solid ${lv.cardBorder};
         ${completed?'box-shadow:0 0 16px '+lv.accentColor+'44':''}">
@@ -3085,7 +3085,7 @@ function openCampDetail(levelId){
   const lv = CAMPAIGN_LEVELS.find(l=>l.id===levelId);
   if(!lv) return;
   const prog = campProgress();
-  const p = prog[lv.id]||{};
+  const p = prog[String(lv.id)]||{};
   const el = document.getElementById('s-camp-detail');
   const card = document.getElementById('camp-detail-card');
   if(!el||!card) return;
@@ -3182,8 +3182,8 @@ function campOnMatchEnd(playerWon){
   if(!CAMP_LEVEL) return;
   const lv = CAMP_LEVEL;
   const prog = campProgress();
-  if(!prog[lv.id]) prog[lv.id]={};
-  const p = prog[lv.id];
+  if(!prog[String(lv.id)]) prog[String(lv.id)]={};
+  const p = prog[String(lv.id)];
   if(!p.objectives) p.objectives={};
 
   // Record objectives progress
@@ -3203,7 +3203,7 @@ function campOnMatchEnd(playerWon){
     p.completed = true;
     // Unlock next level
     const nextLv = CAMPAIGN_LEVELS.find(l=>l.id===lv.id+1);
-    if(nextLv){ if(!prog[nextLv.id]) prog[nextLv.id]={}; prog[nextLv.id].unlocked=true; }
+    if(nextLv){ if(!prog[String(nextLv.id)]) prog[String(nextLv.id)]={}; prog[String(nextLv.id)].unlocked=true; }
   }
   p.unlocked = true;
   campSaveProgress(prog);
