@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Truco Uruguayo</title>
-<script>window.supabase={createClient:()=>({from:()=>({select:()=>Promise.resolve({data:null,error:{message:"Sin Supabase"}}),upsert:()=>Promise.resolve({error:null}),update:()=>({eq:()=>Promise.resolve({error:null})}),eq:()=>Promise.resolve({data:null,error:null})})})}</script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -204,7 +204,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 <body>
 
 <!-- ═══════ MÚSICA DE CORTINA ═══════ -->
-<audio id="menu-music" src="ma_ana_en_el_altiplano_mp3.mpeg" loop preload="auto"></audio>
+<audio id="menu-music" src="https://raw.githubusercontent.com/Marcos2390/juego_truco/main/ma_ana_en_el_altiplano.mp3.mpeg" loop preload="auto"></audio>
 
 <!-- ═══════ MENU ═══════ -->
 <div id="s-menu" class="screen on" style="background:#000;align-items:center;justify-content:flex-end;overflow:hidden;">
@@ -285,19 +285,43 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 </div>
 
 <!-- ===== CAMPAÑA (placeholder) ===== -->
-<div id="s-campaign" class="screen" style="display:none;position:fixed;inset:0;background:#0a0518;
-  align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:24px;z-index:5;">
-  <div style="font-size:54px;">🗺️</div>
-  <div style="color:#dcaaff;font-family:Georgia,serif;font-size:22px;font-weight:800;text-align:center;">
-    Modo Campaña
+<div id="s-campaign" class="screen" style="display:none;position:fixed;inset:0;flex-direction:column;overflow-y:auto;z-index:5;-webkit-overflow-scrolling:touch;">
+
+  <!-- Header -->
+  <div id="camp-header" style="padding:18px 18px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+    <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;letter-spacing:1px" id="camp-title-txt">⚔️ Campaña</div>
+    <button onclick="show('s-menu')" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-family:Georgia,serif">✕ Menú</button>
   </div>
-  <div style="color:#b8a0d0;font-family:Georgia,serif;font-size:14px;text-align:center;max-width:320px;">
-    Próximamente: una serie de desafíos y rivales para superar en orden, con recompensas y progreso guardado.
+
+  <!-- Subtitle -->
+  <div id="camp-subtitle" style="padding:0 18px 14px;font-family:Georgia,serif;font-size:12px;opacity:.7;line-height:1.5"></div>
+
+  <!-- Levels list -->
+  <div id="camp-levels" style="padding:0 14px 40px;display:flex;flex-direction:column;gap:12px;max-width:520px;width:100%;margin:0 auto;box-sizing:border-box"></div>
+</div>
+
+<!-- Campaign level detail overlay -->
+<div id="s-camp-detail" style="display:none;position:fixed;inset:0;z-index:6;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div id="camp-detail-card" style="max-width:340px;width:100%;border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 40px rgba(0,0,0,.7)">
+    <div style="text-align:center">
+      <div id="cd-emoji" style="font-size:52px;margin-bottom:6px"></div>
+      <div id="cd-name" style="font-family:Georgia,serif;font-size:22px;font-weight:900"></div>
+      <div id="cd-subtitle" style="font-size:12px;opacity:.7;font-family:Georgia,serif;margin-top:4px"></div>
+    </div>
+    <div id="cd-rival" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.3)">
+      <span id="cd-rival-emoji" style="font-size:28px"></span>
+      <div>
+        <div style="font-family:Georgia,serif;font-size:11px;opacity:.6">Tu rival</div>
+        <div id="cd-rival-name" style="font-family:Georgia,serif;font-size:15px;font-weight:700"></div>
+      </div>
+      <div id="cd-difficulty" style="margin-left:auto;font-size:11px;font-family:monospace;padding:4px 8px;border-radius:6px"></div>
+    </div>
+    <div id="cd-objectives" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeCampDetail()" style="flex:1;padding:12px;border-radius:10px;cursor:pointer;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:14px;font-family:Georgia,serif">← Volver</button>
+      <button id="cd-play-btn" style="flex:2;padding:12px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:800;font-family:Georgia,serif;border:none">▶ Jugar</button>
+    </div>
   </div>
-  <button onclick="show('s-menu')" style="background:#1a2a1a;border:1px solid #3a5a3a;color:#7fba5a;
-    border-radius:8px;padding:10px 22px;cursor:pointer;font-size:14px;font-family:Georgia,serif">
-    ✕ Volver
-  </button>
 </div>
 
 <!-- ===== RANKING (placeholder) ===== -->
@@ -678,12 +702,31 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
 </div>
 
 <!-- ═══════ GAMEOVER ═══════ -->
-<div id="s-gameover" class="screen inner" style="flex-direction:column;align-items:center;justify-content:center;background:#0a1208 !important;">
-  <div style="font-size:80px;margin-bottom:8px" id="go-emoji">🏆</div>
-  <div id="go-title" style="font-size:38px;font-weight:900;letter-spacing:4px;text-align:center;font-family:Georgia,serif"></div>
-  <div id="go-sub" style="color:rgba(160,200,140,.8);font-size:13px;text-align:center;margin-top:6px;font-family:Georgia,serif"></div>
-  <div id="go-scores" style="font-size:15px;font-weight:700;margin-top:8px;text-align:center;color:rgba(220,200,140,.9);font-family:Georgia,serif"></div>
-  <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;width:100%;max-width:300px">
+<div id="s-gameover" class="screen inner" style="flex-direction:column;align-items:center;justify-content:center;background:#0a1208 !important;gap:0;padding:24px;">
+  <!-- Winner emoji -->
+  <div style="font-size:72px;margin-bottom:4px" id="go-emoji">🏆</div>
+
+  <!-- Winner name -->
+  <div id="go-title" style="font-size:34px;font-weight:900;letter-spacing:3px;text-align:center;font-family:Georgia,serif;color:#fff"></div>
+
+  <!-- Subtitle -->
+  <div id="go-sub" style="font-size:13px;text-align:center;margin-top:6px;font-family:Georgia,serif;color:rgba(180,210,160,.8)"></div>
+
+  <!-- Score card -->
+  <div id="go-scorecard" style="margin-top:18px;width:100%;max-width:280px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.12)">
+    <div style="background:rgba(255,255,255,.06);padding:8px 0;text-align:center;font-family:monospace;font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px">RESULTADO FINAL</div>
+    <div id="go-score-p1" style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid rgba(255,255,255,.07)">
+      <span style="font-family:Georgia,serif;font-size:14px" id="go-p1-label">Vos</span>
+      <span style="font-family:Georgia,serif;font-size:22px;font-weight:900" id="go-p1-pts">0</span>
+    </div>
+    <div id="go-score-p2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid rgba(255,255,255,.07)">
+      <span style="font-family:Georgia,serif;font-size:14px" id="go-p2-label">IA</span>
+      <span style="font-family:Georgia,serif;font-size:22px;font-weight:900" id="go-p2-pts">0</span>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center;width:100%;max-width:300px" id="go-btn-row">
     <button onclick="rematch()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
       background:rgba(30,120,50,.7);border:2px solid rgba(80,200,80,.6);
       color:rgba(180,255,160,.95);font-size:15px;font-weight:700;font-family:Georgia,serif">
@@ -1283,7 +1326,7 @@ function nuevoTurno(p1IsMano) {
     fase: p1IsMano ? 'p_turn' : 'ai_turn',
     // Envido — solo se puede en la primera ronda (antes de que cualquiera juegue carta)
     envDisp: true,  // disponible hasta que alguien juegue la primera carta de la mano
-    envPend: null, envDone: false,
+    envPend: null, envDone: false, envAccepted: false,
     p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
     p1FlorPts: calcFlorPts(p1H, ms, mc), p2FlorPts: calcFlorPts(p2H, ms, mc),
     // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano.
@@ -1318,12 +1361,12 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
     G.envDone=true;
     G.pScore=Math.min(MAX_PTS,G.pScore+3);
     setTimeout(()=>{ sayAndShow('p1','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },300);
-    if(G.pScore>=MAX_PTS){ setTimeout(()=>show('s-gameover'),1200); }
+    if(G.pScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(true); showGameOver(true); },1200); }
   } else if(h.p2Flor){
     G.envDone=true;
     G.oScore=Math.min(MAX_PTS,G.oScore+3);
     setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor! IA +3 pts','#f8a5c2','La mía es flor'); },600);
-    if(G.oScore>=MAX_PTS){ setTimeout(()=>show('s-gameover'),1200); }
+    if(G.oScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(false); showGameOver(false); },1200); }
   }
 
   renderGame();
@@ -1344,10 +1387,70 @@ function addLog(txt, color = '#4a7a4a') {
 }
 function cn(c) { return VNOME[c.v] + ' de ' + c.s.charAt(0).toUpperCase() + c.s.slice(1); }
 
+function showGameOver(playerWon){
+  const rivalName = CAMP_LEVEL ? CAMP_LEVEL.rival : 'IA';
+  const myName    = _playerName || 'Vos';
+  const winPts    = window._campWinPts || MAX_PTS;
+
+  document.getElementById('go-emoji').textContent  = playerWon ? '🏆' : '💀';
+  document.getElementById('go-title').textContent  = playerWon ? '¡' + myName + ' ganó!' : rivalName + ' ganó';
+  document.getElementById('go-title').style.color  = playerWon ? '#7fba5a' : '#e06060';
+  document.getElementById('go-sub').textContent    = playerWon
+    ? '¡Bien jugado! La victoria es tuya.'
+    : 'El rival fue mejor esta vez. ¡Revancha!';
+
+  // Score card
+  const p1Pts = document.getElementById('go-p1-pts');
+  const p2Pts = document.getElementById('go-p2-pts');
+  const p1Row = document.getElementById('go-score-p1');
+  const p2Row = document.getElementById('go-score-p2');
+  document.getElementById('go-p1-label').textContent = myName;
+  document.getElementById('go-p2-label').textContent = rivalName;
+  p1Pts.textContent = G.pScore;
+  p2Pts.textContent = G.oScore;
+  // Highlight winner row
+  p1Row.style.background = playerWon  ? 'rgba(80,200,80,.15)'  : 'transparent';
+  p2Row.style.background = !playerWon ? 'rgba(220,60,60,.15)'  : 'transparent';
+  p1Pts.style.color = playerWon  ? '#7fba5a' : 'rgba(255,255,255,.5)';
+  p2Pts.style.color = !playerWon ? '#e06060' : 'rgba(255,255,255,.5)';
+
+  // Restore normal buttons (campaign may have overridden)
+  const row = document.getElementById('go-btn-row');
+  if(CAMP_LEVEL){
+    row.innerHTML=`
+      <button onclick="show('s-campaign');renderCampaign()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(80,40,120,.7);border:2px solid rgba(150,80,220,.5);
+        color:rgba(220,180,255,.95);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        📜 Campaña
+      </button>
+      <button onclick="show('s-menu')" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(20,40,80,.7);border:2px solid rgba(60,120,200,.5);
+        color:rgba(160,200,255,.9);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        🏠 Menú
+      </button>`;
+  } else {
+    row.innerHTML=`
+      <button onclick="rematch()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(30,120,50,.7);border:2px solid rgba(80,200,80,.6);
+        color:rgba(180,255,160,.95);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        🔄 Revancha
+      </button>
+      <button onclick="show('s-menu')" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(20,40,80,.7);border:2px solid rgba(60,120,200,.5);
+        color:rgba(160,200,255,.9);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        🏠 Menú
+      </button>`;
+  }
+  show('s-gameover');
+}
+
 function checkGameOver() {
-  if (G.pScore >= MAX_PTS || G.oScore >= MAX_PTS) {
+  const winPts = window._campWinPts || MAX_PTS;
+  if (G.pScore >= winPts || G.oScore >= winPts) {
     renderGame();
-    show('s-gameover');
+    const playerWon = G.pScore >= winPts;
+    if (CAMP_LEVEL) campOnMatchEnd(playerWon);
+    showGameOver(playerWon);
     return true;
   }
   return false;
@@ -1363,12 +1466,19 @@ function finalizeHand(g) {
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
   else G.oScore = Math.min(MAX_PTS, G.oScore + pts);
 
+  // Campaign tracking
+  if(CAMP_LEVEL){
+    const tLevel = state.trucoDone ? (state.trucoStake===4?'vale4':state.trucoStake===3?'retruco':'truco') : null;
+    campTrackHandWin(state.handWinner, tLevel);
+    CAMP_OBJ['win_match'] = myWin ? (CAMP_OBJ['win_match']||0)+1 : (CAMP_OBJ['win_match']||0);
+  }
+
   logEnvidoReveal();
 
   // ── Mostrar cartas no jugadas automáticamente ──────────────
-  // Si se disputó envido o flor, y a alguno le quedaron cartas sin jugar,
-  // se dan vuelta para verificar los puntos cantados.
-  if (G.envDone && (G.p1Hand.length > 0 || G.p2Hand.length > 0)) {
+  // Solo si el envido/flor fue aceptado y se jugó: se dan vuelta para verificar los puntos.
+  // Si fue rechazado (No quiero), NO se muestran ni giran las cartas.
+  if (G.envAccepted && (G.p1Hand.length > 0 || G.p2Hand.length > 0)) {
     G.revealHands = true;
     if (G.p1Hand.length) addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
     if (G.p2Hand.length) addLog('🔍 Cartas sin jugar de IA: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
@@ -1613,12 +1723,13 @@ function respondEnvido(accept) {
   const { stake, refuseVal, by } = G.envPend;
   G.envPend = null; G.envDone = true;
   if (accept) {
+    G.envAccepted = true;
     sayAndShow('p1','▶ ¡Quiero!','#7fba5a','Quiero');
     const winner = G.p1Env >= G.p2Env ? 'p1' : 'p2';
     const myWin = winner === 'p1';
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
       '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
-    if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
+    if (myWin){ G.pScore = Math.min(MAX_PTS, G.pScore + stake); campTrackEnvidoWin(); }
     else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   } else {
     sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
@@ -1680,6 +1791,7 @@ function respondTruco(accept, raise = false) {
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
   sayAndShow('p1','▶ Me voy al mazo. IA +1 pt.','#d4890a','Me voy al mazo');
+  campTrackMazo();
   G.oScore = Math.min(MAX_PTS, G.oScore + 1);
   G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
   finalizeHand();
@@ -1727,7 +1839,7 @@ function aiActuar() {
   }
 
   // 3. IA llama truco (solo si no hay nada activo Y no tiene carta en mesa)
-  if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && !G.mesa.p2 && avg >= 9) {
+  if (!G.trucoAcep && !G.trucoPend && !G.trucoDone && !G.mesa.p2 && avg >= (window._campAiCall||9)) {
     G.trucoPend = { level: 'truco', by: 'p2', stake: 2, refuseVal: 1 };
     G.trucoLastCaller = 'p2';
     sayAndShow('p2','🤖 ¡Truco!','#e74c3c','Truco');
@@ -1779,6 +1891,7 @@ function aiDecideEnvido() {
   G.envPend = null; G.envDone = true;
   const accept = G.p2Env >= 21;
   if (accept) {
+    G.envAccepted = true;
     sayAndShow('p2','🤖 ¡Quiero!','#a78bca','Quiero');
     const myWin = G.p1Env >= G.p2Env;
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
@@ -1802,10 +1915,10 @@ function aiDecideTruco() {
   const { level, stake, refuseVal } = G.trucoPend;
   const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
   const canRaise = level !== 'vale4' && G.trucoLastCaller === 'p1';
-  // Raise threshold: lower for retruco (avg>=9), higher for vale4 (avg>=10)
-  const raiseThresh = level === 'truco' ? 9 : 10;
+  const raiseThresh = window._campAiRaise  || (level === 'truco' ? 9 : 10);
+  const acceptThresh= window._campAiAccept || 5;
   const willRaise = canRaise && avg >= raiseThresh;
-  const willAccept = !willRaise && avg >= 5;
+  const willAccept = !willRaise && avg >= acceptThresh;
 
   if (willRaise) {
     // IA sube como respuesta → turno vuelve al jugador para responder
@@ -2050,13 +2163,14 @@ function sayAndShow(who, displayText, color, spoken){
 
 /* ── Mostrar puntos al final de mano ────────────────────────── */
 function logEnvidoReveal(){
-  if(!G.envDone&&!G.p1Flor&&!G.p2Flor) return;
+  // Solo mostrar puntos si el envido/flor fue aceptado y se jugó (no si alguien dijo No quiero)
   if(G.p1Flor||G.p2Flor){
     if(G.p1Flor) addLog('🌸 Tus puntos de Flor: '+G.p1FlorPts,'#f8a5c2');
     if(G.p2Flor) addLog('🌸 Puntos de Flor de IA: '+G.p2FlorPts,'#f8a5c2');
-  } else if(G.envDone){
+  } else if(G.envAccepted){
     addLog('📊 Tus puntos de envido: '+G.p1Env+' | IA: '+G.p2Env,'#d4890a');
   }
+  // Si no fue aceptado (No quiero), no se muestran ni giran las cartas
 }
 
 
@@ -2769,6 +2883,334 @@ function handleCardClick(i){
 /* ═══════════════════════════════════════════
    MODO IA
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   CAMPAÑA
+   ═══════════════════════════════════════════════════════════════ */
+
+const CAMPAIGN_LEVELS = [
+  {
+    id: 1,
+    name: 'La Pulpería',
+    subtitle: 'Un pueblito perdido. Tu primer desafío.',
+    emoji: '🍺',
+    bg: 'linear-gradient(160deg,#3d1f08 0%,#1a0d04 60%,#0d0804 100%)',
+    headerColor: '#d4890a',
+    accentColor: '#f0a830',
+    cardBg: 'rgba(60,30,8,.85)',
+    cardBorder: 'rgba(200,130,40,.4)',
+    rival: 'El Pulpero',
+    rivalEmoji: '🧔',
+    rivalDesc: 'Manso pero sabe jugar.',
+    difficulty: 'Fácil',
+    diffColor: '#7fba5a',
+    aiAcceptThresh: 3,   // willAccept if avg >= X
+    aiRaiseThresh: 14,   // willRaise if avg >= X (very reluctant)
+    aiCallThresh: 7,     // will call truco if avg >= X
+    winPts: 9,
+    objectives: [
+      { id: 'win_match',     label: 'Ganá la partida',          icon: '🏆', target: 1 },
+      { id: 'call_truco',    label: 'Cantá Truco al menos 1 vez', icon: '⚔️', target: 1 },
+    ],
+  },
+  {
+    id: 2,
+    name: 'El Rancho',
+    subtitle: 'Campo abierto. El gaucho no se rinde fácil.',
+    emoji: '🌅',
+    bg: 'linear-gradient(160deg,#1a3a0a 0%,#0d2206 60%,#060f04 100%)',
+    headerColor: '#7fba5a',
+    accentColor: '#a0e060',
+    cardBg: 'rgba(15,40,8,.85)',
+    cardBorder: 'rgba(80,180,40,.4)',
+    rival: 'El Gaucho',
+    rivalEmoji: '🤠',
+    rivalDesc: 'Agresivo. Le gusta el Envido.',
+    difficulty: 'Normal',
+    diffColor: '#d4a017',
+    aiAcceptThresh: 4,
+    aiRaiseThresh: 11,
+    aiCallThresh: 8,
+    winPts: 12,
+    objectives: [
+      { id: 'win_match',     label: 'Ganá la partida',             icon: '🏆', target: 1 },
+      { id: 'win_envido',    label: 'Ganá 2 Envidos',              icon: '🎯', target: 2 },
+      { id: 'no_mazo',       label: 'Sin irse al mazo',            icon: '🚫', target: 0 },
+    ],
+  },
+  {
+    id: 3,
+    name: 'El Fogón',
+    subtitle: 'Noche de fuego y cartas. El as de espadas acecha.',
+    emoji: '🔥',
+    bg: 'linear-gradient(160deg,#3d0f00 0%,#1a0800 60%,#0d0400 100%)',
+    headerColor: '#e04040',
+    accentColor: '#ff6030',
+    cardBg: 'rgba(60,12,4,.85)',
+    cardBorder: 'rgba(220,80,30,.4)',
+    rival: 'El Forastero',
+    rivalEmoji: '🎭',
+    rivalDesc: 'Misterioso. Canta Vale Cuatro.',
+    difficulty: 'Difícil',
+    diffColor: '#e04040',
+    aiAcceptThresh: 5,
+    aiRaiseThresh: 9,
+    aiCallThresh: 8,
+    winPts: 15,
+    objectives: [
+      { id: 'win_match',      label: 'Ganá la partida',               icon: '🏆', target: 1 },
+      { id: 'win_truco_3',    label: 'Ganá 3 Trucos',                 icon: '⚔️', target: 3 },
+      { id: 'win_envido',     label: 'Ganá 1 Envido',                 icon: '🎯', target: 1 },
+    ],
+  },
+  {
+    id: 4,
+    name: 'La Ciudad',
+    subtitle: 'Neón y asfalto. Acá se juega en serio.',
+    emoji: '🌆',
+    bg: 'linear-gradient(160deg,#050a2d 0%,#030618 60%,#010310 100%)',
+    headerColor: '#4a9eff',
+    accentColor: '#60b0ff',
+    cardBg: 'rgba(4,8,40,.85)',
+    cardBorder: 'rgba(60,120,240,.4)',
+    rival: 'El Contador',
+    rivalEmoji: '🧑‍💼',
+    rivalDesc: 'Calculador y frío. Nunca pierde el envido.',
+    difficulty: 'Muy difícil',
+    diffColor: '#e04040',
+    aiAcceptThresh: 5,
+    aiRaiseThresh: 8,
+    aiCallThresh: 7,
+    winPts: 20,
+    objectives: [
+      { id: 'win_match',     label: 'Ganá la partida',             icon: '🏆', target: 1 },
+      { id: 'win_retruco',   label: 'Ganá 1 Re-Truco',            icon: '⚔️', target: 1 },
+      { id: 'no_mazo',       label: 'Sin irse al mazo',            icon: '🚫', target: 0 },
+    ],
+  },
+  {
+    id: 5,
+    name: 'El Gran Torneo',
+    subtitle: 'El campeonato. Solo los mejores llegan acá.',
+    emoji: '👑',
+    bg: 'linear-gradient(160deg,#2d2200 0%,#1a1400 60%,#0d0a00 100%)',
+    headerColor: '#ffd700',
+    accentColor: '#ffe040',
+    cardBg: 'rgba(50,38,4,.85)',
+    cardBorder: 'rgba(220,180,20,.5)',
+    rival: 'El Campeón',
+    rivalEmoji: '🏆',
+    rivalDesc: 'El mejor jugador de la región. No da ventaja.',
+    difficulty: 'Experto',
+    diffColor: '#ff4444',
+    aiAcceptThresh: 6,
+    aiRaiseThresh: 7,
+    aiCallThresh: 6,
+    winPts: 30,
+    objectives: [
+      { id: 'win_match',       label: 'Ganá la partida',           icon: '🏆', target: 1 },
+      { id: 'win_vale4',       label: 'Ganá 1 Vale Cuatro',        icon: '⚔️', target: 1 },
+      { id: 'win_all_trucos',  label: 'Ganá 5 Trucos en total',    icon: '🎯', target: 5 },
+    ],
+  },
+];
+
+let CAMP_LEVEL = null;   // current level config
+let CAMP_OBJ   = {};     // objective counters for current run
+let CAMP_MAZO_COUNT = 0; // times player went al mazo this run
+
+function campProgress(){
+  try{ return JSON.parse(localStorage.getItem('campProgress')||'{}'); }
+  catch(e){ return {}; }
+}
+function campSaveProgress(data){
+  localStorage.setItem('campProgress', JSON.stringify(data));
+}
+
+function renderCampaign(){
+  const prog = campProgress();
+  const el = document.getElementById('s-campaign');
+  const hdr = document.getElementById('camp-header');
+  const sub = document.getElementById('camp-subtitle');
+  const lst = document.getElementById('camp-levels');
+  if(!el||!hdr||!sub||!lst) return;
+
+  // Dynamic background based on highest unlocked level
+  const maxUnlocked = Math.min(CAMPAIGN_LEVELS.length, Object.keys(prog).filter(k=>prog[k]?.unlocked).length + 1);
+  const themeLevel = CAMPAIGN_LEVELS[Math.min(maxUnlocked-1, CAMPAIGN_LEVELS.length-1)];
+  el.style.background = themeLevel.bg;
+  hdr.style.color = themeLevel.accentColor;
+  document.getElementById('camp-title-txt').style.color = themeLevel.accentColor;
+  sub.style.color = 'rgba(255,255,255,.6)';
+  sub.textContent = 'Superá cada rival para avanzar al siguiente nivel.';
+
+  lst.innerHTML = CAMPAIGN_LEVELS.map((lv, i) => {
+    const p = prog[lv.id] || {};
+    const unlocked = i === 0 || prog[CAMPAIGN_LEVELS[i-1].id]?.completed;
+    const completed = !!p.completed;
+    const objs = lv.objectives.map(o => {
+      const done = p.objectives?.[o.id] >= o.target || (o.id==='no_mazo'&&p.objectives?.[o.id]===0&&p.completed);
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-family:Georgia,serif;color:${done?'rgba(180,255,150,.9)':'rgba(200,200,180,.5)'}">
+        <span>${done?'✅':''||o.icon}</span>
+        <span>${o.label}</span>
+        ${done?'<span style="margin-left:auto;font-size:10px">✔</span>':''}
+      </div>`;
+    }).join('');
+
+    return `<div onclick="${unlocked?`openCampDetail(${lv.id})`:'void 0'}"
+      style="border-radius:14px;overflow:hidden;cursor:${unlocked?'pointer':'default'};
+        opacity:${unlocked?1:.45};transition:transform .15s;
+        background:${lv.cardBg};border:1.5px solid ${lv.cardBorder};
+        ${completed?'box-shadow:0 0 16px '+lv.accentColor+'44':''}">
+      <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:36px;flex-shrink:0">${lv.emoji}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:Georgia,serif;font-size:16px;font-weight:800;color:${lv.accentColor}">
+            ${lv.name}
+            ${completed?'<span style="font-size:11px;background:'+lv.accentColor+'33;border:1px solid '+lv.accentColor+'66;border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle">✓ Completo</span>':''}
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);font-family:Georgia,serif;margin-top:2px">${lv.subtitle}</div>
+        </div>
+        <div style="flex-shrink:0;font-size:11px;font-family:monospace;padding:4px 8px;border-radius:6px;background:${lv.diffColor}22;border:1px solid ${lv.diffColor}55;color:${lv.diffColor}">${lv.difficulty}</div>
+      </div>
+      <div style="padding:0 16px 12px;display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px;margin-top:0">
+        <div style="font-size:10px;color:rgba(255,255,255,.35);font-family:monospace;margin-bottom:2px">OBJETIVOS</div>
+        ${objs}
+      </div>
+      ${!unlocked?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(0,0,0,.1)">🔒</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openCampDetail(levelId){
+  const lv = CAMPAIGN_LEVELS.find(l=>l.id===levelId);
+  if(!lv) return;
+  const prog = campProgress();
+  const p = prog[lv.id]||{};
+  const el = document.getElementById('s-camp-detail');
+  const card = document.getElementById('camp-detail-card');
+  if(!el||!card) return;
+
+  card.style.background = lv.cardBg.replace('.85',',.97');
+  card.style.border = '1.5px solid '+lv.cardBorder;
+
+  document.getElementById('cd-emoji').textContent = lv.emoji;
+  document.getElementById('cd-name').style.color = lv.accentColor;
+  document.getElementById('cd-name').textContent = lv.name;
+  document.getElementById('cd-subtitle').textContent = lv.subtitle;
+  document.getElementById('cd-rival-emoji').textContent = lv.rivalEmoji;
+  document.getElementById('cd-rival-name').textContent = lv.rival;
+  document.getElementById('cd-rival-name').style.color = lv.accentColor;
+  document.getElementById('cd-rival').style.border = '1px solid '+lv.cardBorder;
+  const diff = document.getElementById('cd-difficulty');
+  diff.textContent = lv.difficulty;
+  diff.style.background = lv.diffColor+'22';
+  diff.style.border = '1px solid '+lv.diffColor+'55';
+  diff.style.color = lv.diffColor;
+
+  const objEl = document.getElementById('cd-objectives');
+  objEl.innerHTML = lv.objectives.map(o=>{
+    const done = p.objectives?.[o.id] >= o.target || (o.id==='no_mazo'&&p.objectives?.[o.id]===0&&p.completed);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+      background:${done?lv.accentColor+'18':'rgba(0,0,0,.2)'};
+      border:1px solid ${done?lv.accentColor+'44':'rgba(255,255,255,.1)'}">
+      <span style="font-size:16px">${done?'✅':o.icon}</span>
+      <span style="font-family:Georgia,serif;font-size:12px;color:${done?'rgba(180,255,150,.9)':'rgba(220,210,180,.8)'}">${o.label}</span>
+      ${done?'<span style="margin-left:auto;font-size:11px;color:'+lv.accentColor+'">✔</span>':''}
+    </div>`;
+  }).join('');
+
+  const playBtn = document.getElementById('cd-play-btn');
+  playBtn.style.background = lv.accentColor;
+  playBtn.style.color = '#000';
+  const alreadyDone = !!p.completed;
+  playBtn.textContent = alreadyDone ? '🔄 Jugar de nuevo' : '▶ Comenzar';
+  playBtn.onclick = ()=>startCampaignLevel(lv.id);
+
+  el.style.background = lv.bg;
+  el.style.display = 'flex';
+}
+
+function closeCampDetail(){
+  document.getElementById('s-camp-detail').style.display='none';
+}
+
+function startCampaignLevel(levelId){
+  const lv = CAMPAIGN_LEVELS.find(l=>l.id===levelId);
+  if(!lv) return;
+  CAMP_LEVEL = lv;
+  CAMP_OBJ = {};
+  lv.objectives.forEach(o=>{ CAMP_OBJ[o.id] = o.id==='no_mazo' ? 0 : 0; });
+  CAMP_MAZO_COUNT = 0;
+
+  // Apply AI difficulty
+  window._campAiAccept = lv.aiAcceptThresh;
+  window._campAiRaise  = lv.aiRaiseThresh;
+  window._campAiCall   = lv.aiCallThresh;
+  window._campWinPts   = lv.winPts;
+
+  closeCampDetail();
+  document.getElementById('s-campaign').style.display='none';
+  MODE='ai'; MY_ROLE='p1';
+  startAI();
+}
+
+function campTrackHandWin(winner, trucoLevel){
+  if(!CAMP_LEVEL) return;
+  const objs = CAMP_LEVEL.objectives;
+  if(winner==='p1'){
+    if(objs.find(o=>o.id==='win_truco_3')) CAMP_OBJ['win_truco_3']=(CAMP_OBJ['win_truco_3']||0)+(trucoLevel?1:0);
+    if(objs.find(o=>o.id==='win_all_trucos')&&trucoLevel) CAMP_OBJ['win_all_trucos']=(CAMP_OBJ['win_all_trucos']||0)+1;
+    if(objs.find(o=>o.id==='win_vale4')&&trucoLevel==='vale4') CAMP_OBJ['win_vale4']=(CAMP_OBJ['win_vale4']||0)+1;
+    if(objs.find(o=>o.id==='win_retruco')&&trucoLevel==='retruco') CAMP_OBJ['win_retruco']=(CAMP_OBJ['win_retruco']||0)+1;
+  }
+}
+
+function campTrackEnvidoWin(){
+  if(!CAMP_LEVEL) return;
+  if(CAMP_LEVEL.objectives.find(o=>o.id==='win_envido'))
+    CAMP_OBJ['win_envido']=(CAMP_OBJ['win_envido']||0)+1;
+}
+
+function campTrackMazo(){
+  if(!CAMP_LEVEL) return;
+  CAMP_MAZO_COUNT++;
+  if(CAMP_LEVEL.objectives.find(o=>o.id==='no_mazo'))
+    CAMP_OBJ['no_mazo']=CAMP_MAZO_COUNT;
+}
+
+function campOnMatchEnd(playerWon){
+  if(!CAMP_LEVEL) return;
+  const lv = CAMP_LEVEL;
+  const prog = campProgress();
+  if(!prog[lv.id]) prog[lv.id]={};
+  const p = prog[lv.id];
+  if(!p.objectives) p.objectives={};
+
+  // Record objectives progress
+  lv.objectives.forEach(o=>{
+    if(o.id==='win_match') p.objectives[o.id]= playerWon ? 1 : 0;
+    else if(o.id==='no_mazo') p.objectives[o.id]= CAMP_MAZO_COUNT;
+    else p.objectives[o.id]= Math.max(p.objectives[o.id]||0, CAMP_OBJ[o.id]||0);
+  });
+
+  // Check if all objectives met
+  const allDone = lv.objectives.every(o=>{
+    if(o.id==='no_mazo') return p.objectives[o.id]===0 && playerWon;
+    return (p.objectives[o.id]||0) >= o.target;
+  });
+
+  if(allDone && !p.completed){
+    p.completed = true;
+    // Unlock next level
+    const nextLv = CAMPAIGN_LEVELS.find(l=>l.id===lv.id+1);
+    if(nextLv){ if(!prog[nextLv.id]) prog[nextLv.id]={}; prog[nextLv.id].unlocked=true; }
+  }
+  p.unlocked = true;
+  campSaveProgress(prog);
+  CAMP_LEVEL = null;
+  window._campAiAccept=null; window._campAiRaise=null; window._campAiCall=null; window._campWinPts=null;
+}
+
 function startAI(){
   MODE='ai';MY_ROLE='p1';
   initGame(true,0,0);
@@ -2776,16 +3218,9 @@ function startAI(){
 }
 
 function endGame(){
-  const won=G.pScore>=MAX_PTS;
-  document.getElementById('go-emoji').textContent=won?'🏆':'💀';
-  document.getElementById('go-title').textContent=won?'¡GANASTE!':'PERDISTE';
-  document.getElementById('go-title').style.color=won?'#7fba5a':'#c0392b';
-  document.getElementById('go-sub').textContent=won?'¡La IA no te pudo ganar!':'La IA te ganó. ¿Revancha?';
-  document.getElementById('go-scores').textContent='Vos: '+G.pScore+' — IA: '+G.oScore;
-  // Set background based on result
-  const el=document.getElementById('s-gameover');
-  if(el) el.style.background=won?'#071a0a':'#1a0707';
-  show('s-gameover');
+  const won = G.pScore >= (window._campWinPts || MAX_PTS);
+  if(CAMP_LEVEL) campOnMatchEnd(won);
+  showGameOver(won);
 }
 
 function rematch(){ if(MODE==='ai') startAI(); else show('s-menu'); }
@@ -2855,89 +3290,125 @@ function genCode(){
   return Array.from({length:4},()=>c[0|Math.random()*c.length]).join('');
 }
 
-let roomChannel=null;
+/* ─── PEERJS — ONLINE ──────────────────────────────────────────────── */
+let _peer = null;   // PeerJS Peer instance
+let _conn = null;   // active DataConnection
+let _opponentName = 'Rival';
 
-async function createRoom(){
-  if(!initSB()){
-    document.getElementById('online-cfg-warn').style.display='block';
-    return;
-  }
-  const code=genCode();
-  ROOM=code;MY_ROLE='p1';MODE='online';
+function createRoom(){
+  if(_peer){ _peer.destroy(); _peer=null; _conn=null; }
 
-  const initState={...nuevoTurno(true),pScore:0,oScore:0,logs:[{txt:'🃏 Sala creada. Esperando rival....',color:'#d4a017'}],p2Joined:false};
-  const{error}=await SB.from('games').upsert({code,state:initState});
-  if(error){alert('Error al crear sala: '+error.message);return;}
+  const code = genCode();
+  ROOM=code; MY_ROLE='p1'; MODE='online';
+  loadVoices();
 
-  document.getElementById('room-code-display').textContent=code;
-  document.getElementById('room-created').style.display='flex';
+  showMsg('join-msg','🔄 Creando sala...','#d4a017');
 
-  // Subscribe to changes
-  if(roomChannel) SB.removeChannel(roomChannel);
-  roomChannel=SB.channel('room-'+code)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'games',filter:`code=eq.${code}`},(payload)=>{
-      const st=payload.new.state;
-      if(st.p2Joined&&!G.p2Joined){
-        // Player 2 joined — start game
-        G={...st};
-        show('s-game');
-        renderGame();
-        if(G.turn==='p2') addLog('🟢 Rival conectado. Es su turno primero.','#7fba5a');
-        else addLog('🟢 Rival conectado. Es tu turno.','#7fba5a');
-        renderGame();
-      } else if(st.p2Joined){
-        applyRemoteState(st);
+  _peer = new Peer('truco-'+code, { debug:0 });
+
+  _peer.on('open', () => {
+    document.getElementById('room-code-display').textContent = code;
+    document.getElementById('room-created').style.display = 'flex';
+    showMsg('join-msg','','');
+    updateOnlineStatusUI();
+  });
+
+  _peer.on('connection', (connection) => {
+    _conn = connection;
+    _conn.on('open', () => {
+      // Init game and send state to P2
+      G = {...nuevoTurno(true), pScore:0, oScore:0,
+            logs:[{txt:'🃏 Partida iniciada. ¡A jugar!', color:'#d4a017'}],
+            p2Joined:true};
+      _conn.send({type:'init', state:G, playerName:_playerName});
+      // Update waiting UI
+      const pc = document.getElementById('room-player-count');
+      if(pc) pc.innerHTML =
+        `<span style="font-size:16px">👤</span> <span>${_playerName||'Vos'}</span>
+         <span style="color:rgba(140,160,120,.5);font-size:18px;margin:0 4px">·</span>
+         <span style="font-size:16px">👤</span> <span>${_opponentName}</span>`;
+      const wm = document.getElementById('waiting-msg');
+      if(wm){ wm.classList.remove('thinking'); wm.textContent='¡Rival conectado! Iniciando...'; }
+      setTimeout(()=>{ show('s-game'); renderGame(); }, 600);
+    });
+    _conn.on('data', (data) => {
+      if(data.type==='state'){
+        G={...data.state}; SEL=null; BUSY=false; renderGame();
+      } else if(data.type==='name'){
+        _opponentName = data.name||'Rival';
       }
-    })
-    .subscribe();
+    });
+    _conn.on('close', ()=>{ addLog('⚠️ El rival se desconectó.','#e06060'); renderGame(); });
+    _conn.on('error', (e)=>{ console.error('conn error',e); });
+  });
+
+  _peer.on('error', (err) => {
+    const msg = err.type==='unavailable-id'
+      ? '❌ Código ocupado. Intentá de nuevo.'
+      : '❌ Error: '+err.message;
+    showMsg('join-msg', msg, '#e06060');
+  });
 }
 
-async function joinRoom(){
-  if(!initSB()){
-    document.getElementById('online-cfg-warn').style.display='block';
-    return;
-  }
-  const code=document.getElementById('inp-code').value.trim().toUpperCase();
-  if(code.length!==4){showMsg('join-msg','❌ Código debe tener 4 letras.','#e06060');return;}
+function joinRoom(){
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  if(code.length!==4){ showMsg('join-msg','❌ El código debe tener 4 letras.','#e06060'); return; }
 
-  const{data,error}=await SB.from('games').select('state').eq('code',code).single();
-  if(error||!data){showMsg('join-msg','❌ Sala no encontrada.','#e06060');return;}
+  if(_peer){ _peer.destroy(); _peer=null; _conn=null; }
+  ROOM=code; MY_ROLE='p2'; MODE='online';
+  loadVoices();
 
-  ROOM=code;MY_ROLE='p2';MODE='online';
-  loadVoices(); // reload with p2_ prefix
-  G={...data.state,p2Joined:true};
-  addLog('🟢 Te uniste a la sala. ¡Que empiece el truco!','#7fba5a');
+  showMsg('join-msg','🔄 Conectando...','#d4a017');
 
-  await SB.from('games').update({state:G}).eq('code',code);
+  _peer = new Peer(undefined, { debug:0 });
 
-  if(roomChannel) SB.removeChannel(roomChannel);
-  roomChannel=SB.channel('room-'+code)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'games',filter:`code=eq.${code}`},(payload)=>{
-      applyRemoteState(payload.new.state);
-    })
-    .subscribe();
+  _peer.on('open', () => {
+    _conn = _peer.connect('truco-'+code, { reliable:true });
 
-  show('s-game');
-  renderGame();
+    _conn.on('open', () => {
+      _conn.send({ type:'name', name:_playerName });
+      showMsg('join-msg','🟢 Conectado — esperando inicio...','#7fba5a');
+    });
+
+    _conn.on('data', (data) => {
+      if(data.type==='init'){
+        _opponentName = data.playerName||'Rival';
+        G = {...data.state, p2Joined:true};
+        addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
+        show('s-game'); renderGame();
+      } else if(data.type==='state'){
+        G={...data.state}; SEL=null; BUSY=false; renderGame();
+      }
+    });
+
+    _conn.on('close', ()=>{ addLog('⚠️ El rival se desconectó.','#e06060'); renderGame(); });
+    _conn.on('error', (e)=>{ console.error('conn error',e); });
+  });
+
+  _peer.on('error', (err) => {
+    const msg = err.type==='peer-unavailable'
+      ? '❌ Sala no encontrada. Verificá el código.'
+      : '❌ Error: '+err.message;
+    showMsg('join-msg', msg, '#e06060');
+  });
 }
 
 function applyRemoteState(st){
-  // Only apply if it's not my turn (remote change = opponent's action)
-  G={...st};
-  SEL=null;BUSY=false;
-  renderGame();
+  G={...st}; SEL=null; BUSY=false; renderGame();
 }
 
-async function syncOnline(){
-  if(MODE!=='online'||!SB||!ROOM) return;
-  try{
-    await SB.from('games').update({state:G,updated_at:new Date().toISOString()}).eq('code',ROOM);
-  }catch(e){console.error('sync error',e);}
+function syncOnline(){
+  if(MODE!=='online'||!_conn||!_conn.open) return;
+  try{ _conn.send({type:'state', state:G}); }
+  catch(e){ console.error('sync error',e); }
 }
 
 function cancelRoom(){
-  if(roomChannel){SB&&SB.removeChannel(roomChannel);roomChannel=null;}
+  if(_conn){ try{ _conn.close(); }catch(e){} _conn=null; }
+  if(_peer){ try{ _peer.destroy(); }catch(e){} _peer=null; }
+  ROOM=null; MODE='ai'; MY_ROLE='p1';
   document.getElementById('room-created').style.display='none';
+  document.getElementById('room-code-display').textContent='----';
   document.getElementById('room-code-display').textContent='----';
 }
 
@@ -2958,13 +3429,13 @@ function updateOnlineStatusUI(){
   const dot=document.getElementById('online-conn-dot');
   const label=document.getElementById('online-conn-label');
   if(!dot||!label) return;
-  const connected=!!(SB&&typeof SB.from==='function'&&window.SUPABASE_CONFIGURED);
-  dot.style.background=connected?'#7fba5a':'#e04040';
-  dot.style.boxShadow=connected?'0 0 6px #7fba5a':'none';
-  label.style.color=connected?'rgba(180,240,150,.9)':'rgba(200,180,130,.8)';
+  const connected=!!(_peer&&!_peer.disconnected);
+  dot.style.background=connected?'#7fba5a':'#7fba5a'; // always green (PeerJS needs no config)
+  dot.style.boxShadow='0 0 6px #7fba5a';
+  label.style.color='rgba(180,240,150,.9)';
   label.textContent=connected
-    ?'Conectado — listo para jugar'
-    :'Sin conexión — configurá Supabase en ⚙️ Configuración';
+    ?'Conectado con servidor de señalización'
+    :'Listo para jugar — creá o unite a una sala';
 }
 
 /* ═══════════════════════════════════════════
@@ -3020,7 +3491,8 @@ function show(id){
       's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000'
     };
     if(bgs[id]) el.style.background=bgs[id];
-    if(id==='s-online'){ initSB(); setTimeout(updateOnlineStatusUI,50); }
+    if(id==='s-online'){ setTimeout(updateOnlineStatusUI,50); }
+    if(id==='s-campaign'){ setTimeout(renderCampaign,30); }
   }
  }catch(err){
   console.error('show() error:',err);
