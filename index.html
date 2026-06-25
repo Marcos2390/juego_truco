@@ -1357,7 +1357,7 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
     G.florPend = { level: 'flor_resp', by: manoRole };
     G.florStage = 'await_response';
     setTimeout(()=>{ sayAndShow(manoRole,'🌸 ¡La mía es Flor!','#f8a5c2','La mía es flor'); },300);
-    addLog('🌸 Ambos tienen Flor. ' + (respRole==='p1' ? 'Tenés' : 'La IA tiene') + ' que responder.','#f8a5c2');
+    addLog('🌸 Ambos tienen Flor. ' + (respRole==='p1' ? 'Tenés' : (MODE==='online'?'El rival tiene':'La IA tiene')) + ' que responder.','#f8a5c2');
     G.fase = respRole === 'p1' ? 'p_resp_flor' : 'ai_turn';
   } else if(h.p1Flor){
     G.envDone=true;
@@ -1652,7 +1652,11 @@ function finishFlorBattle() {
 // El jugador (respondedor) acepta la Flor-Flor sin escalar
 function florAccept() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
-  if (MODE==='online' && MY_ROLE==='p2') { sendAction('florAccept',{}); return; }
+  if (MODE==='online' && MY_ROLE==='p2') {
+    sayAndShow('p2','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+    sendAction('florAccept',{});
+    return;
+  }
   sayAndShow('p1','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
   syncOnline();
   resolveFlorBattle(6);
@@ -1661,7 +1665,11 @@ function florAccept() {
 // El jugador (respondedor) escala a Contra Flor al Resto
 function florCallContraflorResto() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
-  if (MODE==='online' && MY_ROLE==='p2') { sendAction('florCallContraflorResto',{}); return; }
+  if (MODE==='online' && MY_ROLE==='p2') {
+    sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+    sendAction('florCallContraflorResto',{});
+    return;
+  }
   const stake = getFalta() + 6;
   G.florPend = { level: 'contraflor_resto', by: 'p1', stake, refuseVal: 6 };
   G.florStage = 'await_resto_response';
@@ -1675,7 +1683,11 @@ function florCallContraflorResto() {
 // El jugador, como mano original, responde a la Contra Flor al Resto de la IA
 function respondContraflorResto(accept) {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'contraflor_resto') return;
-  if (MODE==='online' && MY_ROLE==='p2') { sendAction('respondContraflorResto',{accept}); return; }
+  if (MODE==='online' && MY_ROLE==='p2') {
+    sayAndShow('p2', accept ? '▶ ¡Quiero!' : '▶ No quiero.', accept ? '#7fba5a' : '#d4890a', accept ? 'Quiero' : 'No quiero');
+    sendAction('respondContraflorResto',{accept});
+    return;
+  }
   const { stake, refuseVal, by } = G.florPend;
   if (accept) {
     sayAndShow('p1','▶ ¡Quiero!','#7fba5a','Quiero');
@@ -2739,11 +2751,14 @@ function renderActions(){
 
   // ── Responder Flor (ambos tienen Flor) ─────────────────
   if(fase==='p_resp_flor'&&G.florPend){
+    const myFlorPts = MY_ROLE==='p1' ? G.p1FlorPts : G.p2FlorPts;
     if(G.florPend.level==='flor_resp'){
+      // florPend.by is already from local perspective (inverted for P2 by syncOnline)
+      const rivalCalled = G.florPend.by !== MY_ROLE;
       act.innerHTML=`
         <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
           font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          🌸 ${G.mano==='p1'?'Cantaste':(MODE==='online'?'El rival cantó':'La IA cantó')} ¡Flor! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+          🌸 ${rivalCalled ? (MODE==='online'?'El rival cantó':'La IA cantó') : 'Cantaste'} ¡Flor! &nbsp;• Tus puntos: <b>${myFlorPts}</b>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="florAccept()"
@@ -2759,11 +2774,11 @@ function renderActions(){
         </div>`;
       return;
     }
-    if(G.florPend.level==='contraflor_resto'&&G.florPend.by==='p2'){
+    if(G.florPend.level==='contraflor_resto' && G.florPend.by !== MY_ROLE){
       act.innerHTML=`
         <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
           font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          🤖 ${MODE==='online'?'Rival':'IA'} dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+          ${MODE==='online'?'👤 Rival':'🤖 IA'} dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${myFlorPts}</b>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="respondContraflorResto(true)"
@@ -3430,11 +3445,10 @@ function createRoom(){
   _peer.on('connection', (connection) => {
     _conn = connection;
     _conn.on('open', () => {
-      // Init game and send state to P2
+      // Init game with P1 as mano
       G = {...nuevoTurno(true), pScore:0, oScore:0,
             logs:[{txt:'🃏 Partida iniciada. ¡A jugar!', color:'#d4a017'}],
             p2Joined:true};
-      _conn.send({type:'init', state:G, playerName:_playerName});
       // Update waiting UI
       const pc = document.getElementById('room-player-count');
       if(pc) pc.innerHTML =
@@ -3443,7 +3457,11 @@ function createRoom(){
          <span style="font-size:16px">👤</span> <span>${_opponentName}</span>`;
       const wm = document.getElementById('waiting-msg');
       if(wm){ wm.classList.remove('thinking'); wm.textContent='¡Rival conectado! Iniciando...'; }
-      setTimeout(()=>{ show('s-game'); renderGame(); }, 600);
+      setTimeout(()=>{
+        show('s-game');
+        renderGame();
+        syncOnline(); // Send properly inverted state to P2
+      }, 600);
     });
     _conn.on('data', (data) => {
       if(data.type==='action'){
@@ -3487,8 +3505,10 @@ function joinRoom(){
 
     _conn.on('data', (data) => {
       if(data.type==='init'){
+        // P1 now sends inverted state via syncOnline (type:'state'), but handle
+        // legacy 'init' the same as 'state' for safety — state is already inverted.
         _opponentName = data.playerName||'Rival';
-        G = {...data.state, p2Joined:true};
+        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
         addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
         show('s-game'); renderGame();
       } else if(data.type==='state'){
@@ -3701,6 +3721,11 @@ function syncOnline(){
   if (G.fase === 'p_resp_env'   && G.envPend   && G.envPend.by   === 'p2') mappedFase = 'p_resp_env';
   if (G.fase === 'p_resp_truco' && G.trucoPend && G.trucoPend.by === 'p2') mappedFase = 'p_resp_truco';
   if (G.fase === 'p_resp_flor'  && G.florPend  && G.florPend.by  === 'p2') mappedFase = 'p_resp_flor';
+  // Special flor case: when P1 is mano and called flor first, G.fase='ai_turn' (waiting for P2).
+  // P2 must see p_resp_flor so they get the response buttons.
+  if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'flor_resp' && G.florStage === 'await_response') mappedFase = 'p_resp_flor';
+  // Same for contraflor_resto called by P1: P2 must respond
+  if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'contraflor_resto' && G.florPend.by === 'p1') mappedFase = 'p_resp_flor';
   // Build P2-perspective state. MY_ROLE='p2' so myHand()=G.p2Hand, myMesa()=G.mesa.p2.
   // Keep p1Hand/p2Hand/mesa in original positions — P2's myHand() already reads G.p2Hand.
   // Only invert: fase, scores (pScore=opponent's score from P2's view), mano, roundLeader,
