@@ -897,13 +897,13 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
+// ===== SISTEMA DE MAZOS =====
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
-
 
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
@@ -1559,6 +1559,8 @@ function doResolveRound() {
 ═══════════════════════════════════════════════════════════ */
 function playCard(idx) {
   if (G.fase !== 'p_turn' || G.handDone) return;
+  // Online: solo puede jugar el jugador local cuando es su turno
+  if (MODE==='online' && G.fase !== 'p_turn') return;
   const hand = myHand();
   const card = hand[idx];
   if (!card) return;
@@ -2623,16 +2625,24 @@ function renderGame(){
      <div style="color:rgba(240,130,110,.9)">${tallyMarks(G.oScore,'rgba(220,100,80,.95)')}</div>
      <div style="font-size:10px;color:rgba(240,130,110,.9);font-weight:700;margin-top:2px;font-family:Georgia,serif">${G.oScore}/30</div>`;
 
-  // Turn badge
+  // Turn badge + mano indicator
   const fase=G.fase;
   const tb=document.getElementById('turn-badge');
-  if(fase==='hand_done')      tb.innerHTML='<span style="color:rgba(220,180,80,.9)">Nueva mano...</span>';
-  else if(fase==='ai_turn')   tb.innerHTML='<span class="thinking" style="color:rgba(150,200,150,.8)">⏳ Turno del rival...</span>';
-  else if(fase==='p_turn')    tb.innerHTML='<span style="color:rgba(140,230,140,.95);font-weight:700">⚔️ Tu turno</span>';
-  else if(fase==='p_resp_env')   tb.innerHTML='<span style="color:rgba(230,180,80,.95);font-weight:700">🎯 Respondé el envido</span>';
-  else if(fase==='p_resp_truco') tb.innerHTML='<span style="color:rgba(230,100,80,.95);font-weight:700">⚔️ Respondé el truco</span>';
-  else if(fase==='p_resp_flor')  tb.innerHTML='<span style="color:rgba(248,165,194,.95);font-weight:700">🌸 '+
-    (G.florPend&&G.florPend.level==='contraflor_resto'?'Respondé Contra Flor al Resto':'Ambos tienen Flor')+'</span>';
+  const manoLabel = myIsMano
+    ? '<span style="color:rgba(255,220,80,.85);font-size:10px;font-family:Georgia,serif;font-weight:600"> · Sos mano 🎯</span>'
+    : '<span style="color:rgba(200,150,80,.7);font-size:10px;font-family:Georgia,serif"> · Rival es mano 🎯</span>';
+  if(fase==='hand_done')
+    tb.innerHTML='<span style="color:rgba(220,180,80,.9)">Nueva mano...</span>'+manoLabel;
+  else if(fase==='ai_turn')
+    tb.innerHTML='<span style="color:rgba(220,100,80,.95);font-weight:700;font-size:13px">⏳ TURNO DEL RIVAL</span>'+manoLabel;
+  else if(fase==='p_turn')
+    tb.innerHTML='<span style="color:rgba(140,255,140,.98);font-weight:700;font-size:14px">⚔️ TU TURNO</span>'+manoLabel;
+  else if(fase==='p_resp_env')
+    tb.innerHTML='<span style="color:rgba(230,180,80,.95);font-weight:700">🎯 Respondé el envido</span>'+manoLabel;
+  else if(fase==='p_resp_truco')
+    tb.innerHTML='<span style="color:rgba(230,100,80,.95);font-weight:700">⚔️ Respondé el truco</span>'+manoLabel;
+  else if(fase==='p_resp_flor')
+    tb.innerHTML='<span style="color:rgba(248,165,194,.95);font-weight:700">🌸 '+(G.florPend&&G.florPend.level==='contraflor_resto'?'Respondé Contra Flor al Resto':'Ambos tienen Flor')+'</span>'+manoLabel;
 
   // Truco badge
   const tb2=document.getElementById('truco-badge');
@@ -2693,13 +2703,47 @@ function renderActions(){
   act.innerHTML='';
   const fase=G.fase;
 
+  // ── GUARD GLOBAL ONLINE: bloquear acciones si no es tu turno ──────────────
+  // En modo online, las fases p_resp_* y p_turn solo le corresponden al jugador local.
+  // Si llegó un estado desfasado, nunca mostrar botones al que no debe actuar.
+  if(MODE==='online'){
+    const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
+    const isMyTurn = myFases.includes(fase);
+    if(!isMyTurn){
+      // Mostrar quién es mano y que es turno del rival
+      const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
+      act.innerHTML=`
+        <div style="width:100%;text-align:center;padding:6px 0">
+          <div style="color:rgba(150,200,150,.65);font-size:11px;font-family:Georgia,serif;letter-spacing:1px;margin-bottom:4px">
+            ⏳ Esperando al rival...
+          </div>
+          <div style="color:rgba(220,180,80,.7);font-size:10px;font-family:Georgia,serif">
+            ${iAmMano?'🎯 Sos mano esta ronda':'🃏 El rival es mano esta ronda'}
+          </div>
+        </div>`;
+      return;
+    }
+    // También mostrar indicador de mano en las acciones activas (sin bloquear)
+    const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
+    act.innerHTML=`<div style="width:100%;text-align:right;font-size:9px;color:rgba(220,180,80,.6);font-family:Georgia,serif;padding:0 4px 3px;letter-spacing:1px">
+      ${iAmMano?'🎯 Sos mano':'🃏 El rival es mano'}</div>`;
+  }
+
+  // ── GUARD GLOBAL: si no es tu turno → no mostrar ningún botón de acción ──
+  if(fase==='ai_turn' || fase==='hand_done'){
+    act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
+      font-size:11px;font-family:Georgia,serif;padding:8px 0;letter-spacing:1px">
+      ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}</div>`;
+    return;
+  }
+
   // ── Responder Flor (ambos tienen Flor) ─────────────────
   if(fase==='p_resp_flor'&&G.florPend){
     if(G.florPend.level==='flor_resp'){
       act.innerHTML=`
         <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
           font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          🌸 ${G.mano==='p1'?'Cantaste':'La IA cantó'} ¡Flor! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+          🌸 ${G.mano==='p1'?'Cantaste':(MODE==='online'?'El rival cantó':'La IA cantó')} ¡Flor! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="florAccept()"
@@ -2719,7 +2763,7 @@ function renderActions(){
       act.innerHTML=`
         <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
           font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          🤖 IA dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
+          🤖 ${MODE==='online'?'Rival':'IA'} dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${G.p1FlorPts}</b>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="respondContraflorResto(true)"
@@ -2737,13 +2781,14 @@ function renderActions(){
     }
   }
 
-  // ── Responder envido de IA ─────────────────────────────
+  // ── Responder envido (de IA o rival online) ───────────
   if(fase==='p_resp_env'&&G.envPend){
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
+    const caller = MODE==='online' ? '👤 Rival dice' : '🤖 IA dice';
     act.innerHTML=`
       <div style="color:rgba(230,180,80,.95);font-weight:700;font-size:12px;text-align:center;
         font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-        🤖 IA dice: ¡${names[G.envPend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b>
+        ${caller}: ¡${names[G.envPend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="respondEnvido(true)"
@@ -2772,16 +2817,19 @@ function renderActions(){
     return;
   }
 
-  // ── Responder truco de IA ──────────────────────────────
+  // ── Responder truco (de IA o rival online) ────────────
   if(fase==='p_resp_truco'&&G.trucoPend){
     const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by!==MY_ROLE;
+    // canRaise: puede subir solo si no llegó a vale4 Y el rival fue quien cantó este nivel
+    const opponentRole = MODE==='online' ? (MY_ROLE==='p1'?'p2':'p1') : 'p2';
+    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by===opponentRole;
     const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
+    const caller = MODE==='online' ? '👤 Rival dice' : '🤖 IA dice';
     act.style.flexDirection='column';
     act.style.alignItems='stretch';
     act.innerHTML=`
       <div style="color:rgba(240,100,80,.95);font-weight:700;font-size:12px;text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-        🤖 IA dice: ¡${names[G.trucoPend.level]}! ¿Querés?
+        ${caller}: ¡${names[G.trucoPend.level]}! ¿Querés?
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="respondTruco(true)"  style="flex:1;min-width:100px;padding:13px 8px;border-radius:10px;cursor:pointer;background:rgba(30,100,30,.75);border:2px solid rgba(80,200,80,.7);color:#a0f0a0;font-size:14px;font-weight:700;font-family:Georgia,serif">✅ Quiero</button>
