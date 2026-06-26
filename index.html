@@ -897,7 +897,7 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
-// ===== SISTEMA DE MAZOS =====
+
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
@@ -2708,6 +2708,26 @@ function renderGame(){
   });
 
   renderActions();
+
+  // ── POST-RENDER LOCK (online): deshabilitar fisicamente todo si no es turno local ──
+  if(MODE==='online'){
+    const myFases=['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
+    const isMyTurn = myFases.includes(G.fase);
+    const actEl = document.getElementById('actions');
+    if(!isMyTurn){
+      // Bloquear cartas y área de acciones
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
+        el.style.pointerEvents='none';
+      });
+      if(actEl){ actEl.style.pointerEvents='none'; }
+    } else {
+      // Restaurar interactividad
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
+        el.style.pointerEvents='';
+      });
+      if(actEl){ actEl.style.pointerEvents=''; }
+    }
+  }
 }
 
 function renderActions(){
@@ -2724,6 +2744,7 @@ function renderActions(){
     if(!isMyTurn){
       // Mostrar quién es mano y que es turno del rival
       const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
+      act.style.pointerEvents='none';
       act.innerHTML=`
         <div style="width:100%;text-align:center;padding:6px 0">
           <div style="color:rgba(150,200,150,.65);font-size:11px;font-family:Georgia,serif;letter-spacing:1px;margin-bottom:4px">
@@ -2735,6 +2756,7 @@ function renderActions(){
         </div>`;
       return;
     }
+    act.style.pointerEvents='';
     // También mostrar indicador de mano en las acciones activas (sin bloquear)
     const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
     act.innerHTML=`<div style="width:100%;text-align:right;font-size:9px;color:rgba(220,180,80,.6);font-family:Georgia,serif;padding:0 4px 3px;letter-spacing:1px">
