@@ -3482,6 +3482,8 @@ function createRoom(){
       setTimeout(()=>{
         show('s-game');
         renderGame();
+        // Send P1's name to P2 before the state so _opponentName is set
+        if(_conn && _conn.open) _conn.send({type:'name', name:_playerName});
         syncOnline(); // Send properly inverted state to P2
       }, 600);
     });
@@ -3525,16 +3527,25 @@ function joinRoom(){
       showMsg('join-msg','🟢 Conectado — esperando inicio...','#7fba5a');
     });
 
+    let _p2GameStarted = false;
     _conn.on('data', (data) => {
       if(data.type==='init'){
-        // P1 now sends inverted state via syncOnline (type:'state'), but handle
-        // legacy 'init' the same as 'state' for safety — state is already inverted.
+        // Legacy handler kept for safety
         _opponentName = data.playerName||'Rival';
         G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
         addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
+        _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false; renderGame();
+        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
+        if(!_p2GameStarted){
+          _p2GameStarted=true;
+          addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
+          show('s-game');
+        }
+        renderGame();
+      } else if(data.type==='name'){
+        _opponentName = data.name||'Rival';
       }
     });
 
