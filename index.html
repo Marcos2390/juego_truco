@@ -1544,9 +1544,16 @@ function doResolveRound() {
   G.mesa = { p1: null, p2: null };
   // Envido solo en la primera ronda: se cierra cuando el primer round se resuelve
   G.envDisp = false;
-  if (w === 'p1') addLog('✅ Ganás el round.', '#7fba5a');
-  else if (w === 'p2') addLog('❌ El rival gana el round.', '#e06060');
-  else addLog('🔄 Parda (empate).', '#70b0d0');
+  if (w === 'p1') {
+    addLog('✅ Ganás el round.', '#7fba5a');
+    sendP2Log('❌ El rival gana el round.', '#e06060');
+  } else if (w === 'p2') {
+    addLog('❌ El rival gana el round.', '#e06060');
+    sendP2Log('✅ Ganás el round.', '#7fba5a');
+  } else {
+    addLog('🔄 Parda (empate).', '#70b0d0');
+    sendP2Log('🔄 Parda (empate).', '#70b0d0');
+  }
 
   // Actualizar quién lidera el próximo round:
   // - Si alguien gana: él lidera el próximo round
@@ -3587,6 +3594,10 @@ function createRoom(){
       if(data.type==='action'){
         // P2 sent an action — execute it on P1's engine (P1 is the source of truth)
         handleRemoteAction(data.action, data.payload);
+      } else if(data.type==='p2log'){
+        // Log entry specifically crafted for P2's perspective
+        addLog(data.txt, data.color||'#4a7a4a');
+        renderGame();
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
       }
@@ -3633,12 +3644,17 @@ function joinRoom(){
         _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
+        const prevLogs = G ? (G.logs||[]) : [];
+        G={...data.state, p2Joined:true, logs: data.state.logs || prevLogs}; SEL=null; BUSY=false;
         if(!_p2GameStarted){
           _p2GameStarted=true;
           addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
           show('s-game');
         }
+        renderGame();
+      } else if(data.type==='p2log'){
+        // Log entry specifically crafted for P2's perspective
+        addLog(data.txt, data.color||'#4a7a4a');
         renderGame();
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
@@ -3738,20 +3754,30 @@ function handleRemoteAction(action, payload){
         G.envAccepted = true;
         sayAndShow('p2','▶ ¡Quiero!','#7fba5a','Quiero');
         const winner = G.p1Env >= G.p2Env ? 'p1':'p2';
-        const myWin = winner==='p1';
+        const myWin = winner==='p1';  // from P1's perspective
+        const p2Win = !myWin;         // from P2's perspective
         addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+G.p1Env+' vs Rival: '+G.p2Env+'. '+(myWin?'+'+stake+' pts.':'Rival +'+stake+' pts.'), myWin?'#7fba5a':'#e06060');
         if(myWin){ G.pScore=Math.min(MAX_PTS,G.pScore+stake); campTrackEnvidoWin(); }
         else G.oScore=Math.min(MAX_PTS,G.oScore+stake);
+        if(checkGameOver()) return;
+        G.fase = nextFaseAfterInterrupt();
+        renderGame();
+        syncOnline();
+        // Send P2-perspective log: p2Env is P2's score, p1Env is P1's score
+        sendP2Log((p2Win?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+G.p2Env+' vs Rival: '+G.p1Env+'. '+(p2Win?'+'+stake+' pts.':'Rival +'+stake+' pts.'), p2Win?'#7fba5a':'#e06060');
+        if(G.fase==='ai_turn') scheduleAI(700);
       } else {
         sayAndShow('p2','▶ No quiero.','#d4890a','No quiero');
         G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
         addLog('✅ Rival no quiere: +'+refuseVal+' pts.','#7fba5a');
+        if(checkGameOver()) return;
+        G.fase = nextFaseAfterInterrupt();
+        renderGame();
+        syncOnline();
+        // P2 refused envido: P1 wins, so P2 loses
+        sendP2Log('❌ No quisiste el envido. Rival +'+refuseVal+' pts.','#e06060');
+        if(G.fase==='ai_turn') scheduleAI(700);
       }
-      if(checkGameOver()) return;
-      G.fase = nextFaseAfterInterrupt();
-      renderGame();
-      syncOnline();
-      if(G.fase==='ai_turn') scheduleAI(700);
       break;
     }
     case 'respondTruco': {
@@ -3781,12 +3807,14 @@ function handleRemoteAction(action, payload){
         G.fase=nextFaseAfterInterrupt();
         renderGame();
         syncOnline();
+        sendP2Log('✅ Aceptaste el truco ('+stake+' pts en juego).','#7fba5a');
         if(G.fase==='ai_turn') scheduleAI(700);
       } else {
         sayAndShow('p2','▶ No quiero. +'+refuseVal+' pts.','#d4890a','No quiero');
         G.trucoDone=true;
         G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
         G.handDone=true; G.handWinner='p1'; G.fase='hand_done';
+        sendP2Log('❌ No quisiste el truco. Rival +'+refuseVal+' pts.','#e06060');
         finalizeHand();
       }
       break;
@@ -3826,6 +3854,12 @@ function handleRemoteAction(action, payload){
       break;
     }
   }
+}
+
+// Send a log message to P2 from P2's perspective (opposite of P1's view)
+function sendP2Log(txt, color){
+  if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
+  try{ _conn.send({type:'p2log', txt, color}); } catch(e){}
 }
 
 function syncOnline(){
@@ -3868,6 +3902,8 @@ function syncOnline(){
   // handWinner, pending by fields.
   const p2state = {
     ...G,
+    // Don't sync logs: P2 builds their own log via sendP2Log messages
+    logs: undefined,
     // Scores from P2's perspective: pScore=their score, oScore=P1's score
     pScore: G.oScore,
     oScore: G.pScore,
