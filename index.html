@@ -910,7 +910,6 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
-
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
@@ -3849,9 +3848,11 @@ function syncOnline(){
     trucoPend: G.trucoPend ? {...G.trucoPend, by: G.trucoPend.by==='p1'?'p2':'p1'} : null,
     florPend: G.florPend ? {...G.florPend, by: G.florPend.by==='p1'?'p2':'p1'} : null,
     trucoLastCaller: G.trucoLastCaller === 'p1' ? 'p2' : (G.trucoLastCaller === 'p2' ? 'p1' : G.trucoLastCaller),
-    // Invert mano and roundLeader for correct UI indicators
-    mano: G.mano === 'p1' ? 'p2' : 'p1',
-    roundLeader: G.roundLeader === 'p1' ? 'p2' : (G.roundLeader === 'p2' ? 'p1' : G.roundLeader),
+    // mano and roundLeader: keep as-is. MY_ROLE='p2' on P2's side, so G.mano===MY_ROLE works directly.
+    // e.g. P1 is mano (G.mano='p1') -> P2 gets mano='p1', 'p1'==='p2'=false ✓
+    // e.g. P2 is mano (G.mano='p2') -> P2 gets mano='p2', 'p2'==='p2'=true ✓
+    mano: G.mano,
+    roundLeader: G.roundLeader,
   };
   try{ _conn.send({type:'state', state:p2state}); }
   catch(e){ console.error('sync error',e); }
