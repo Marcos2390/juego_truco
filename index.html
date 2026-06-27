@@ -281,6 +281,19 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         ⚙️ Config
       </button>
     </div>
+
+    <!-- Control de volumen de música -->
+    <div style="display:flex;align-items:center;gap:10px;width:100%;padding:6px 2px">
+      <span style="font-size:16px;flex-shrink:0" id="music-icon">🎵</span>
+      <input type="range" id="music-vol" min="0" max="100" value="55"
+        oninput="setMenuMusicVolume(this.value)"
+        style="flex:1;accent-color:#cc9933;cursor:pointer">
+      <button id="music-mute-btn" onclick="toggleMenuMusicMute()"
+        style="background:rgba(60,30,5,.8);border:1px solid #885522;border-radius:7px;
+               padding:5px 10px;color:#ffcc88;font-size:12px;cursor:pointer;font-family:Georgia,serif;flex-shrink:0">
+        🔊 Música
+      </button>
+    </div>
   </div>
 </div>
 
@@ -897,7 +910,6 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
-
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
@@ -2227,8 +2239,14 @@ function spawnImpact(targetId){
 
 function sayAndShow(who, displayText, color, spoken){
   addLog(displayText, color);
-  showBubble(who, spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim());
-  say(spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'').trim(), who);
+  // Determinar burbuja según perspectiva local:
+  // bubble-p1 = abajo (jugador local), bubble-p2 = arriba (rival/IA)
+  const bubbleWho = (MODE==='online' && who===MY_ROLE) ? 'p1'
+                  : (MODE==='online' && who!==MY_ROLE) ? 'p2'
+                  : who;
+  const cleanText = (spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'')).trim();
+  showBubble(bubbleWho, cleanText);
+  say(cleanText, who);
   triggerTensionShake();
 }
 
@@ -2303,13 +2321,12 @@ function say(text, who){
     'Me voy al mazo':'mazo','Me voy al mazo.':'mazo',
   };
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
-  // Custom voice: only for local player (who === MY_ROLE), not for opponent
+  // Custom voice files: solo reproducir en el dispositivo del jugador local
   const isLocalPlayer = !who || who === MY_ROLE || (who === 'p1' && MODE !== 'online');
-  // In online mode, skip TTS entirely for the other player's actions —
-  // they announce on their own device.
-  if (MODE === 'online' && !isLocalPlayer) return;
   if(k && isLocalPlayer && playCustomVoice(k)) return;
-  // TTS fallback
+  // TTS: permitir para acciones del rival también (así P2 escucha a P1 y viceversa)
+  // Solo silenciar si el rival ya lo reproduce en su propio dispositivo
+  // (el custom voice ya está suprimido arriba; TTS sí se permite)
   if(!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
@@ -2326,10 +2343,11 @@ let _menuMusicStarted=false;
 function startMenuMusic(){
   const m=document.getElementById('menu-music');
   if(!m||!m.paused) return;
+  if(_menuMusicMuted){ m.volume=0; m.currentTime=0; m.play().catch(()=>{}); return; }
   m.volume=0;
   m.currentTime=0;
   m.play().then(()=>{
-    const target=0.55,steps=40,interval=2000/steps;
+    const target=_menuMusicVol,steps=40,interval=2000/steps;
     let v=0;
     const fi=setInterval(()=>{v=Math.min(target,v+target/steps);m.volume=v;if(v>=target)clearInterval(fi);},interval);
   }).catch(()=>{});
@@ -2344,8 +2362,31 @@ function stopMenuMusic(){
   const fade=setInterval(()=>{
     vol=Math.max(0, vol-step);
     m.volume=vol;
-    if(vol<=0){ clearInterval(fade); m.pause(); m.currentTime=0; m.volume=0.55; }
+    if(vol<=0){ clearInterval(fade); m.pause(); m.currentTime=0; m.volume=_menuMusicVol; }
   },40);
+}
+
+let _menuMusicVol=0.55;
+let _menuMusicMuted=false;
+
+function setMenuMusicVolume(val){
+  _menuMusicVol=Number(val)/100;
+  if(!_menuMusicMuted){
+    const m=document.getElementById('menu-music');
+    if(m) m.volume=_menuMusicVol;
+  }
+  const icon=document.getElementById('music-icon');
+  if(icon) icon.textContent=(_menuMusicVol===0)?'🔇':(_menuMusicVol<0.4)?'🔉':'🎵';
+}
+
+function toggleMenuMusicMute(){
+  _menuMusicMuted=!_menuMusicMuted;
+  const m=document.getElementById('menu-music');
+  const btn=document.getElementById('music-mute-btn');
+  if(m) m.volume=_menuMusicMuted?0:_menuMusicVol;
+  if(btn) btn.textContent=_menuMusicMuted?'🔇 Música':'🔊 Música';
+  if(_menuMusicMuted && m && !m.paused) m.volume=0;
+  if(!_menuMusicMuted && m && !m.paused) m.volume=_menuMusicVol;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2357,7 +2398,7 @@ function toggleAudio(){
   if(!_audioOn && window.speechSynthesis) window.speechSynthesis.cancel();
   // También silenciar/restaurar música de menú si por alguna razón estuviera activa
   const m=document.getElementById('menu-music');
-  if(m && !m.paused) m.volume=_audioOn?0.55:0;
+  if(m && !m.paused) m.volume=_audioOn?_menuMusicVol:0;
 }
 
 /* ── Diagnóstico claro de por qué el micrófono puede no andar ── */
@@ -2712,19 +2753,17 @@ function renderGame(){
   // ── POST-RENDER LOCK (online): deshabilitar fisicamente todo si no es turno local ──
   if(MODE==='online'){
     const myFases=['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
-    const isMyTurn = myFases.includes(G.fase);
+    let isMyTurn = myFases.includes(G.fase);
+    // Si el jugador local fue quien cantó, no le corresponde responder — espera
+    if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
+    if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
+    if(G.fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
     const actEl = document.getElementById('actions');
     if(!isMyTurn){
-      // Bloquear cartas y área de acciones
-      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
-        el.style.pointerEvents='none';
-      });
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents='none'; });
       if(actEl){ actEl.style.pointerEvents='none'; }
     } else {
-      // Restaurar interactividad
-      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
-        el.style.pointerEvents='';
-      });
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents=''; });
       if(actEl){ actEl.style.pointerEvents=''; }
     }
   }
@@ -2740,9 +2779,12 @@ function renderActions(){
   // Si llegó un estado desfasado, nunca mostrar botones al que no debe actuar.
   if(MODE==='online'){
     const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
-    const isMyTurn = myFases.includes(fase);
+    let isMyTurn = myFases.includes(fase);
+    // Si el jugador local fue quien cantó, espera — no responde a sí mismo
+    if(fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
+    if(fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
+    if(fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
     if(!isMyTurn){
-      // Mostrar quién es mano y que es turno del rival
       const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
       act.style.pointerEvents='none';
       act.innerHTML=`
@@ -2757,7 +2799,6 @@ function renderActions(){
       return;
     }
     act.style.pointerEvents='';
-    // También mostrar indicador de mano en las acciones activas (sin bloquear)
     const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
     act.innerHTML=`<div style="width:100%;text-align:right;font-size:9px;color:rgba(220,180,80,.6);font-family:Georgia,serif;padding:0 4px 3px;letter-spacing:1px">
       ${iAmMano?'🎯 Sos mano':'🃏 El rival es mano'}</div>`;
