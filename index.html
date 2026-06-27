@@ -1375,17 +1375,29 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   } else if(h.p1Flor){
     G.envDone=true;
     G.pScore=Math.min(MAX_PTS,G.pScore+3);
+    addLog('🌸 Tenés Flor! +3 pts.','#f8a5c2');
     setTimeout(()=>{ sayAndShow('p1','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },300);
     if(G.pScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(true); showGameOver(true); },1200); }
   } else if(h.p2Flor){
     G.envDone=true;
     G.oScore=Math.min(MAX_PTS,G.oScore+3);
-    setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor! IA +3 pts','#f8a5c2','La mía es flor'); },600);
+    addLog('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
+    setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },600);
     if(G.oScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(false); showGameOver(false); },1200); }
   }
 
   renderGame();
   syncOnline(); // Send new hand state to P2
+  // Send P2-perspective logs after syncOnline
+  if(MODE==='online'){
+    if(h.p1Flor){
+      sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
+      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },350);
+    } else if(h.p2Flor){
+      sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2');
+      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },650);
+    }
+  }
   if (G.fase === 'ai_turn') scheduleAI(900);
 }
 
@@ -1511,10 +1523,7 @@ function finalizeHand(g) {
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
   setTimeout(() => {
     initGame(nm === 'p1', ps, os);
-    renderGame();
-    syncOnline(); // Send new hand state to P2
-    // Send P2-perspective mano log (replaces P1's version)
-    sendP2Log('🃏 Nueva mano. ' + (G.mano === 'p1' ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
+    // Note: initGame already calls renderGame() + syncOnline() + sendP2Log for mano/flor
   }, G.revealHands ? 3200 : 2200);
 }
 
@@ -3594,15 +3603,23 @@ function createRoom(){
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName});
         syncOnline(); // Send properly inverted state to P2
-        // Now send P2-perspective log for "Nueva mano" (replaces P1's version)
+        // Now send P2-perspective logs (replaces P1's versions)
         const p1IsManoNow = G.mano === 'p1';
         sendP2Log('🃏 Nueva mano. ' + (p1IsManoNow ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
+        // Flor announcements if applicable
+        if(G.p1Flor && !G.p2Flor && G.envDone){
+          setTimeout(()=>sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2'), 100);
+        } else if(G.p2Flor && !G.p1Flor && G.envDone){
+          setTimeout(()=>sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2'), 100);
+        }
       }, 600);
     });
     _conn.on('data', (data) => {
       if(data.type==='action'){
         // P2 sent an action — execute it on P1's engine (P1 is the source of truth)
         handleRemoteAction(data.action, data.payload);
+      } else if(data.type==='bubble'){
+        showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -3664,6 +3681,8 @@ function joinRoom(){
           show('s-game');
         }
         renderGame();
+      } else if(data.type==='bubble'){
+        showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
