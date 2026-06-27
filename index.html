@@ -910,6 +910,7 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
+
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
@@ -2664,9 +2665,33 @@ function respondAndRaiseEnv(newLevel){
   scheduleAI(1100);
 }
 
+// Track last seen pending call to avoid re-showing the bubble on every render
+let _lastBubblePendKey = null;
+
 function renderGame(){
   if(!G.p1Hand) return;
   const myH=myHand(),oppH=oppHand(),myIsMano=G.mano===MY_ROLE;
+
+  // ── Burbuja online: mostrar grito del rival cuando llega el estado ──
+  if(MODE==='online'){
+    const pend = G.envPend || G.trucoPend || G.florPend;
+    // Show bubble only if the pending call is FROM the opponent (not from us)
+    if(pend && pend.by && pend.by !== MY_ROLE){
+      const pendKey = (G.envPend?'env':G.trucoPend?'truco':'flor') + ':' + pend.level;
+      if(pendKey !== _lastBubblePendKey){
+        _lastBubblePendKey = pendKey;
+        const names = {
+          envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido',
+          truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro',
+          flor_resp:'La mia es Flor', contraflor_resto:'Contra Flor al Resto'
+        };
+        const txt = names[pend.level] || pend.level;
+        showBubble('p2', txt);
+      }
+    } else if(!pend){
+      _lastBubblePendKey = null;
+    }
+  }
 
   // Scores
   document.getElementById('score-me').innerHTML=
@@ -3800,6 +3825,10 @@ function syncOnline(){
   if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'flor_resp' && G.florStage === 'await_response') mappedFase = 'p_resp_flor';
   // Same for contraflor_resto called by P1: P2 must respond
   if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'contraflor_resto' && G.florPend.by === 'p1') mappedFase = 'p_resp_flor';
+  // When P1 called envido/truco and G.fase='ai_turn' (waiting for P2 to respond),
+  // P2 must see p_resp_env / p_resp_truco so the response buttons appear.
+  if (G.fase === 'ai_turn' && G.envPend   && G.envPend.by   === 'p1') mappedFase = 'p_resp_env';
+  if (G.fase === 'ai_turn' && G.trucoPend && G.trucoPend.by === 'p1') mappedFase = 'p_resp_truco';
   // Build P2-perspective state. MY_ROLE='p2' so myHand()=G.p2Hand, myMesa()=G.mesa.p2.
   // Keep p1Hand/p2Hand/mesa in original positions — P2's myHand() already reads G.p2Hand.
   // Only invert: fase, scores (pScore=opponent's score from P2's view), mano, roundLeader,
