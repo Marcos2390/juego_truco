@@ -2155,7 +2155,7 @@ function playerRaiseTruco(level){
 
 function playerCanRaiseTruco(){
   if(!G.trucoAcep||G.trucoPend||G.trucoDone||G.handDone) return null;
-  if(G.trucoLastCaller !== 'p2') return null;
+  if(G.trucoLastCaller === MY_ROLE) return null; // can't raise your own call
   const currentLevel=G.trucoStake===2?'truco':G.trucoStake===3?'retruco':G.trucoStake===4?'vale4':'truco';
   const next={truco:'retruco',retruco:'vale4'}[currentLevel];
   return next||null;
@@ -3751,6 +3751,7 @@ function handleRemoteAction(action, payload){
         G.fase=nextFaseAfterInterrupt();
         renderGame();
         syncOnline();
+        if(G.fase==='ai_turn') scheduleAI(700);
       } else {
         sayAndShow('p2','▶ No quiero. +'+refuseVal+' pts.','#d4890a','No quiero');
         G.trucoDone=true;
@@ -3851,7 +3852,7 @@ function syncOnline(){
     envPend: G.envPend ? {...G.envPend} : null,
     trucoPend: G.trucoPend ? {...G.trucoPend} : null,
     florPend: G.florPend ? {...G.florPend} : null,
-    trucoLastCaller: G.trucoLastCaller === 'p1' ? 'p2' : (G.trucoLastCaller === 'p2' ? 'p1' : G.trucoLastCaller),
+    trucoLastCaller: G.trucoLastCaller, // keep as-is: playerCanRaiseTruco() checks !== MY_ROLE equivalent
     // mano and roundLeader: keep as-is. MY_ROLE='p2' on P2's side, so G.mano===MY_ROLE works directly.
     // e.g. P1 is mano (G.mano='p1') -> P2 gets mano='p1', 'p1'==='p2'=false ✓
     // e.g. P2 is mano (G.mano='p2') -> P2 gets mano='p2', 'p2'==='p2'=true ✓
