@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es" style="background:#000">
 <head>
@@ -2810,6 +2809,7 @@ function renderActions(){
     if(fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
     if(fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
     if(fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
+    console.log('[DEBUG renderActions]', {fase, MY_ROLE, isMyTurn, envBy: G.envPend?.by, trucBy: G.trucoPend?.by});
     if(!isMyTurn){
       const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
       act.style.pointerEvents='none';
@@ -3604,6 +3604,7 @@ function joinRoom(){
         _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
+        console.log('[P2 received state]', {fase:data.state.fase, envBy:data.state.envPend?.by, trucBy:data.state.trucoPend?.by});
         G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
         if(!_p2GameStarted){
           _p2GameStarted=true;
@@ -3859,6 +3860,7 @@ function syncOnline(){
     mano: G.mano,
     roundLeader: G.roundLeader,
   };
+  console.log('[syncOnline] sending to P2:', {fase:p2state.fase, envBy:p2state.envPend?.by, G_fase:G.fase, G_envBy:G.envPend?.by});
   try{ _conn.send({type:'state', state:p2state}); }
   catch(e){ console.error('sync error',e); }
 }
