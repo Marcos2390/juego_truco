@@ -1360,6 +1360,7 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   const sN = { espadas: 'Espadas', bastos: 'Bastos', oros: 'Oros', copas: 'Copas' };
   addLog('🃏 Nueva mano. ' + (p1IsMano ? 'Sos el mano.' : 'El rival es mano.'), '#d4a017');
   addLog('🎴 Muestra: ' + VNOME[h.muestra.v] + ' de ' + sN[h.muestra.s], '#e8c84a');
+  // Note: P2 mano log is sent after syncOnline (see startOnlineGame / finalizeHand)
 
   // ── FLOR: detectar y anunciar con burbuja + audio ──────────
   if(h.p1Flor && h.p2Flor){
@@ -1508,7 +1509,13 @@ function finalizeHand(g) {
   syncOnline(); // Send hand result to P2
   if (checkGameOver()) return;
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
-  setTimeout(() => initGame(nm === 'p1', ps, os), G.revealHands ? 3200 : 2200);
+  setTimeout(() => {
+    initGame(nm === 'p1', ps, os);
+    renderGame();
+    syncOnline(); // Send new hand state to P2
+    // Send P2-perspective mano log (replaces P1's version)
+    sendP2Log('🃏 Nueva mano. ' + (G.mano === 'p1' ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
+  }, G.revealHands ? 3200 : 2200);
 }
 
 function resRound(p1c, p2c) {
@@ -1544,31 +1551,30 @@ function doResolveRound() {
   G.mesa = { p1: null, p2: null };
   // Envido solo en la primera ronda: se cierra cuando el primer round se resuelve
   G.envDisp = false;
-  if (w === 'p1') {
-    addLog('✅ Ganás el round.', '#7fba5a');
-    sendP2Log('❌ El rival gana el round.', '#e06060');
-  } else if (w === 'p2') {
-    addLog('❌ El rival gana el round.', '#e06060');
-    sendP2Log('✅ Ganás el round.', '#7fba5a');
-  } else {
-    addLog('🔄 Parda (empate).', '#70b0d0');
-    sendP2Log('🔄 Parda (empate).', '#70b0d0');
-  }
-
-  // Actualizar quién lidera el próximo round:
-  // - Si alguien gana: él lidera el próximo round
-  // - Si parda: el mismo que lideró este round sigue liderando
   if (w !== 'tie') G.roundLeader = w;
-  // si es tie, G.roundLeader queda igual (quien lideró este round)
 
   const hw = resHand(G.rounds, G.mano);
   if (hw) {
+    if (w === 'p1') addLog('✅ Ganás el round.', '#7fba5a');
+    else if (w === 'p2') addLog('❌ El rival gana el round.', '#e06060');
+    else addLog('🔄 Parda (empate).', '#70b0d0');
     G.handDone = true; G.handWinner = hw; G.fase = 'hand_done';
     finalizeHand();
+    // sendP2Log after finalizeHand which calls syncOnline internally
+    if(w==='p1') sendP2Log('❌ El rival gana el round.','#e06060');
+    else if(w==='p2') sendP2Log('✅ Ganás el round.','#7fba5a');
+    else sendP2Log('🔄 Parda (empate).','#70b0d0');
   } else {
     G.fase = G.roundLeader === 'p1' ? 'p_turn' : 'ai_turn';
+    if (w === 'p1') addLog('✅ Ganás el round.', '#7fba5a');
+    else if (w === 'p2') addLog('❌ El rival gana el round.', '#e06060');
+    else addLog('🔄 Parda (empate).', '#70b0d0');
     renderGame();
     syncOnline(); // Tell P2 who plays next
+    // sendP2Log AFTER syncOnline so it arrives after state and replaces the last log
+    if(w==='p1') sendP2Log('❌ El rival gana el round.','#e06060');
+    else if(w==='p2') sendP2Log('✅ Ganás el round.','#7fba5a');
+    else sendP2Log('🔄 Parda (empate).','#70b0d0');
     if (G.fase === 'ai_turn') scheduleAI(800);
   }
 }
@@ -3588,6 +3594,9 @@ function createRoom(){
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName});
         syncOnline(); // Send properly inverted state to P2
+        // Now send P2-perspective log for "Nueva mano" (replaces P1's version)
+        const p1IsManoNow = G.mano === 'p1';
+        sendP2Log('🃏 Nueva mano. ' + (p1IsManoNow ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
       }, 600);
     });
     _conn.on('data', (data) => {
@@ -3595,8 +3604,12 @@ function createRoom(){
         // P2 sent an action — execute it on P1's engine (P1 is the source of truth)
         handleRemoteAction(data.action, data.payload);
       } else if(data.type==='p2log'){
-        // Log entry specifically crafted for P2's perspective
-        addLog(data.txt, data.color||'#4a7a4a');
+        // Replace the last log entry with P2's perspective version
+        if(G && G.logs && G.logs.length > 0){
+          G.logs = [...G.logs.slice(0,-1), {txt:data.txt, color:data.color||'#4a7a4a'}];
+        } else {
+          addLog(data.txt, data.color||'#4a7a4a');
+        }
         renderGame();
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
@@ -3644,8 +3657,7 @@ function joinRoom(){
         _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
-        const prevLogs = G ? (G.logs||[]) : [];
-        G={...data.state, p2Joined:true, logs: data.state.logs || prevLogs}; SEL=null; BUSY=false;
+        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
         if(!_p2GameStarted){
           _p2GameStarted=true;
           addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
@@ -3653,8 +3665,12 @@ function joinRoom(){
         }
         renderGame();
       } else if(data.type==='p2log'){
-        // Log entry specifically crafted for P2's perspective
-        addLog(data.txt, data.color||'#4a7a4a');
+        // Replace the last log entry with P2's perspective version
+        if(G && G.logs && G.logs.length > 0){
+          G.logs = [...G.logs.slice(0,-1), {txt:data.txt, color:data.color||'#4a7a4a'}];
+        } else {
+          addLog(data.txt, data.color||'#4a7a4a');
+        }
         renderGame();
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
@@ -3902,8 +3918,6 @@ function syncOnline(){
   // handWinner, pending by fields.
   const p2state = {
     ...G,
-    // Don't sync logs: P2 builds their own log via sendP2Log messages
-    logs: undefined,
     // Scores from P2's perspective: pScore=their score, oScore=P1's score
     pScore: G.oScore,
     oScore: G.pScore,
