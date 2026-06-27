@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es" style="background:#000">
 <head>
@@ -911,8 +912,8 @@ function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object
 
 // ===== SISTEMA DE MAZOS =====
 const MAZOS = [
-  { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
-  { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'clasico', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
+  { id: 'madera', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-MADERA', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
@@ -2804,7 +2805,8 @@ function renderActions(){
   if(MODE==='online'){
     const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
     let isMyTurn = myFases.includes(fase);
-    // Si el jugador local fue quien cantó, espera — no responde a sí mismo
+    // Si el jugador local fue quien cantó (by===MY_ROLE), espera — no responde a sí mismo
+    // by uses absolute p1/p2 roles, MY_ROLE is the local player's role
     if(fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
     if(fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
     if(fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
@@ -3816,15 +3818,17 @@ function syncOnline(){
   // see the response-waiting UI as well.  Re-map those cases so P2 mirrors
   // the same p_resp_* state, allowing the renderGame to show "esperando..."
   let mappedFase = faseMap[G.fase] || G.fase;
-  if (G.fase === 'p_resp_env'   && G.envPend   && G.envPend.by   === 'p2') mappedFase = 'p_resp_env';
-  if (G.fase === 'p_resp_truco' && G.trucoPend && G.trucoPend.by === 'p2') mappedFase = 'p_resp_truco';
-  if (G.fase === 'p_resp_flor'  && G.florPend  && G.florPend.by  === 'p2') mappedFase = 'p_resp_flor';
+  // p_resp_* and ai_turn: if P2 called (by==='p2'), P1 is responding -> P2 waits (ai_turn already mapped)
+  // If P1 called (by==='p1') and P1 is responding (p_resp_*), P2 must respond -> send p_resp_*
+  if (G.fase === 'p_resp_env'   && G.envPend   && G.envPend.by   === 'p1') mappedFase = 'p_resp_env';
+  if (G.fase === 'p_resp_truco' && G.trucoPend && G.trucoPend.by === 'p1') mappedFase = 'p_resp_truco';
+  if (G.fase === 'p_resp_flor'  && G.florPend  && G.florPend.by  === 'p1') mappedFase = 'p_resp_flor';
   // Special flor case: when P1 is mano and called flor first, G.fase='ai_turn' (waiting for P2).
   // P2 must see p_resp_flor so they get the response buttons.
   if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'flor_resp' && G.florStage === 'await_response') mappedFase = 'p_resp_flor';
   // Same for contraflor_resto called by P1: P2 must respond
   if (G.fase === 'ai_turn' && G.florPend && G.florPend.level === 'contraflor_resto' && G.florPend.by === 'p1') mappedFase = 'p_resp_flor';
-  // When P1 called envido/truco and G.fase='ai_turn' (waiting for P2 to respond),
+  // When P1 called envido/truco (by==='p1') and G.fase='ai_turn' (waiting for P2),
   // P2 must see p_resp_env / p_resp_truco so the response buttons appear.
   if (G.fase === 'ai_turn' && G.envPend   && G.envPend.by   === 'p1') mappedFase = 'p_resp_env';
   if (G.fase === 'ai_turn' && G.trucoPend && G.trucoPend.by === 'p1') mappedFase = 'p_resp_truco';
@@ -3843,10 +3847,11 @@ function syncOnline(){
     handWinner: G.handWinner === 'p1' ? 'p2' : (G.handWinner === 'p2' ? 'p1' : G.handWinner),
     // Invert round winners so P2 sees their wins as 'p1' (renderGame checks r.w==='p1')
     rounds: (G.rounds||[]).map(r=>({...r, w: r.w==='p1'?'p2': r.w==='p2'?'p1': r.w})),
-    // Pending by fields: invert so P2's respondEnvido etc. see the right challenger
-    envPend: G.envPend ? {...G.envPend, by: G.envPend.by==='p1'?'p2':'p1'} : null,
-    trucoPend: G.trucoPend ? {...G.trucoPend, by: G.trucoPend.by==='p1'?'p2':'p1'} : null,
-    florPend: G.florPend ? {...G.florPend, by: G.florPend.by==='p1'?'p2':'p1'} : null,
+    // Pending by fields: keep as-is (p1/p2 absolute roles).
+    // renderActions guard uses by!==MY_ROLE to detect "opponent called, I must respond".
+    envPend: G.envPend ? {...G.envPend} : null,
+    trucoPend: G.trucoPend ? {...G.trucoPend} : null,
+    florPend: G.florPend ? {...G.florPend} : null,
     trucoLastCaller: G.trucoLastCaller === 'p1' ? 'p2' : (G.trucoLastCaller === 'p2' ? 'p1' : G.trucoLastCaller),
     // mano and roundLeader: keep as-is. MY_ROLE='p2' on P2's side, so G.mano===MY_ROLE works directly.
     // e.g. P1 is mano (G.mano='p1') -> P2 gets mano='p1', 'p1'==='p2'=false ✓
