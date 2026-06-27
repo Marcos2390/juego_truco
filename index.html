@@ -1604,7 +1604,11 @@ function playCard(idx) {
 
 // ── Envido: solo en la primera ronda y antes de jugar carta ──
 function canCallEnvido() {
-  return G.fase === 'p_turn' && G.envDisp && !G.envDone && !G.envPend &&
+  // Envido se puede cantar en el turno propio O del rival, mientras sea la 1ra ronda (envDisp)
+  // y no se haya cantado/resuelto el envido aun
+  const myTurn = G.fase === 'p_turn';
+  const rivalTurn = G.fase === 'ai_turn';
+  return (myTurn || rivalTurn) && G.envDisp && !G.envDone && !G.envPend &&
     !G.handDone && !G.p1Flor && !G.p2Flor;
 }
 
@@ -1748,7 +1752,10 @@ function aiDecideContraflorResto() {
 //   Si vale4 → adversario puede: quiero / no quiero
 // El mismo que gritó NO puede subir en su propio grito.
 function canCallTruco() {
-  return G.fase === 'p_turn' && !G.trucoDone && !G.trucoAcep &&
+  // Truco se puede cantar en turno propio o del rival
+  const myTurn = G.fase === 'p_turn';
+  const rivalTurn = G.fase === 'ai_turn';
+  return (myTurn || rivalTurn) && !G.trucoDone && !G.trucoAcep &&
     !G.trucoPend && !G.handDone;
 }
 
@@ -2802,7 +2809,7 @@ function renderActions(){
   // En modo online, las fases p_resp_* y p_turn solo le corresponden al jugador local.
   // Si llegó un estado desfasado, nunca mostrar botones al que no debe actuar.
   if(MODE==='online'){
-    const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
+    const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor','ai_turn'];
     let isMyTurn = myFases.includes(fase);
     // Si el jugador local fue quien cantó (by===MY_ROLE), espera — no responde a sí mismo
     // by uses absolute p1/p2 roles, MY_ROLE is the local player's role
@@ -2830,10 +2837,33 @@ function renderActions(){
   }
 
   // ── GUARD GLOBAL: si no es tu turno → no mostrar ningún botón de acción ──
-  if(fase==='ai_turn' || fase==='hand_done'){
+  if(fase==='hand_done'){
     act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
       font-size:11px;font-family:Georgia,serif;padding:8px 0;letter-spacing:1px">
       ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}</div>`;
+    return;
+  }
+  if(fase==='ai_turn'){
+    // Mostrar "esperando" pero también botones de envido/truco si están disponibles
+    act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
+      font-size:11px;font-family:Georgia,serif;padding:4px 0;letter-spacing:1px">
+      ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}</div>`;
+    // Envido en turno del rival (primera ronda)
+    if(G.envDisp&&!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
+      const envBtns=[];
+      envBtns.push({label:'🎯 Envido',fn:"callEnvido('envido')"});
+      envBtns.push({label:'🎯 Real Envido',fn:"callEnvido('realenvido')"});
+      envBtns.push({label:'🎯 Falta Envido',fn:"callEnvido('faltaenvido')"});
+      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;flex-wrap:wrap;justify-content:center">
+        ${envBtns.map(b=>`<button class="btn-action" onclick="${b.fn}">${b.label}</button>`).join('')}
+      </div>`;
+    }
+    // Truco en turno del rival
+    if(!G.trucoDone&&!G.trucoAcep&&!G.trucoPend){
+      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;justify-content:center;margin-top:4px">
+        <button class="btn-action" onclick="callTruco()" style="background:linear-gradient(135deg,#c0392b,#922b21)">⚔️ Truco</button>
+      </div>`;
+    }
     return;
   }
 
