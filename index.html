@@ -2627,7 +2627,7 @@ function setVoiceVol(val){
 }
 
 function setMusicVolFromSettings(val){
-  setMenuMusicVolume(val); // real music vol setter
+  setMusicVol(val);
   const lbl=document.getElementById('music-vol-label');
   if(lbl) lbl.textContent=val+'%';
 }
