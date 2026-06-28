@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es" style="background:#000">
 <head>
@@ -2313,7 +2314,9 @@ function playerRaiseTruco(level){
 }
 
 function raiseTruco(){
-  respondTruco(false, true);
+  // Called from the raise button - determine current raise level and call playerRaiseTruco
+  const level = playerCanRaiseTruco();
+  if(level) playerRaiseTruco(level);
 }
 
 function playerCanRaiseTruco(){
@@ -2454,13 +2457,16 @@ const _remoteVoiceURLs={}; // opponent's voices received via WebRTC: key → obj
 let _mediaRec=null, _recKey=null, _recChunks=[];
 
 // Send all local recorded voices to the connected peer
+// Try all possible storage prefixes so voices recorded in any mode are found
 function sendVoicesToPeer(conn){
   if(!conn || !conn.open) return;
-  const prefix = voicePrefix();
+  const prefixes = ['p1', 'p2', _playerName].filter(Boolean);
   const voices = {};
   VOICE_CALLS.forEach(({key})=>{
-    const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
-    if(b64) voices[key] = b64;
+    for(const prefix of prefixes){
+      const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
+      if(b64){ voices[key] = b64; break; } // first found wins
+    }
   });
   if(Object.keys(voices).length > 0){
     try{ conn.send({type:'voices', voices}); }
@@ -3234,7 +3240,8 @@ function renderActions(){
     const raiseLevel = playerCanRaiseTruco();
     const raiseNames = {retruco:'Re-Truco', vale4:'Vale Cuatro'};
     if(raiseLevel && raiseNames[raiseLevel]){
-      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], 'raiseTruco()',
+      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel],
+        `playerRaiseTruco('${raiseLevel}')`,
         {disabled: !showActions || fase==='p_resp_env',
          color:'linear-gradient(135deg,#8a1a1a,#5a0f0f)',
          accent:'#e06060', icon:'⚔️'}));
