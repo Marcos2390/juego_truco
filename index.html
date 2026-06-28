@@ -548,20 +548,145 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
         padding:8px 10px;border-radius:10px;cursor:pointer;flex-shrink:0;
         background:rgba(0,0,0,.55);border:1.5px solid rgba(180,130,40,.3);
         color:rgba(220,180,80,.9);font-size:16px;line-height:1">🏠</button>
-    <!-- SCORE BAR -->
-    <div style="display:flex;flex:1;justify-content:space-between;align-items:center;
-      background:rgba(20,12,0,.72);backdrop-filter:blur(6px);
-      border:1.5px solid rgba(180,130,40,.4);border-radius:12px;padding:7px 12px">
-      <div class="score-panel" id="score-me"></div>
-      <div style="text-align:center;flex:1">
-        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-          <span style="color:rgba(220,180,70,.8);font-size:9px;letter-spacing:2px;font-family:Georgia,serif">TRUCO</span>
-          <button id="audio-toggle" onclick="toggleAudio()" style="background:rgba(0,0,0,.3);border:1px solid rgba(200,150,40,.4);color:rgba(220,180,70,.9);border-radius:6px;padding:2px 7px;cursor:pointer;font-size:13px">🔊</button>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;
+      background:rgba(0,0,0,0.75);align-items:center;justify-content:center">
+      <div style="background:linear-gradient(160deg,#2a1a08,#1a0f02);
+        border:2px solid rgba(180,130,40,.7);border-radius:16px;
+        padding:20px 24px;width:min(320px,90vw);
+        box-shadow:0 8px 40px rgba(0,0,0,.8)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="color:rgba(220,180,70,1);font-size:15px;font-family:Georgia,serif;font-weight:700;letter-spacing:1px">⚙️ Ajustes</span>
+          <button onclick="document.getElementById('settings-modal').style.display='none'"
+            style="background:none;border:none;color:rgba(220,180,70,.7);font-size:20px;cursor:pointer">✕</button>
         </div>
-        <div id="turn-badge" style="font-size:10px;margin-top:2px;font-family:Georgia,serif"></div>
-        <div id="truco-badge" style="font-size:9px;color:#e04040;font-weight:700;font-family:Georgia,serif"></div>
+
+        <!-- Voice toggle -->
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          margin-bottom:14px;padding:10px 12px;
+          background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(180,130,40,.2)">
+          <span style="color:rgba(220,180,70,.9);font-size:13px;font-family:Georgia,serif">🗣️ Voz del jugador</span>
+          <button id="voice-toggle-btn" onclick="toggleVoice()"
+            style="padding:5px 14px;border-radius:8px;border:1.5px solid rgba(180,130,40,.6);
+            background:rgba(40,25,5,.8);color:rgba(220,180,70,.9);
+            font-size:12px;cursor:pointer;font-family:Georgia,serif">ON</button>
+        </div>
+
+        <!-- Voice volume -->
+        <div style="padding:10px 12px;background:rgba(0,0,0,.3);border-radius:10px;
+          border:1px solid rgba(180,130,40,.2);margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:rgba(220,180,70,.9);font-size:13px;font-family:Georgia,serif">🔊 Volumen voz</span>
+            <span id="voice-vol-label" style="color:rgba(220,180,70,.7);font-size:12px;font-family:Georgia,serif">80%</span>
+          </div>
+          <input type="range" min="0" max="100" value="80" id="voice-vol-slider"
+            oninput="setVoiceVol(this.value)"
+            style="width:100%;accent-color:#c8963e">
+        </div>
+
+        <!-- Music volume -->
+        <div style="padding:10px 12px;background:rgba(0,0,0,.3);border-radius:10px;
+          border:1px solid rgba(180,130,40,.2);margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:rgba(220,180,70,.9);font-size:13px;font-family:Georgia,serif">🎵 Volumen música</span>
+            <span id="music-vol-label" style="color:rgba(220,180,70,.7);font-size:12px;font-family:Georgia,serif">55%</span>
+          </div>
+          <input type="range" min="0" max="100" value="55" id="music-vol-slider"
+            oninput="setMusicVolFromSettings(this.value)"
+            style="width:100%;accent-color:#c8963e">
+        </div>
+
+        <!-- Deck selector shortcut -->
+        <div style="padding:10px 12px;background:rgba(0,0,0,.3);border-radius:10px;
+          border:1px solid rgba(180,130,40,.2);margin-bottom:18px;
+          display:flex;justify-content:space-between;align-items:center">
+          <span style="color:rgba(220,180,70,.9);font-size:13px;font-family:Georgia,serif">🃏 Mazo</span>
+          <select id="deck-select-settings" onchange="changeDeckFromSettings(this.value)"
+            style="background:rgba(40,25,5,.9);border:1px solid rgba(180,130,40,.5);
+            color:rgba(220,180,70,.9);border-radius:7px;padding:4px 8px;font-family:Georgia,serif;font-size:12px">
+            <option value="clasico">Clásico</option>
+            <option value="nueva">Nueva</option>
+            <option value="madera">Madera</option>
+            <option value="diamante">Diamante</option>
+          </select>
+        </div>
+
+        <!-- Back to menu -->
+        <button onclick="confirmGoHome()"
+          style="width:100%;padding:10px;border-radius:10px;
+          background:linear-gradient(135deg,#5a2008,#3a1205);
+          border:1.5px solid rgba(200,100,60,.6);
+          color:rgba(255,210,170,.95);font-size:14px;font-family:Georgia,serif;
+          cursor:pointer;letter-spacing:1px">
+          🏠 Volver al inicio
+        </button>
       </div>
-      <div class="score-panel" id="score-opp"></div>
+    </div>
+
+    <!-- SCORE BAR — redesigned wood theme -->
+    <div id="score-bar" style="display:flex;flex:1;flex-direction:column;
+      background:linear-gradient(180deg,rgba(35,18,4,.92) 0%,rgba(22,11,2,.88) 100%);
+      backdrop-filter:blur(8px);
+      border:1.5px solid rgba(160,110,30,.5);
+      border-radius:12px;overflow:hidden;position:relative">
+
+      <!-- Wood grain overlay -->
+      <div style="position:absolute;inset:0;pointer-events:none;
+        background:repeating-linear-gradient(92deg,transparent,transparent 40px,rgba(180,120,20,.03) 41px);
+        border-radius:12px"></div>
+
+      <!-- Top row: names + settings button -->
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:5px 10px 2px;border-bottom:1px solid rgba(160,110,30,.25)">
+
+        <!-- My name + mano indicator -->
+        <div style="display:flex;align-items:center;gap:5px;min-width:80px">
+          <span id="me-label" style="font-size:9px;letter-spacing:1.5px;
+            color:rgba(160,240,140,.85);font-family:Georgia,serif;font-weight:700">VOS</span>
+          <span id="me-mano-tag" style="display:none;font-size:9px;
+            background:rgba(80,160,60,.25);border:1px solid rgba(100,200,80,.4);
+            color:rgba(160,240,140,.9);border-radius:4px;padding:0px 4px;
+            font-family:Georgia,serif">sos mano 🫱</span>
+        </div>
+
+        <!-- Center: title + settings -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="color:rgba(200,160,50,.7);font-size:8px;
+            letter-spacing:3px;font-family:Georgia,serif">TRUCO</span>
+          <button onclick="openSettings()"
+            style="background:rgba(0,0,0,.3);border:1px solid rgba(180,130,30,.4);
+            color:rgba(200,160,50,.85);border-radius:6px;padding:2px 7px;
+            cursor:pointer;font-size:13px;line-height:1">⚙️</button>
+        </div>
+
+        <!-- Opp name + mano indicator -->
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:80px">
+          <span id="opp-mano-tag" style="display:none;font-size:9px;
+            background:rgba(160,60,40,.25);border:1px solid rgba(200,100,80,.4);
+            color:rgba(240,160,130,.9);border-radius:4px;padding:0px 4px;
+            font-family:Georgia,serif">🫱 es mano</span>
+          <span id="opp-label" style="font-size:9px;letter-spacing:1.5px;
+            color:rgba(240,130,110,.85);font-family:Georgia,serif;font-weight:700">IA</span>
+        </div>
+      </div>
+
+      <!-- Middle row: tally marks + turn badge -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px 3px">
+
+        <!-- My tally -->
+        <div id="score-me" style="min-width:80px"></div>
+
+        <!-- Turn badge center -->
+        <div style="text-align:center;flex:1;padding:0 4px">
+          <div id="turn-badge" style="font-size:10px;font-family:Georgia,serif"></div>
+          <div id="truco-badge" style="font-size:9px;color:#e04040;font-weight:700;font-family:Georgia,serif"></div>
+        </div>
+
+        <!-- Opp tally -->
+        <div id="score-opp" style="min-width:80px;display:flex;flex-direction:column;align-items:flex-end"></div>
+      </div>
+
     </div></div><!-- end top bar -->
 
     <!-- IA HAND — top of table -->
@@ -619,10 +744,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       <div id="my-hand" style="position:relative;min-height:130px;width:100%"></div>
     </div>
 
-    <!-- ACTIONS — respond / call buttons -->
+    <!-- ACTIONS — fixed action bar -->
+    <!-- Response zone: shown only when opponent calls envido/truco/flor -->
+    <div id="resp-zone" style="display:none;flex-direction:column;align-items:stretch;
+      gap:4px;padding:4px 8px;background:rgba(0,0,0,0.35);border-radius:8px;
+      margin:2px 4px;flex-shrink:0"></div>
+    <!-- Fixed action bar: always visible, buttons enabled/disabled by state -->
     <div id="actions" style="
-      display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
-      align-items:center;padding:2px 0;min-height:44px;flex-shrink:0"></div>
+      display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
+      align-items:center;padding:4px 4px 2px;min-height:48px;flex-shrink:0"></div>
 
     <!-- QUICK REF -->
     <details style="color:rgba(150,120,60,.7);font-size:9px;flex-shrink:0">
@@ -2182,6 +2312,10 @@ function playerRaiseTruco(level){
   scheduleAI(1100);
 }
 
+function raiseTruco(){
+  respondTruco(false, true);
+}
+
 function playerCanRaiseTruco(){
   if(!G.trucoAcep||G.trucoPend||G.trucoDone||G.handDone) return null;
   if(G.trucoLastCaller === MY_ROLE) return null; // can't raise your own call
@@ -2277,6 +2411,15 @@ function sayAndShow(who, displayText, color, spoken){
   showBubble(bubbleWho, cleanText);
   say(cleanText, who);
   triggerTensionShake();
+  // In online mode: when the LOCAL player speaks, tell the opponent to play our recorded voice
+  if(MODE==='online' && who===MY_ROLE && _conn && _conn.open){
+    const km={'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
+      '¡Quiero!':'quiero','Quiero':'quiero','No quiero':'noquiero',
+      'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
+      'Al mazo':'almazo','La mía es flor':'flor','Flor':'flor'};
+    const k=km[cleanText]||Object.entries(km).find(([t])=>cleanText.includes(t))?.[1];
+    if(k) try{ _conn.send({type:'playvoice', key:k}); }catch(e){}
+  }
 }
 
 /* ── Mostrar puntos al final de mano ────────────────────────── */
@@ -2306,8 +2449,36 @@ const VOICE_CALLS=[
 ];
 
 let _playerName=localStorage.getItem('playerName')||'jugador';
-const _voiceURLs={}; // key → objectURL
+const _voiceURLs={};       // local player's recorded voices: key → objectURL
+const _remoteVoiceURLs={}; // opponent's voices received via WebRTC: key → objectURL
 let _mediaRec=null, _recKey=null, _recChunks=[];
+
+// Send all local recorded voices to the connected peer
+function sendVoicesToPeer(conn){
+  if(!conn || !conn.open) return;
+  const prefix = voicePrefix();
+  const voices = {};
+  VOICE_CALLS.forEach(({key})=>{
+    const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
+    if(b64) voices[key] = b64;
+  });
+  if(Object.keys(voices).length > 0){
+    try{ conn.send({type:'voices', voices}); }
+    catch(e){ console.warn('sendVoices error',e); }
+  }
+}
+
+// Store received voices from peer into _remoteVoiceURLs
+function receiveVoicesFromPeer(voices){
+  Object.entries(voices).forEach(([key, b64])=>{
+    try{
+      const ab = Uint8Array.from(atob(b64), c=>c.charCodeAt(0)).buffer;
+      const blob = new Blob([ab], {type:'audio/webm'});
+      if(_remoteVoiceURLs[key]) URL.revokeObjectURL(_remoteVoiceURLs[key]);
+      _remoteVoiceURLs[key] = URL.createObjectURL(blob);
+    } catch(e){ console.warn('receiveVoice error', key, e); }
+  });
+}
 
 // Voice prefix: p1_ when playing as p1 (local or online host), p2_ when joining as p2
 function voicePrefix(){ return MY_ROLE||'p1'; }
@@ -2329,8 +2500,8 @@ function loadVoices(){
   });
 }
 
-function playCustomVoice(key){
-  const url=_voiceURLs[key];
+function playCustomVoice(key, remote=false){
+  const url = remote ? _remoteVoiceURLs[key] : _voiceURLs[key];
   if(!url) return false;
   const a=new Audio(url);
   a.play().catch(e=>console.warn('play error',e));
@@ -2338,7 +2509,7 @@ function playCustomVoice(key){
 }
 
 // say() tries custom voice first, then TTS
-// who: 'p1' = local player, 'p2' = AI/remote (no custom voice for AI)
+// who: 'p1' = local player, 'p2' = AI/remote
 function say(text, who){
   if(!_audioOn) return;
   const keyMap={
@@ -2352,14 +2523,18 @@ function say(text, who){
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
   // Custom voice files: solo reproducir en el dispositivo del jugador local
   const isLocalPlayer = !who || who === MY_ROLE || (who === 'p1' && MODE !== 'online');
-  if(k && isLocalPlayer && playCustomVoice(k)) return;
+  const isRemotePlayer = MODE === 'online' && who && who !== MY_ROLE;
+  // In online mode: play local voice for own calls, remote voice for opponent's calls
+  if(k && isLocalPlayer && playCustomVoice(k, false)) return;
+  if(k && isRemotePlayer && playCustomVoice(k, true)) return;
   // TTS: permitir para acciones del rival también (así P2 escucha a P1 y viceversa)
   // Solo silenciar si el rival ya lo reproduce en su propio dispositivo
   // (el custom voice ya está suprimido arriba; TTS sí se permite)
   if(!window.speechSynthesis) return;
+  if(!_voiceOn) return; // Voice disabled in settings
   window.speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
-  u.lang='es-AR'; u.rate=0.95; u.pitch=1.05; u.volume=1;
+  u.lang='es-AR'; u.rate=0.95; u.pitch=1.05; u.volume=typeof _voiceVol!=='undefined'?_voiceVol:1;
   const voices=window.speechSynthesis.getVoices();
   const sp=voices.find(v=>v.lang.startsWith('es-AR')||v.lang.startsWith('es-UY')||v.lang.startsWith('es'));
   if(sp) u.voice=sp;
@@ -2420,14 +2595,56 @@ function toggleMenuMusicMute(){
 
 // ─────────────────────────────────────────────────────────────
 let _audioOn=true;
+let _voiceOn=true;
+let _voiceVol=0.8;
+
 function toggleAudio(){
   _audioOn=!_audioOn;
-  const btn=document.getElementById('audio-toggle');
-  if(btn) btn.textContent=_audioOn?'🔊':'🔇';
   if(!_audioOn && window.speechSynthesis) window.speechSynthesis.cancel();
-  // También silenciar/restaurar música de menú si por alguna razón estuviera activa
   const m=document.getElementById('menu-music');
   if(m && !m.paused) m.volume=_audioOn?_menuMusicVol:0;
+}
+
+function toggleVoice(){
+  _voiceOn=!_voiceOn;
+  const btn=document.getElementById('voice-toggle-btn');
+  if(btn){ btn.textContent=_voiceOn?'ON':'OFF'; btn.style.background=_voiceOn?'rgba(40,80,20,.8)':'rgba(80,20,10,.8)'; }
+  if(!_voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+function setVoiceVol(val){
+  _voiceVol=Number(val)/100;
+  const lbl=document.getElementById('voice-vol-label');
+  if(lbl) lbl.textContent=val+'%';
+}
+
+function setMusicVolFromSettings(val){
+  setMusicVol(val);
+  const lbl=document.getElementById('music-vol-label');
+  if(lbl) lbl.textContent=val+'%';
+}
+
+function changeDeckFromSettings(val){
+  _selectedDeck=val; localStorage.setItem('truco_deck',val);
+}
+
+function openSettings(){
+  const modal=document.getElementById('settings-modal');
+  if(!modal) return;
+  modal.style.display='flex';
+  const vs=document.getElementById('voice-vol-slider');
+  if(vs){ vs.value=Math.round(_voiceVol*100); setVoiceVol(vs.value); }
+  const ms=document.getElementById('music-vol-slider');
+  if(ms){ ms.value=Math.round(_menuMusicVol*100); setMusicVolFromSettings(ms.value); }
+  const vtb=document.getElementById('voice-toggle-btn');
+  if(vtb){ vtb.textContent=_voiceOn?'ON':'OFF'; vtb.style.background=_voiceOn?'rgba(40,80,20,.8)':'rgba(80,20,10,.8)'; }
+  const ds=document.getElementById('deck-select-settings');
+  if(ds) ds.value=_selectedDeck||'clasico';
+}
+
+function confirmGoHome(){
+  document.getElementById('settings-modal').style.display='none';
+  show('s-menu');
 }
 
 /* ── Diagnóstico claro de por qué el micrófono puede no andar ── */
@@ -2722,14 +2939,20 @@ function renderGame(){
   }
 
   // Scores
+  // ── Update score panels + mano indicators ──
   document.getElementById('score-me').innerHTML=
-    `<div style="font-size:9px;color:rgba(160,240,140,.9);letter-spacing:1px;margin-bottom:3px;font-family:Georgia,serif">VOS ${myIsMano?'🎯':''}</div>
-     <div style="color:rgba(160,240,140,.9)">${tallyMarks(G.pScore,'rgba(130,220,110,.95)')}</div>
-     <div style="font-size:10px;color:rgba(160,240,140,.9);font-weight:700;margin-top:2px;font-family:Georgia,serif">${G.pScore}/30</div>`;
+    `<div style="color:rgba(130,220,110,.95)">${tallyMarks(G.pScore,'rgba(130,220,110,.95)')}</div>
+     <div style="font-size:11px;color:rgba(160,240,140,.9);font-weight:700;font-family:Georgia,serif">${G.pScore}<span style="opacity:.5;font-size:9px">/30</span></div>`;
   document.getElementById('score-opp').innerHTML=
-    `<div style="font-size:9px;color:rgba(240,130,110,.9);letter-spacing:1px;margin-bottom:3px;font-family:Georgia,serif">${MODE==='ai'?'IA':'RIVAL'} ${!myIsMano?'🎯':''}</div>
-     <div style="color:rgba(240,130,110,.9)">${tallyMarks(G.oScore,'rgba(220,100,80,.95)')}</div>
-     <div style="font-size:10px;color:rgba(240,130,110,.9);font-weight:700;margin-top:2px;font-family:Georgia,serif">${G.oScore}/30</div>`;
+    `<div style="color:rgba(220,100,80,.95)">${tallyMarks(G.oScore,'rgba(220,100,80,.95)')}</div>
+     <div style="font-size:11px;color:rgba(240,130,110,.9);font-weight:700;font-family:Georgia,serif">${G.oScore}<span style="opacity:.5;font-size:9px">/30</span></div>`;
+  // Mano indicators
+  const meTag = document.getElementById('me-mano-tag');
+  const oppTag = document.getElementById('opp-mano-tag');
+  const oppLabel = document.getElementById('opp-label');
+  if(meTag) meTag.style.display = myIsMano ? 'inline' : 'none';
+  if(oppTag) oppTag.style.display = (!myIsMano && !G.handDone) ? 'inline' : 'none';
+  if(oppLabel) oppLabel.textContent = MODE==='ai'?'IA':'RIVAL';
 
   // Turn badge + mano indicator
   const fase=G.fase;
@@ -2806,7 +3029,11 @@ function renderGame(){
   // ── POST-RENDER LOCK (online): deshabilitar fisicamente todo si no es turno local ──
   if(MODE==='online'){
     const myFases=['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
-    let isMyTurn = myFases.includes(G.fase);
+    // ai_turn: not our turn to play a card, but we CAN call envido/truco
+    const canCallDuringAiTurn = G.fase==='ai_turn' &&
+      ((G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor) ||
+       (!G.trucoDone && !G.trucoAcep && !G.trucoPend));
+    let isMyTurn = myFases.includes(G.fase) || canCallDuringAiTurn;
     // Si el jugador local fue quien cantó, no le corresponde responder — espera
     if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
     if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
@@ -2823,234 +3050,225 @@ function renderGame(){
 }
 
 function renderActions(){
-  const act=document.getElementById('actions');
-  act.innerHTML='';
-  const fase=G.fase;
+  const act = document.getElementById('actions');
+  const resp = document.getElementById('resp-zone');
+  if(!act || !resp) return;
 
-  // ── GUARD GLOBAL ONLINE: bloquear acciones si no es tu turno ──────────────
-  // En modo online, las fases p_resp_* y p_turn solo le corresponden al jugador local.
-  // Si llegó un estado desfasado, nunca mostrar botones al que no debe actuar.
+  const fase = G.fase;
+
+  // ── Determine whose turn it is ──────────────────────────────────────────
+  const myFasesBase = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
+  let isMyPlayTurn = myFasesBase.includes(fase); // my turn to play a card OR respond
+  // ai_turn: rival plays card, but I can still call envido/truco
+  const canInterruptAiTurn = fase === 'ai_turn' &&
+    ((G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor) ||
+     (!G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone));
+
+  // In online: block if not local player's action
+  let onlineBlocked = false;
   if(MODE==='online'){
-    const myFases = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor','ai_turn'];
-    let isMyTurn = myFases.includes(fase);
-    // Si el jugador local fue quien cantó (by===MY_ROLE), espera — no responde a sí mismo
-    // by uses absolute p1/p2 roles, MY_ROLE is the local player's role
-    if(fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
-    if(fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
-    if(fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
-    if(!isMyTurn){
-      const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
-      act.style.pointerEvents='none';
-      act.innerHTML=`
-        <div style="width:100%;text-align:center;padding:6px 0">
-          <div style="color:rgba(150,200,150,.65);font-size:11px;font-family:Georgia,serif;letter-spacing:1px;margin-bottom:4px">
-            ⏳ Esperando al rival...
-          </div>
-          <div style="color:rgba(220,180,80,.7);font-size:10px;font-family:Georgia,serif">
-            ${iAmMano?'🎯 Sos mano esta ronda':'🃏 El rival es mano esta ronda'}
-          </div>
-        </div>`;
-      return;
-    }
-    act.style.pointerEvents='';
-    const iAmMano = (MY_ROLE==='p1' && G.mano==='p1') || (MY_ROLE==='p2' && G.mano==='p2');
-    act.innerHTML=`<div style="width:100%;text-align:right;font-size:9px;color:rgba(220,180,80,.6);font-family:Georgia,serif;padding:0 4px 3px;letter-spacing:1px">
-      ${iAmMano?'🎯 Sos mano':'🃏 El rival es mano'}</div>`;
+    if(fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   onlineBlocked=true;
+    if(fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) onlineBlocked=true;
+    if(fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  onlineBlocked=true;
+    if(!isMyPlayTurn && !canInterruptAiTurn) onlineBlocked=true;
   }
 
-  // ── GUARD GLOBAL: si no es tu turno → no mostrar ningún botón de acción ──
-  if(fase==='hand_done'){
-    act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
-      font-size:11px;font-family:Georgia,serif;padding:8px 0;letter-spacing:1px">
-      ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}</div>`;
-    return;
-  }
-  if(fase==='ai_turn'){
-    // Mostrar "esperando" pero también botones de envido/truco si están disponibles
-    act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
-      font-size:11px;font-family:Georgia,serif;padding:4px 0;letter-spacing:1px">
-      ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}</div>`;
-    // Envido en turno del rival (primera ronda)
-    if(G.envDisp&&!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
-      const envBtns=[];
-      envBtns.push({label:'🎯 Envido',fn:"callEnvido('envido')"});
-      envBtns.push({label:'🎯 Real Envido',fn:"callEnvido('realenvido')"});
-      envBtns.push({label:'🎯 Falta Envido',fn:"callEnvido('faltaenvido')"});
-      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;flex-wrap:wrap;justify-content:center">
-        ${envBtns.map(b=>`<button class="btn-action" onclick="${b.fn}">${b.label}</button>`).join('')}
-      </div>`;
-    }
-    // Truco en turno del rival
-    if(!G.trucoDone&&!G.trucoAcep&&!G.trucoPend){
-      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;justify-content:center;margin-top:4px">
-        <button class="btn-action" onclick="callTruco()" style="background:linear-gradient(135deg,#c0392b,#922b21)">⚔️ Truco</button>
-      </div>`;
-    }
-    return;
+  const waiting = onlineBlocked || fase==='hand_done' ||
+    (fase==='ai_turn' && !canInterruptAiTurn && MODE!=='online');
+
+  // ── Helper: build a button element ──────────────────────────────────────
+  function mkBtn(label, onclick, {disabled=false, color='#5a3a1a', accent='#c8963e', icon=''}={}){
+    const btn = document.createElement('button');
+    btn.innerHTML = (icon?icon+' ':'')+label;
+    btn.onclick = disabled ? null : new Function(onclick);
+    btn.style.cssText = `
+      padding:7px 10px;border-radius:7px;border:1.5px solid ${disabled?'rgba(255,255,255,0.12)':accent};
+      background:${disabled?'rgba(30,20,10,0.45)':color};
+      color:${disabled?'rgba(255,255,255,0.28)':'rgba(255,240,200,0.95)'};
+      font-size:12px;font-family:Georgia,serif;font-weight:600;
+      cursor:${disabled?'default':'pointer'};
+      opacity:${disabled?'0.45':'1'};
+      min-width:70px;text-align:center;
+      transition:all 0.15s;letter-spacing:0.3px;
+      pointer-events:${disabled?'none':'auto'};`;
+    return btn;
   }
 
-  // ── Responder Flor (ambos tienen Flor) ─────────────────
-  if(fase==='p_resp_flor'&&G.florPend){
-    const myFlorPts = MY_ROLE==='p1' ? G.p1FlorPts : G.p2FlorPts;
-    if(G.florPend.level==='flor_resp'){
-      // florPend.by is already from local perspective (inverted for P2 by syncOnline)
-      const rivalCalled = G.florPend.by !== MY_ROLE;
-      act.innerHTML=`
-        <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
-          font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          🌸 ${rivalCalled ? (MODE==='online'?'El rival cantó':'La IA cantó') : 'Cantaste'} ¡Flor! &nbsp;• Tus puntos: <b>${myFlorPts}</b>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="florAccept()"
-            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
-              background:rgba(120,40,90,.6);border:2px solid rgba(230,120,180,.7);
-              color:#f8c0e0;font-size:12px;font-weight:700;font-family:Georgia,serif">
-            🌸 También Flor</button>
-          <button onclick="florCallContraflorResto()"
-            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
-              background:rgba(150,30,70,.6);border:2px solid rgba(240,100,160,.7);
-              color:#ffc0e0;font-size:12px;font-weight:700;font-family:Georgia,serif">
-            🌺 Contra Flor al Resto</button>
-        </div>`;
-      return;
-    }
-    if(G.florPend.level==='contraflor_resto' && G.florPend.by !== MY_ROLE){
-      act.innerHTML=`
-        <div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;text-align:center;
-          font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-          ${MODE==='online'?'👤 Rival':'🤖 IA'} dice: ¡Contra Flor al Resto! &nbsp;• Tus puntos: <b>${myFlorPts}</b>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="respondContraflorResto(true)"
-            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
-              background:rgba(30,110,30,.75);border:2px solid rgba(80,210,80,.7);
-              color:#a0f8a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
-            ✅ Quiero</button>
-          <button onclick="respondContraflorResto(false)"
-            style="flex:1;min-width:100px;padding:12px 6px;border-radius:10px;cursor:pointer;
-              background:rgba(110,20,20,.75);border:2px solid rgba(230,80,60,.7);
-              color:#f8a0a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
-            ❌ No quiero (–${G.florPend.refuseVal})</button>
-        </div>`;
-      return;
-    }
-  }
+  // ── RESPONSE ZONE (shown when opponent called something) ─────────────────
+  resp.innerHTML='';
+  resp.style.display='none';
 
-  // ── Responder envido (de IA o rival online) ───────────
-  if(fase==='p_resp_env'&&G.envPend){
-    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
-    const caller = MODE==='online' ? '👤 Rival dice' : '🤖 IA dice';
-    act.innerHTML=`
-      <div style="color:rgba(230,180,80,.95);font-weight:700;font-size:12px;text-align:center;
-        font-family:Georgia,serif;padding:3px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-        ${caller}: ¡${names[G.envPend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="respondEnvido(true)"
-          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
-            background:rgba(30,110,30,.75);border:2px solid rgba(80,210,80,.7);
-            color:#a0f8a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
-          ✅ Quiero</button>
-        <button onclick="respondEnvido(false)"
-          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
-            background:rgba(110,20,20,.75);border:2px solid rgba(230,80,60,.7);
-            color:#f8a0a0;font-size:13px;font-weight:700;font-family:Georgia,serif">
-          ❌ No quiero</button>
-        ${G.envPend.level==='envido'?`
-        <button onclick="respondAndRaiseEnv('realenvido')"
-          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
-            background:rgba(130,80,0,.75);border:2px solid rgba(220,150,40,.7);
-            color:rgba(255,210,120,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
-          🎯 Real Env.</button>`:''}
-        ${G.envPend.level!=='faltaenvido'?`
-        <button onclick="respondAndRaiseEnv('faltaenvido')"
-          style="flex:1;min-width:80px;padding:12px 6px;border-radius:10px;cursor:pointer;
-            background:rgba(100,60,0,.75);border:2px solid rgba(200,130,30,.7);
-            color:rgba(255,200,100,.95);font-size:12px;font-weight:700;font-family:Georgia,serif">
-          🎯 Falta Env.</button>`:''}
-      </div>`;
-    return;
-  }
+  const respondingToEnv   = (fase==='p_resp_env')   && G.envPend   && G.envPend.by !== MY_ROLE;
+  const respondingToTruco = (fase==='p_resp_truco') && G.trucoPend && G.trucoPend.by !== MY_ROLE;
+  const respondingToFlor  = (fase==='p_resp_flor')  && G.florPend;
 
-  // ── Responder truco (de IA o rival online) ────────────
-  if(fase==='p_resp_truco'&&G.trucoPend){
-    const names={truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro'};
-    // canRaise: puede subir solo si no llegó a vale4 Y el rival fue quien cantó este nivel
-    const opponentRole = MODE==='online' ? (MY_ROLE==='p1'?'p2':'p1') : 'p2';
-    const canRaise=G.trucoPend.level!=='vale4' && G.trucoPend.by===opponentRole;
-    const nextName={truco:'Re-Truco',retruco:'Vale Cuatro'}[G.trucoPend.level]||'';
-    const caller = MODE==='online' ? '👤 Rival dice' : '🤖 IA dice';
-    act.style.flexDirection='column';
-    act.style.alignItems='stretch';
-    act.innerHTML=`
-      <div style="color:rgba(240,100,80,.95);font-weight:700;font-size:12px;text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
-        ${caller}: ¡${names[G.trucoPend.level]}! ¿Querés?
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="respondTruco(true)"  style="flex:1;min-width:100px;padding:13px 8px;border-radius:10px;cursor:pointer;background:rgba(30,100,30,.75);border:2px solid rgba(80,200,80,.7);color:#a0f0a0;font-size:14px;font-weight:700;font-family:Georgia,serif">✅ Quiero</button>
-        <button onclick="respondTruco(false)" style="flex:1;min-width:100px;padding:13px 8px;border-radius:10px;cursor:pointer;background:rgba(100,20,20,.75);border:2px solid rgba(220,80,60,.7);color:#f0a0a0;font-size:14px;font-weight:700;font-family:Georgia,serif">❌ No quiero (–${G.trucoPend.refuseVal})</button>
-        ${canRaise?`<button onclick="respondTruco(false,true)" style="width:100%;padding:11px 8px;border-radius:10px;cursor:pointer;background:rgba(80,30,120,.75);border:2px solid rgba(160,100,220,.7);color:#d0a0ff;font-size:13px;font-weight:700;font-family:Georgia,serif">⬆️ ${nextName}</button>`:''}
-      </div>`;
-    return;
-  }
+  if(!onlineBlocked && (respondingToEnv || respondingToTruco || respondingToFlor)){
+    resp.style.display='flex';
+    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',
+      truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro',
+      flor_resp:'La mía es Flor',contraflor_resto:'Contra Flor al Resto'};
 
-  // ── Turno del jugador ──────────────────────────────────
-  if(fase==='p_turn'){
-    // Tip
-    act.innerHTML=`<div class="tip" style="width:100%;text-align:center;color:rgba(180,230,150,.75);font-size:10px;font-family:Georgia,serif;padding:2px 0">
-      ${SEL!==null?'▶ Tocá de nuevo para jugar':'← Tocá una carta de tu mano'}</div>`;
-
-    // ── BARRA DE ACCIONES PROGRESIVA ──────────────────────
-    // Fila 1: Envido (solo en primera ronda, sin flor)
-    if(G.envDisp&&!G.envDone&&!G.envPend&&!G.p1Flor&&!G.p2Flor){
-      // Mostrar opciones de envido según lo que ya fue dicho
-      // Si nadie tocó aún → mostrar Envido, Real Envido, Falta Envido
-      const envBtns=[];
-      envBtns.push({label:'🎯 Envido',fn:"callEnvido('envido')"});
-      envBtns.push({label:'🎯 Real Envido',fn:"callEnvido('realenvido')"});
-      envBtns.push({label:'🎯 Falta Envido',fn:"callEnvido('faltaenvido')"});
-      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;flex-wrap:wrap;justify-content:center">
-        ${envBtns.map(b=>`<button onclick="${b.fn}"
-          style="flex:1;min-width:80px;padding:8px 4px;border-radius:8px;cursor:pointer;
-            background:rgba(150,90,0,.5);border:1.5px solid rgba(220,160,40,.6);
-            color:rgba(255,215,100,.95);font-size:11px;font-weight:700;font-family:Georgia,serif">
-          ${b.label}</button>`).join('')}
-      </div>`;
-    }
-
-    // Fila 2: Truco / Re-Truco / Vale Cuatro — progresivo
-    // Solo UN botón a la vez, en el orden correcto
-    let trucoBtns=[];
-    if(!G.trucoDone&&!G.trucoPend){
-      if(!G.trucoAcep){
-        // Nadie cantó truco aún → solo "Truco"
-        trucoBtns.push({label:'⚔️ Truco',fn:'callTruco()',color:'rgba(180,40,20,.55)',border:'rgba(240,80,60,.7)',text:'rgba(255,150,130,.95)'});
-      } else {
-        // Truco fue aceptado — mostrar solo el siguiente nivel disponible
-        const _canR=playerCanRaiseTruco();
-        if(_canR==='retruco'){
-          trucoBtns.push({label:'⚔️ Re-Truco',fn:"playerRaiseTruco('retruco')",color:'rgba(160,30,100,.55)',border:'rgba(230,80,180,.7)',text:'rgba(255,160,220,.95)'});
-        } else if(_canR==='vale4'){
-          trucoBtns.push({label:'⚔️ Vale Cuatro',fn:"playerRaiseTruco('vale4')",color:'rgba(120,20,140,.55)',border:'rgba(200,80,240,.7)',text:'rgba(220,160,255,.95)'});
-        }
+    if(respondingToEnv){
+      const pend = G.envPend;
+      const caller = MODE==='online'?'👤 Rival':'🤖 IA';
+      resp.innerHTML=`<div style="color:rgba(230,180,80,.95);font-weight:700;font-size:12px;
+        text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
+        ${caller}: ¡${names[pend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b></div>`;
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
+      // Raise buttons first
+      const raises={envido:'realenvido',realenvido:'faltaenvido'};
+      const nextEnv=raises[pend.level];
+      if(nextEnv && pend.by!==MY_ROLE){
+        btnRow.appendChild(mkBtn(names[nextEnv], `callEnvido('${nextEnv}')`,
+          {color:'linear-gradient(135deg,#1a6b3a,#0f4a28)',accent:'#4aba7a',icon:'🎯'}));
       }
+      btnRow.appendChild(mkBtn('¡Quiero!', `respondEnvido(true)`,
+        {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
+      btnRow.appendChild(mkBtn('No quiero', `respondEnvido(false)`,
+        {color:'linear-gradient(135deg,#5c3a0a,#3a2008)',accent:'#c8963e',icon:'❌'}));
+      resp.appendChild(btnRow);
     }
-    // Al mazo siempre disponible
-    trucoBtns.push({label:'🃏 Al mazo',fn:'mazo()',color:'rgba(40,30,10,.5)',border:'rgba(140,110,40,.4)',text:'rgba(200,180,120,.7)'});
 
-    if(trucoBtns.length){
-      act.innerHTML+=`<div style="display:flex;gap:5px;width:100%;justify-content:center;flex-wrap:wrap">
-        ${trucoBtns.map(b=>`<button onclick="${b.fn}"
-          style="flex:1;min-width:80px;padding:9px 4px;border-radius:8px;cursor:pointer;
-            background:${b.color};border:1.5px solid ${b.border};
-            color:${b.text};font-size:12px;font-weight:700;font-family:Georgia,serif">
-          ${b.label}</button>`).join('')}
-      </div>`;
+    if(respondingToTruco){
+      const pend = G.trucoPend;
+      const caller = MODE==='online'?'👤 Rival':'🤖 IA';
+      const nextNames={truco:'Re-Truco',retruco:'Vale Cuatro'};
+      const opRole = MODE==='online'?(MY_ROLE==='p1'?'p2':'p1'):'p2';
+      const canRaise = pend.level!=='vale4' && pend.by===opRole;
+      resp.innerHTML=`<div style="color:rgba(240,100,80,.95);font-weight:700;font-size:12px;
+        text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
+        ${caller}: ¡${names[pend.level]}!</div>`;
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
+      if(canRaise && nextNames[pend.level]){
+        btnRow.appendChild(mkBtn(nextNames[pend.level], `respondTruco(false,true)`,
+          {color:'linear-gradient(135deg,#7a1a1a,#4a0f0f)',accent:'#e06060',icon:'⚔️'}));
+      }
+      btnRow.appendChild(mkBtn('¡Quiero!', `respondTruco(true)`,
+        {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
+      btnRow.appendChild(mkBtn('No quiero', `respondTruco(false)`,
+        {color:'linear-gradient(135deg,#5c3a0a,#3a2008)',accent:'#c8963e',icon:'❌'}));
+      resp.appendChild(btnRow);
     }
+
+    if(respondingToFlor){
+      const pend = G.florPend;
+      const caller = MODE==='online'?'👤 Rival':'🤖 IA';
+      resp.innerHTML=`<div style="color:rgba(248,165,194,.95);font-weight:700;font-size:12px;
+        text-align:center;font-family:Georgia,serif;padding:2px 0">
+        ${caller}: ${names[pend.level]||pend.level}</div>`;
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
+      if(pend.level==='flor_resp'){
+        btnRow.appendChild(mkBtn('Contra Flor al Resto', `florCallContraflorResto()`,
+          {color:'linear-gradient(135deg,#7a1a8a,#4a0f5a)',accent:'#c060e0',icon:'🌸'}));
+        btnRow.appendChild(mkBtn('Con Flor me voy', `florAccept()`,
+          {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
+        // No 'no quiero' option in flor battle - both must play
+      } else if(pend.level==='contraflor_resto'){
+        btnRow.appendChild(mkBtn('¡Quiero!', `respondContraflorResto(true)`,
+          {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
+        btnRow.appendChild(mkBtn('No quiero', `respondContraflorResto(false)`,
+          {color:'linear-gradient(135deg,#5c3a0a,#3a2008)',accent:'#c8963e',icon:'❌'}));
+      }
+      resp.appendChild(btnRow);
+    }
+  }
+
+  // ── FIXED ACTION BAR ─────────────────────────────────────────────────────
+  act.innerHTML='';
+
+  // Status line when waiting
+  if(waiting){
+    const iAmMano = (MY_ROLE==='p1' && G.mano==='p1')||(MY_ROLE==='p2' && G.mano==='p2')
+      || (MODE!=='online' && G.mano==='p1');
+    act.innerHTML=`<div style="width:100%;text-align:center;color:rgba(150,200,150,.6);
+      font-size:11px;font-family:Georgia,serif;padding:2px 0;letter-spacing:1px">
+      ⏳ ${MODE==='online'?'Esperando al rival...':'IA pensando...'}
+      &nbsp;<span style="color:rgba(220,180,80,.55);font-size:10px">
+      ${iAmMano?'🎯 Sos mano':'🃏 El rival es mano'}</span></div>`;
+  }
+
+  // Only show action buttons when it's our turn or we can interrupt with envido/truco
+  const showActions = !onlineBlocked && (isMyPlayTurn || canInterruptAiTurn) &&
+    fase !== 'hand_done';
+  if(!showActions && !waiting) return;
+
+  // ── Envido buttons ───────────────────────────────────────────────────────
+  const envAvail = G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor && !G.handDone;
+  const envDisabled = !showActions || respondingToTruco || respondingToFlor || fase==='p_resp_env';
+
+  if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
+    const envRow = document.createElement('div');
+    envRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
+    const envLabels=[
+      {label:'Envido',     fn:"callEnvido('envido')",     icon:'🎯'},
+      {label:'Real Envido',fn:"callEnvido('realenvido')", icon:'🎯'},
+      {label:'Falta Envido',fn:"callEnvido('faltaenvido')",icon:'🎯'},
+    ];
+    envLabels.forEach(e=>{
+      envRow.appendChild(mkBtn(e.label, e.fn,
+        {disabled: !envAvail || envDisabled,
+         color:'linear-gradient(135deg,#1a4a6a,#0f2e45)',
+         accent:'#4a9aba', icon:e.icon}));
+    });
+    act.appendChild(envRow);
+  }
+
+  // ── Truco / raise buttons ────────────────────────────────────────────────
+  const trucoRow = document.createElement('div');
+  trucoRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
+
+  if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
+    // Initial truco call
+    const trucoAvail = !G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone;
+    const trucoDisabled = !showActions || fase==='p_resp_env';
+    trucoRow.appendChild(mkBtn('Truco', 'callTruco()',
+      {disabled: !trucoAvail || trucoDisabled,
+       color:'linear-gradient(135deg,#6a1a1a,#3a0f0f)',
+       accent:'#e04040', icon:'⚔️'}));
+
+    // Raise button: if truco accepted and I can raise
+    const raiseLevel = playerCanRaiseTruco();
+    const raiseNames = {retruco:'Re-Truco', vale4:'Vale Cuatro'};
+    if(raiseLevel && raiseNames[raiseLevel]){
+      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], 'raiseTruco()',
+        {disabled: !showActions || fase==='p_resp_env',
+         color:'linear-gradient(135deg,#8a1a1a,#5a0f0f)',
+         accent:'#e06060', icon:'⚔️'}));
+    }
+  }
+
+  // Al mazo button (always available during your turn)
+  const almazoAvail = (fase==='p_turn' || (fase==='ai_turn'&&canInterruptAiTurn)) && !G.handDone;
+  if(!respondingToEnv && !respondingToTruco && !respondingToFlor && isMyPlayTurn){
+    trucoRow.appendChild(mkBtn('Al mazo', 'irAlMazo()',
+      {disabled: !almazoAvail,
+       color:'rgba(40,30,15,0.7)',
+       accent:'rgba(160,130,60,0.6)', icon:'🃏'}));
+  }
+
+  if(trucoRow.children.length) act.appendChild(trucoRow);
+
+  // ── Waiting status tip (when in ai_turn with buttons) ───────────────────
+  if(fase==='ai_turn' && canInterruptAiTurn && !waiting){
+    const tip = document.createElement('div');
+    tip.style.cssText='width:100%;text-align:center;color:rgba(150,200,150,.5);font-size:10px;font-family:Georgia,serif;padding:1px 0';
+    tip.textContent='⏳ Esperando al rival… podés cantar ahora';
+    act.appendChild(tip);
+  }
+
+  // ── Tip for p_turn ───────────────────────────────────────────────────────
+  if(fase==='p_turn'){
+    const tip = document.createElement('div');
+    tip.style.cssText='width:100%;text-align:center;color:rgba(180,230,150,.6);font-size:10px;font-family:Georgia,serif;padding:1px 0';
+    tip.textContent = SEL!==null?'▶ Tocá de nuevo para jugar':'← Tocá una carta de tu mano';
+    act.appendChild(tip);
   }
 }
 
-/* ─── ANIMACIÓN: carta vuela desde la mano hasta la mesa ─────────────────── */
+
 function animateCardPlay(idx, callback) {
   const cardEl = document.getElementById('hand-card-' + idx);
   const mesaTarget = document.getElementById('mesa-me');
@@ -3602,6 +3820,7 @@ function createRoom(){
         renderGame();
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName});
+        sendVoicesToPeer(_conn); // Send P1's recorded voices to P2
         syncOnline(); // Send properly inverted state to P2
         // Now send P2-perspective logs (replaces P1's versions)
         const p1IsManoNow = G.mano === 'p1';
@@ -3618,6 +3837,12 @@ function createRoom(){
       if(data.type==='action'){
         // P2 sent an action — execute it on P1's engine (P1 is the source of truth)
         handleRemoteAction(data.action, data.payload);
+      } else if(data.type==='voices'){
+        // P2 sent their recorded voices — store them for local playback
+        receiveVoicesFromPeer(data.voices);
+      } else if(data.type==='playvoice'){
+        // P2 is speaking — play their recorded voice on P1's device
+        playCustomVoice(data.key, true);
       } else if(data.type==='bubble'){
         showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
@@ -3628,6 +3853,12 @@ function createRoom(){
           addLog(data.txt, data.color||'#4a7a4a');
         }
         renderGame();
+      } else if(data.type==='voices'){
+        // P1 sent their recorded voices — store them for local playback
+        receiveVoicesFromPeer(data.voices);
+      } else if(data.type==='playvoice'){
+        // P1 is speaking — play their recorded voice on P2's device
+        playCustomVoice(data.key, true);
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
       }
@@ -3661,6 +3892,7 @@ function joinRoom(){
 
     _conn.on('open', () => {
       _conn.send({ type:'name', name:_playerName });
+      sendVoicesToPeer(_conn); // Send P2's recorded voices to P1
       showMsg('join-msg','🟢 Conectado — esperando inicio...','#7fba5a');
     });
 
