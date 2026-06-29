@@ -1520,17 +1520,12 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   syncOnline(); // Send new hand state to P2
   // Send P2-perspective logs after syncOnline
   if(MODE==='online'){
-    // Send mano log first (replaces P1's perspective), then flor as additive
-    const _p1Mano = G.mano==='p1';
-    sendP2Log('🃏 Nueva mano. '+(_p1Mano?'El rival es mano.':'Sos el mano.'),'#d4a017');
-    if(h.p1Flor && !h.p2Flor){
-      setTimeout(()=>{ sendP2LogAdd('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
-        if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },150);
-    } else if(h.p2Flor && !h.p1Flor){
-      setTimeout(()=>{ sendP2LogAdd('🌸 Tenés Flor! +3 pts.','#f8a5c2');
-        if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },150);
-    } else if(h.p1Flor && h.p2Flor){
-      setTimeout(()=>sendP2LogAdd('🌸 Ambos tienen Flor. Tenés que responder.','#f8a5c2'),150);
+    if(h.p1Flor){
+      sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
+      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },350);
+    } else if(h.p2Flor){
+      sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2');
+      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },650);
     }
   }
   if (G.fase === 'ai_turn') scheduleAI(900);
@@ -2326,7 +2321,6 @@ function playerRaiseTruco(level){
   showBubble('p1',names[level]);
   triggerTensionShake();
   G.fase='ai_turn';
-  syncOnline(); // Send raise to P2
   renderGame();
   scheduleAI(1100);
 }
@@ -3878,15 +3872,11 @@ function createRoom(){
         // Now send P2-perspective logs (replaces P1's versions)
         const p1IsManoNow = G.mano === 'p1';
         sendP2Log('🃏 Nueva mano. ' + (p1IsManoNow ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
-        // Flor announcements: ADD as extra log entries (not replace)
+        // Flor announcements if applicable
         if(G.p1Flor && !G.p2Flor && G.envDone){
-          setTimeout(()=>{ sendP2LogAdd('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
-            if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); }, 150);
+          setTimeout(()=>sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2'), 100);
         } else if(G.p2Flor && !G.p1Flor && G.envDone){
-          setTimeout(()=>{ sendP2LogAdd('🌸 Tenés Flor! +3 pts.','#f8a5c2');
-            if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); }, 150);
-        } else if(G.p1Flor && G.p2Flor && G.envDone){
-          setTimeout(()=>sendP2LogAdd('🌸 Ambos tienen Flor. Tenés que responder.','#f8a5c2'), 150);
+          setTimeout(()=>sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2'), 100);
         }
       }, 600);
     });
@@ -3902,10 +3892,6 @@ function createRoom(){
         playCustomVoice(data.key, true);
       } else if(data.type==='bubble'){
         showBubble(data.who, data.txt);
-      } else if(data.type==='p2logadd'){
-        // ADD a log entry (for flor/extra info)
-        addLog(data.txt, data.color||'#4a7a4a');
-        renderGame();
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -3976,10 +3962,6 @@ function joinRoom(){
         renderGame();
       } else if(data.type==='bubble'){
         showBubble(data.who, data.txt);
-      } else if(data.type==='p2logadd'){
-        // ADD a log entry (for flor/extra info)
-        addLog(data.txt, data.color||'#4a7a4a');
-        renderGame();
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -4193,10 +4175,6 @@ function handleRemoteAction(action, payload){
 function sendP2Log(txt, color){
   if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
   try{ _conn.send({type:'p2log', txt, color}); } catch(e){}
-}
-function sendP2LogAdd(txt, color){
-  if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
-  try{ _conn.send({type:'p2logadd', txt, color}); } catch(e){}
 }
 
 function syncOnline(){
