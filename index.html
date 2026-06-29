@@ -1046,7 +1046,6 @@ const MAZOS = [
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
-
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -1649,15 +1648,6 @@ function finalizeHand(g) {
   );
   renderGame();
   syncOnline(); // Send hand result to P2
-  // P2 sees opposite result
-  if(MODE==='online'){
-    const p2Win = !myWin;
-    sendP2Log(
-      (p2Win ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
-      (p2Win ? '+' + pts + ' pts → Vos: ' + G.oScore : 'Rival +' + pts + ' pts → Rival: ' + G.pScore) + '/' + MAX_PTS,
-      p2Win ? '#7fba5a' : '#e06060'
-    );
-  }
   if (checkGameOver()) return;
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
   setTimeout(() => {
@@ -1986,9 +1976,7 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    // Can only raise if the opponent (not me) was the last caller
-    const opRole = MY_ROLE === 'p1' ? 'p2' : 'p1';
-    if (G.trucoLastCaller !== opRole) return;
+    if (G.trucoLastCaller !== 'p2') return;
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
     const stakes2 = { retruco: 3, vale4: 4 };
@@ -2029,8 +2017,6 @@ function respondTruco(accept, raise = false) {
 }
 
 // ── Al mazo ───────────────────────────────────────────────────
-function irAlMazo(){ mazo(); }
-
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
   if (MODE==='online' && MY_ROLE==='p2') {
@@ -2326,7 +2312,9 @@ function playerRaiseTruco(level){
 }
 
 function raiseTruco(){
-  respondTruco(false, true);
+  // Called from the raise button - determine current raise level and call playerRaiseTruco
+  const level = playerCanRaiseTruco();
+  if(level) playerRaiseTruco(level);
 }
 
 function playerCanRaiseTruco(){
@@ -2429,9 +2417,7 @@ function sayAndShow(who, displayText, color, spoken){
     const km={'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
       '¡Quiero!':'quiero','Quiero':'quiero','No quiero':'noquiero',
       'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
-      'Al mazo':'almazo','Me voy al mazo':'almazo','mazo':'almazo',
-      'La mía es flor':'flor','Flor':'flor','flor':'flor',
-      'Contra Flor':'contraflor'};
+      'Al mazo':'almazo','La mía es flor':'flor','Flor':'flor'};
     const k=km[cleanText]||Object.entries(km).find(([t])=>cleanText.includes(t))?.[1];
     if(k) try{ _conn.send({type:'playvoice', key:k}); }catch(e){}
   }
@@ -2458,7 +2444,7 @@ const VOICE_CALLS=[
   {key:'vale4',label:'⚔️ Vale Cuatro'},{key:'quiero',label:'✅ Quiero'},
   {key:'noquiero',label:'❌ No quiero'},{key:'envido',label:'🎯 Envido'},
   {key:'realenv',label:'🎯 Real Envido'},{key:'faltaenv',label:'🎯 Falta Envido'},
-  {key:'almazo',label:'🃏 Me voy al mazo'},{key:'flor',label:'🌸 La mía es Flor'},
+  {key:'flor',label:'🌸 La mía es Flor'},
   {key:'contraflor',label:'🌺 Contra Flor al Resto'},
   {key:'mazo',label:'🃏 Me voy al mazo'},
 ];
@@ -2469,13 +2455,16 @@ const _remoteVoiceURLs={}; // opponent's voices received via WebRTC: key → obj
 let _mediaRec=null, _recKey=null, _recChunks=[];
 
 // Send all local recorded voices to the connected peer
+// Try all possible storage prefixes so voices recorded in any mode are found
 function sendVoicesToPeer(conn){
   if(!conn || !conn.open) return;
-  const prefix = voicePrefix();
+  const prefixes = ['p1', 'p2', _playerName].filter(Boolean);
   const voices = {};
   VOICE_CALLS.forEach(({key})=>{
-    const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
-    if(b64) voices[key] = b64;
+    for(const prefix of prefixes){
+      const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
+      if(b64){ voices[key] = b64; break; } // first found wins
+    }
   });
   if(Object.keys(voices).length > 0){
     try{ conn.send({type:'voices', voices}); }
@@ -2499,11 +2488,14 @@ function receiveVoicesFromPeer(voices){
 function voicePrefix(){ return MY_ROLE||'p1'; }
 
 function loadVoices(){
-  const prefix=voicePrefix();
+  // Try all possible prefixes so voices recorded in any mode are found
+  const prefixes = ['p1', 'p2', _playerName, voicePrefix()].filter((v,i,a)=>v&&a.indexOf(v)===i);
   VOICE_CALLS.forEach(({key})=>{
-    // Try role-based key first, then legacy playerName key for backwards compat
-    let b64=localStorage.getItem('voz_'+prefix+'_'+key);
-    if(!b64) b64=localStorage.getItem('voz_'+_playerName+'_'+key);
+    let b64 = null;
+    for(const prefix of prefixes){
+      b64 = localStorage.getItem('voz_'+prefix+'_'+key);
+      if(b64) break;
+    }
     if(b64){
       try{
         const ab=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer;
@@ -2533,7 +2525,7 @@ function say(text, who){
     'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
     'La mía es flor':'flor','la mía es flor':'flor','¡La mía es Flor!':'flor',
     'Contra Flor al Resto':'contraflor','¡Contra Flor al Resto!':'contraflor',
-    'Me voy al mazo':'almazo','Me voy al mazo.':'almazo','Al mazo':'almazo',
+    'Me voy al mazo':'mazo','Me voy al mazo.':'mazo',
   };
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
   // Custom voice files: solo reproducir en el dispositivo del jugador local
@@ -3045,21 +3037,21 @@ function renderGame(){
   if(MODE==='online'){
     const myFases=['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
     // ai_turn: not our turn to play a card, but we CAN call envido/truco
-    const canCallDuringAiTurn = G.fase==='ai_turn' &&
-      (canCallEnvido() || canCallTruco());
-    let isMyTurn = myFases.includes(G.fase) || canCallDuringAiTurn;
-    // Si el jugador local fue quien cantó, no le corresponde responder — espera
-    if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
-    if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
-    if(G.fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
+    // Can I call envido/truco even during opponent's card-playing turn?
+    const canInterrupt = G.fase==='ai_turn' && (canCallEnvido() || canCallTruco());
+    // Is it my turn to play a card or respond to a call?
+    let isMyCardTurn = myFases.includes(G.fase);
+    if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyCardTurn=false;
+    if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyCardTurn=false;
+    if(G.fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyCardTurn=false;
     const actEl = document.getElementById('actions');
-    if(!isMyTurn){
-      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents='none'; });
-      if(actEl){ actEl.style.pointerEvents='none'; }
-    } else {
-      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents=''; });
-      if(actEl){ actEl.style.pointerEvents=''; }
-    }
+    // Cards: only enabled when it's truly my card-playing turn (p_turn)
+    const canPlayCard = G.fase === 'p_turn';
+    document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
+      el.style.pointerEvents = canPlayCard ? '' : 'none';
+    });
+    // Actions area: enabled if my turn OR can interrupt with envido/truco
+    if(actEl) actEl.style.pointerEvents = (isMyCardTurn || canInterrupt) ? '' : 'none';
   }
 }
 
@@ -3074,9 +3066,10 @@ function renderActions(){
   const myFasesBase = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
   let isMyPlayTurn = myFasesBase.includes(fase); // my turn to play a card OR respond
   // ai_turn: rival plays card, but I can still call envido/truco
+  // Use canCallEnvido/Truco as authoritative checks (they handle all edge cases)
+  const _tmpFase = G.fase;
   const canInterruptAiTurn = fase === 'ai_turn' &&
-    ((G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor) ||
-     (!G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone));
+    (canCallEnvido() || canCallTruco());
 
   // In online: block if not local player's action
   let onlineBlocked = false;
@@ -3210,7 +3203,8 @@ function renderActions(){
   if(!showActions && !waiting) return;
 
   // ── Envido buttons ───────────────────────────────────────────────────────
-  const envAvail = G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor && !G.handDone;
+  // Use same logic as canCallEnvido() - the authoritative source
+  const envAvail = canCallEnvido();
   const envDisabled = !showActions || respondingToTruco || respondingToFlor || fase==='p_resp_env';
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
@@ -3235,8 +3229,8 @@ function renderActions(){
   trucoRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
-    // Initial truco call
-    const trucoAvail = !G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone;
+    // Initial truco call - use canCallTruco() as authoritative check
+    const trucoAvail = canCallTruco();
     const trucoDisabled = !showActions || fase==='p_resp_env';
     trucoRow.appendChild(mkBtn('Truco', 'callTruco()',
       {disabled: !trucoAvail || trucoDisabled,
@@ -3247,7 +3241,8 @@ function renderActions(){
     const raiseLevel = playerCanRaiseTruco();
     const raiseNames = {retruco:'Re-Truco', vale4:'Vale Cuatro'};
     if(raiseLevel && raiseNames[raiseLevel]){
-      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], 'raiseTruco()',
+      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel],
+        `playerRaiseTruco('${raiseLevel}')`,
         {disabled: !showActions || fase==='p_resp_env',
          color:'linear-gradient(135deg,#8a1a1a,#5a0f0f)',
          accent:'#e06060', icon:'⚔️'}));
