@@ -1046,6 +1046,7 @@ const MAZOS = [
   { id: 'dorado', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'CARTAS-DORADO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
+
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -1519,12 +1520,17 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   syncOnline(); // Send new hand state to P2
   // Send P2-perspective logs after syncOnline
   if(MODE==='online'){
-    if(h.p1Flor){
-      sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
-      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },350);
-    } else if(h.p2Flor){
-      sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2');
-      setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },650);
+    // Send mano log first (replaces P1's perspective), then flor as additive
+    const _p1Mano = G.mano==='p1';
+    sendP2Log('🃏 Nueva mano. '+(_p1Mano?'El rival es mano.':'Sos el mano.'),'#d4a017');
+    if(h.p1Flor && !h.p2Flor){
+      setTimeout(()=>{ sendP2LogAdd('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
+        if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },150);
+    } else if(h.p2Flor && !h.p1Flor){
+      setTimeout(()=>{ sendP2LogAdd('🌸 Tenés Flor! +3 pts.','#f8a5c2');
+        if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },150);
+    } else if(h.p1Flor && h.p2Flor){
+      setTimeout(()=>sendP2LogAdd('🌸 Ambos tienen Flor. Tenés que responder.','#f8a5c2'),150);
     }
   }
   if (G.fase === 'ai_turn') scheduleAI(900);
@@ -1648,6 +1654,15 @@ function finalizeHand(g) {
   );
   renderGame();
   syncOnline(); // Send hand result to P2
+  // P2 sees opposite result
+  if(MODE==='online'){
+    const p2Win = !myWin;
+    sendP2Log(
+      (p2Win ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
+      (p2Win ? '+' + pts + ' pts → Vos: ' + G.oScore : 'Rival +' + pts + ' pts → Rival: ' + G.pScore) + '/' + MAX_PTS,
+      p2Win ? '#7fba5a' : '#e06060'
+    );
+  }
   if (checkGameOver()) return;
   const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
   setTimeout(() => {
@@ -1976,7 +1991,9 @@ function respondTruco(accept, raise = false) {
   const { level, stake, refuseVal, by } = G.trucoPend;
 
   if (raise) {
-    if (G.trucoLastCaller !== 'p2') return;
+    // Can only raise if the opponent (not me) was the last caller
+    const opRole = MY_ROLE === 'p1' ? 'p2' : 'p1';
+    if (G.trucoLastCaller !== opRole) return;
     const next = { truco: 'retruco', retruco: 'vale4' }[level];
     if (!next) return;
     const stakes2 = { retruco: 3, vale4: 4 };
@@ -2017,6 +2034,8 @@ function respondTruco(accept, raise = false) {
 }
 
 // ── Al mazo ───────────────────────────────────────────────────
+function irAlMazo(){ mazo(); }
+
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
   if (MODE==='online' && MY_ROLE==='p2') {
@@ -2026,8 +2045,8 @@ function mazo() {
   }
   sayAndShow('p1','▶ Me voy al mazo.','#d4890a','Me voy al mazo');
   campTrackMazo();
-  G.oScore = Math.min(MAX_PTS, G.oScore + 1);
   G.handDone = true; G.handWinner = 'p2'; G.fase = 'hand_done';
+  renderGame();
   syncOnline();
   finalizeHand();
 }
@@ -2307,14 +2326,13 @@ function playerRaiseTruco(level){
   showBubble('p1',names[level]);
   triggerTensionShake();
   G.fase='ai_turn';
+  syncOnline(); // Send raise to P2
   renderGame();
   scheduleAI(1100);
 }
 
 function raiseTruco(){
-  // Called from the raise button - determine current raise level and call playerRaiseTruco
-  const level = playerCanRaiseTruco();
-  if(level) playerRaiseTruco(level);
+  respondTruco(false, true);
 }
 
 function playerCanRaiseTruco(){
@@ -2417,7 +2435,9 @@ function sayAndShow(who, displayText, color, spoken){
     const km={'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
       '¡Quiero!':'quiero','Quiero':'quiero','No quiero':'noquiero',
       'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
-      'Al mazo':'almazo','La mía es flor':'flor','Flor':'flor'};
+      'Al mazo':'almazo','Me voy al mazo':'almazo','mazo':'almazo',
+      'La mía es flor':'flor','Flor':'flor','flor':'flor',
+      'Contra Flor':'contraflor'};
     const k=km[cleanText]||Object.entries(km).find(([t])=>cleanText.includes(t))?.[1];
     if(k) try{ _conn.send({type:'playvoice', key:k}); }catch(e){}
   }
@@ -2444,7 +2464,7 @@ const VOICE_CALLS=[
   {key:'vale4',label:'⚔️ Vale Cuatro'},{key:'quiero',label:'✅ Quiero'},
   {key:'noquiero',label:'❌ No quiero'},{key:'envido',label:'🎯 Envido'},
   {key:'realenv',label:'🎯 Real Envido'},{key:'faltaenv',label:'🎯 Falta Envido'},
-  {key:'flor',label:'🌸 La mía es Flor'},
+  {key:'almazo',label:'🃏 Me voy al mazo'},{key:'flor',label:'🌸 La mía es Flor'},
   {key:'contraflor',label:'🌺 Contra Flor al Resto'},
   {key:'mazo',label:'🃏 Me voy al mazo'},
 ];
@@ -2454,30 +2474,45 @@ const _voiceURLs={};       // local player's recorded voices: key → objectURL
 const _remoteVoiceURLs={}; // opponent's voices received via WebRTC: key → objectURL
 let _mediaRec=null, _recKey=null, _recChunks=[];
 
+// Get best supported audio MIME type on this device
+function getSupportedAudioMime(){
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+  for(const t of types){
+    if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return 'audio/webm'; // fallback
+}
+
 // Send all local recorded voices to the connected peer
-// Try all possible storage prefixes so voices recorded in any mode are found
 function sendVoicesToPeer(conn){
   if(!conn || !conn.open) return;
-  const prefixes = ['p1', 'p2', _playerName].filter(Boolean);
-  const voices = {};
+  // Try all possible prefixes so voices recorded in any mode are found
+  const allPrefixes = ['p1', 'p2', _playerName, voicePrefix()].filter((v,i,a)=>v&&a.indexOf(v)===i);
+  const voices = {}, mimes = {};
   VOICE_CALLS.forEach(({key})=>{
-    for(const prefix of prefixes){
+    for(const prefix of allPrefixes){
       const b64 = localStorage.getItem('voz_'+prefix+'_'+key);
-      if(b64){ voices[key] = b64; break; } // first found wins
+      if(b64){
+        voices[key] = b64;
+        const m = localStorage.getItem('voz_'+prefix+'_'+key+'_mime');
+        if(m) mimes[key] = m;
+        break; // first found wins
+      }
     }
   });
   if(Object.keys(voices).length > 0){
-    try{ conn.send({type:'voices', voices}); }
+    try{ conn.send({type:'voices', voices, mimes}); }
     catch(e){ console.warn('sendVoices error',e); }
   }
 }
 
 // Store received voices from peer into _remoteVoiceURLs
-function receiveVoicesFromPeer(voices){
+function receiveVoicesFromPeer(voices, mimes){
   Object.entries(voices).forEach(([key, b64])=>{
     try{
+      const mime = (mimes && mimes[key]) || getSupportedAudioMime();
       const ab = Uint8Array.from(atob(b64), c=>c.charCodeAt(0)).buffer;
-      const blob = new Blob([ab], {type:'audio/webm'});
+      const blob = new Blob([ab], {type:mime});
       if(_remoteVoiceURLs[key]) URL.revokeObjectURL(_remoteVoiceURLs[key]);
       _remoteVoiceURLs[key] = URL.createObjectURL(blob);
     } catch(e){ console.warn('receiveVoice error', key, e); }
@@ -2488,18 +2523,22 @@ function receiveVoicesFromPeer(voices){
 function voicePrefix(){ return MY_ROLE||'p1'; }
 
 function loadVoices(){
-  // Try all possible prefixes so voices recorded in any mode are found
-  const prefixes = ['p1', 'p2', _playerName, voicePrefix()].filter((v,i,a)=>v&&a.indexOf(v)===i);
+  const prefix=voicePrefix();
   VOICE_CALLS.forEach(({key})=>{
-    let b64 = null;
-    for(const prefix of prefixes){
-      b64 = localStorage.getItem('voz_'+prefix+'_'+key);
-      if(b64) break;
-    }
+    // Try role-based key first, then legacy playerName key for backwards compat
+    let b64=localStorage.getItem('voz_'+prefix+'_'+key);
+    if(!b64) b64=localStorage.getItem('voz_'+_playerName+'_'+key);
     if(b64){
       try{
+        // Try to get saved mimeType, fallback to detection
+        let mime = null;
+        for(const prefix of prefixes){
+          mime = localStorage.getItem('voz_'+prefix+'_'+key+'_mime');
+          if(mime) break;
+        }
+        if(!mime) mime = getSupportedAudioMime();
         const ab=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer;
-        const blob=new Blob([ab],{type:'audio/webm'});
+        const blob=new Blob([ab],{type:mime});
         if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
         _voiceURLs[key]=URL.createObjectURL(blob);
       }catch(e){ console.warn('loadVoice error',key,e); }
@@ -2511,7 +2550,11 @@ function playCustomVoice(key, remote=false){
   const url = remote ? _remoteVoiceURLs[key] : _voiceURLs[key];
   if(!url) return false;
   const a=new Audio(url);
-  a.play().catch(e=>console.warn('play error',e));
+  a.play().catch(e=>{
+    console.warn('play error for key:', key, e.message);
+    // On playback error, mark this voice as unavailable to avoid repeated failures
+    if(remote) delete _remoteVoiceURLs[key];
+  });
   return true;
 }
 
@@ -2525,7 +2568,7 @@ function say(text, who){
     'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
     'La mía es flor':'flor','la mía es flor':'flor','¡La mía es Flor!':'flor',
     'Contra Flor al Resto':'contraflor','¡Contra Flor al Resto!':'contraflor',
-    'Me voy al mazo':'mazo','Me voy al mazo.':'mazo',
+    'Me voy al mazo':'almazo','Me voy al mazo.':'almazo','Al mazo':'almazo',
   };
   const k=keyMap[text]||keyMap[text.replace(/[!¡]/g,'').trim()];
   // Custom voice files: solo reproducir en el dispositivo del jugador local
@@ -2754,7 +2797,9 @@ async function startRecording(key){
       reader.onload=()=>{
         try{
           const b64=btoa(String.fromCharCode(...new Uint8Array(reader.result)));
-          localStorage.setItem('voz_'+voicePrefix()+'_'+key,b64);
+          const mimeType = _mediaRec.mimeType||'audio/webm';
+          localStorage.setItem('voz_'+voicePrefix()+'_'+key, b64);
+          localStorage.setItem('voz_'+voicePrefix()+'_'+key+'_mime', mimeType);
           if(_voiceURLs[key]) URL.revokeObjectURL(_voiceURLs[key]);
           _voiceURLs[key]=URL.createObjectURL(blob);
           updateRecBtn(key,'done');
@@ -3037,21 +3082,21 @@ function renderGame(){
   if(MODE==='online'){
     const myFases=['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
     // ai_turn: not our turn to play a card, but we CAN call envido/truco
-    // Can I call envido/truco even during opponent's card-playing turn?
-    const canInterrupt = G.fase==='ai_turn' && (canCallEnvido() || canCallTruco());
-    // Is it my turn to play a card or respond to a call?
-    let isMyCardTurn = myFases.includes(G.fase);
-    if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyCardTurn=false;
-    if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyCardTurn=false;
-    if(G.fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyCardTurn=false;
+    const canCallDuringAiTurn = G.fase==='ai_turn' &&
+      (canCallEnvido() || canCallTruco());
+    let isMyTurn = myFases.includes(G.fase) || canCallDuringAiTurn;
+    // Si el jugador local fue quien cantó, no le corresponde responder — espera
+    if(G.fase==='p_resp_env'   && G.envPend   && G.envPend.by===MY_ROLE)   isMyTurn=false;
+    if(G.fase==='p_resp_truco' && G.trucoPend && G.trucoPend.by===MY_ROLE) isMyTurn=false;
+    if(G.fase==='p_resp_flor'  && G.florPend  && G.florPend.by===MY_ROLE)  isMyTurn=false;
     const actEl = document.getElementById('actions');
-    // Cards: only enabled when it's truly my card-playing turn (p_turn)
-    const canPlayCard = G.fase === 'p_turn';
-    document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{
-      el.style.pointerEvents = canPlayCard ? '' : 'none';
-    });
-    // Actions area: enabled if my turn OR can interrupt with envido/truco
-    if(actEl) actEl.style.pointerEvents = (isMyCardTurn || canInterrupt) ? '' : 'none';
+    if(!isMyTurn){
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents='none'; });
+      if(actEl){ actEl.style.pointerEvents='none'; }
+    } else {
+      document.querySelectorAll('#hand-p1 [onclick], #hand-p1 .hand-card-wrap').forEach(el=>{ el.style.pointerEvents=''; });
+      if(actEl){ actEl.style.pointerEvents=''; }
+    }
   }
 }
 
@@ -3066,10 +3111,9 @@ function renderActions(){
   const myFasesBase = ['p_turn','p_resp_env','p_resp_truco','p_resp_flor'];
   let isMyPlayTurn = myFasesBase.includes(fase); // my turn to play a card OR respond
   // ai_turn: rival plays card, but I can still call envido/truco
-  // Use canCallEnvido/Truco as authoritative checks (they handle all edge cases)
-  const _tmpFase = G.fase;
   const canInterruptAiTurn = fase === 'ai_turn' &&
-    (canCallEnvido() || canCallTruco());
+    ((G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor) ||
+     (!G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone));
 
   // In online: block if not local player's action
   let onlineBlocked = false;
@@ -3203,8 +3247,7 @@ function renderActions(){
   if(!showActions && !waiting) return;
 
   // ── Envido buttons ───────────────────────────────────────────────────────
-  // Use same logic as canCallEnvido() - the authoritative source
-  const envAvail = canCallEnvido();
+  const envAvail = G.envDisp && !G.envDone && !G.envPend && !G.p1Flor && !G.p2Flor && !G.handDone;
   const envDisabled = !showActions || respondingToTruco || respondingToFlor || fase==='p_resp_env';
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
@@ -3229,8 +3272,8 @@ function renderActions(){
   trucoRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
-    // Initial truco call - use canCallTruco() as authoritative check
-    const trucoAvail = canCallTruco();
+    // Initial truco call
+    const trucoAvail = !G.trucoDone && !G.trucoAcep && !G.trucoPend && !G.handDone;
     const trucoDisabled = !showActions || fase==='p_resp_env';
     trucoRow.appendChild(mkBtn('Truco', 'callTruco()',
       {disabled: !trucoAvail || trucoDisabled,
@@ -3241,8 +3284,7 @@ function renderActions(){
     const raiseLevel = playerCanRaiseTruco();
     const raiseNames = {retruco:'Re-Truco', vale4:'Vale Cuatro'};
     if(raiseLevel && raiseNames[raiseLevel]){
-      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel],
-        `playerRaiseTruco('${raiseLevel}')`,
+      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], 'raiseTruco()',
         {disabled: !showActions || fase==='p_resp_env',
          color:'linear-gradient(135deg,#8a1a1a,#5a0f0f)',
          accent:'#e06060', icon:'⚔️'}));
@@ -3830,15 +3872,21 @@ function createRoom(){
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName});
         sendVoicesToPeer(_conn); // Send P1's recorded voices to P2
+        // Retry voice send after 3s in case initial send was missed
+        setTimeout(()=>{ if(_conn&&_conn.open) sendVoicesToPeer(_conn); }, 3000);
         syncOnline(); // Send properly inverted state to P2
         // Now send P2-perspective logs (replaces P1's versions)
         const p1IsManoNow = G.mano === 'p1';
         sendP2Log('🃏 Nueva mano. ' + (p1IsManoNow ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
-        // Flor announcements if applicable
+        // Flor announcements: ADD as extra log entries (not replace)
         if(G.p1Flor && !G.p2Flor && G.envDone){
-          setTimeout(()=>sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2'), 100);
+          setTimeout(()=>{ sendP2LogAdd('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
+            if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); }, 150);
         } else if(G.p2Flor && !G.p1Flor && G.envDone){
-          setTimeout(()=>sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2'), 100);
+          setTimeout(()=>{ sendP2LogAdd('🌸 Tenés Flor! +3 pts.','#f8a5c2');
+            if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); }, 150);
+        } else if(G.p1Flor && G.p2Flor && G.envDone){
+          setTimeout(()=>sendP2LogAdd('🌸 Ambos tienen Flor. Tenés que responder.','#f8a5c2'), 150);
         }
       }, 600);
     });
@@ -3848,12 +3896,16 @@ function createRoom(){
         handleRemoteAction(data.action, data.payload);
       } else if(data.type==='voices'){
         // P2 sent their recorded voices — store them for local playback
-        receiveVoicesFromPeer(data.voices);
+        receiveVoicesFromPeer(data.voices, data.mimes);
       } else if(data.type==='playvoice'){
         // P2 is speaking — play their recorded voice on P1's device
         playCustomVoice(data.key, true);
       } else if(data.type==='bubble'){
         showBubble(data.who, data.txt);
+      } else if(data.type==='p2logadd'){
+        // ADD a log entry (for flor/extra info)
+        addLog(data.txt, data.color||'#4a7a4a');
+        renderGame();
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -3864,7 +3916,7 @@ function createRoom(){
         renderGame();
       } else if(data.type==='voices'){
         // P1 sent their recorded voices — store them for local playback
-        receiveVoicesFromPeer(data.voices);
+        receiveVoicesFromPeer(data.voices, data.mimes);
       } else if(data.type==='playvoice'){
         // P1 is speaking — play their recorded voice on P2's device
         playCustomVoice(data.key, true);
@@ -3924,6 +3976,10 @@ function joinRoom(){
         renderGame();
       } else if(data.type==='bubble'){
         showBubble(data.who, data.txt);
+      } else if(data.type==='p2logadd'){
+        // ADD a log entry (for flor/extra info)
+        addLog(data.txt, data.color||'#4a7a4a');
+        renderGame();
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -4097,8 +4153,9 @@ function handleRemoteAction(action, payload){
     }
     case 'mazo': {
       sayAndShow('p2','▶ Rival al mazo. +1 pt.','#d4890a','Me voy al mazo');
-      G.pScore=Math.min(MAX_PTS,G.pScore+1);
       G.handDone=true; G.handWinner='p1'; G.fase='hand_done';
+      renderGame();
+      syncOnline();
       finalizeHand();
       break;
     }
@@ -4136,6 +4193,10 @@ function handleRemoteAction(action, payload){
 function sendP2Log(txt, color){
   if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
   try{ _conn.send({type:'p2log', txt, color}); } catch(e){}
+}
+function sendP2LogAdd(txt, color){
+  if(MODE!=='online'||MY_ROLE!=='p1'||!_conn||!_conn.open) return;
+  try{ _conn.send({type:'p2logadd', txt, color}); } catch(e){}
 }
 
 function syncOnline(){
