@@ -547,7 +547,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;
     min-height:100vh;padding:8px;gap:5px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box">
 
-    <!-- TOP BAR: menu button + scores -->
+    <!-- TOP BAR: minimal — home, turn status, settings -->
     <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
       <button onclick="show('s-menu')" title="Menú" style="
         padding:8px 10px;border-radius:10px;cursor:pointer;flex-shrink:0;
@@ -662,129 +662,86 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       </div>
     </div>
 
-    <!-- SCORE BAR — redesigned wood theme -->
-    <div id="score-bar" style="display:flex;flex:1;flex-direction:column;
-      background:linear-gradient(180deg,rgba(35,18,4,.92) 0%,rgba(22,11,2,.88) 100%);
-      backdrop-filter:blur(8px);
-      border:1.5px solid rgba(160,110,30,.5);
-      border-radius:12px;overflow:hidden;position:relative">
-
-      <!-- Wood grain overlay -->
-      <div style="position:absolute;inset:0;pointer-events:none;
-        background:repeating-linear-gradient(92deg,transparent,transparent 40px,rgba(180,120,20,.03) 41px);
-        border-radius:12px"></div>
-
-      <!-- Top row: names + settings button -->
-      <div style="display:flex;justify-content:space-between;align-items:center;
-        padding:5px 10px 2px;border-bottom:1px solid rgba(160,110,30,.25)">
-
-        <!-- My name + mano indicator -->
-        <div style="display:flex;align-items:center;gap:5px;min-width:80px">
-          <span id="me-label" style="font-size:9px;letter-spacing:1.5px;
-            color:rgba(160,240,140,.85);font-family:Georgia,serif;font-weight:700">VOS</span>
-          <span id="me-mano-tag" style="display:none;font-size:9px;
-            background:rgba(80,160,60,.25);border:1px solid rgba(100,200,80,.4);
-            color:rgba(160,240,140,.9);border-radius:4px;padding:0px 4px;
-            font-family:Georgia,serif">sos mano 🫱</span>
-        </div>
-
-        <!-- Center: title + settings -->
+      <!-- Minimal status strip: turn + truco level + settings -->
+      <div style="display:flex;flex:1;justify-content:space-between;align-items:center;
+        background:linear-gradient(180deg,rgba(35,18,4,.92) 0%,rgba(22,11,2,.88) 100%);
+        backdrop-filter:blur(8px);
+        border:1.5px solid rgba(160,110,30,.5);
+        border-radius:12px;padding:7px 12px">
+        <div id="turn-badge" style="font-size:11px;font-family:Georgia,serif;flex:1;text-align:center"></div>
         <div style="display:flex;align-items:center;gap:6px">
-          <span style="color:rgba(200,160,50,.7);font-size:8px;
-            letter-spacing:3px;font-family:Georgia,serif">TRUCO</span>
+          <div id="truco-badge" style="font-size:10px;color:#e04040;font-weight:700;font-family:Georgia,serif"></div>
           <button onclick="openSettings()"
             style="background:rgba(0,0,0,.3);border:1px solid rgba(180,130,30,.4);
             color:rgba(200,160,50,.85);border-radius:6px;padding:2px 7px;
             cursor:pointer;font-size:13px;line-height:1">⚙️</button>
         </div>
-
-        <!-- Opp name + mano indicator -->
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;min-width:80px">
-          <span id="opp-mano-tag" style="display:none;font-size:9px;
-            background:rgba(160,60,40,.25);border:1px solid rgba(200,100,80,.4);
-            color:rgba(240,160,130,.9);border-radius:4px;padding:0px 4px;
-            font-family:Georgia,serif">🫱 es mano</span>
-          <span id="opp-label" style="font-size:9px;letter-spacing:1.5px;
-            color:rgba(240,130,110,.85);font-family:Georgia,serif;font-weight:700">IA</span>
-        </div>
       </div>
+    </div><!-- end top bar -->
 
-      <!-- Middle row: tally marks + turn badge -->
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px 3px">
-
-        <!-- My tally -->
-        <div id="score-me" style="min-width:80px"></div>
-
-        <!-- Turn badge center -->
-        <div style="text-align:center;flex:1;padding:0 4px">
-          <div id="turn-badge" style="font-size:10px;font-family:Georgia,serif"></div>
-          <div id="truco-badge" style="font-size:9px;color:#e04040;font-weight:700;font-family:Georgia,serif"></div>
-        </div>
-
-        <!-- Opp tally -->
-        <div id="score-opp" style="min-width:80px;display:flex;flex-direction:column;align-items:flex-end"></div>
-      </div>
-
-    </div></div><!-- end top bar -->
-
-    <!-- IA HAND — top of table -->
+    <!-- IA HAND — top of table, with score panels on each side -->
     <div style="position:relative;flex-shrink:0">
       <div id="bubble-p2" class="bubble p2"></div>
-      <div style="display:flex;justify-content:center;align-items:center;min-height:84px">
-        <div id="opp-hand"></div>
-        <div id="opp-count" style="color:rgba(200,160,80,.8);font-size:9px;margin-left:5px;font-family:Georgia,serif"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;min-height:84px;gap:4px">
+
+        <!-- Left: My score + mano indicator -->
+        <div id="score-me" style="flex-shrink:0;min-width:54px;text-align:center"></div>
+
+        <!-- Center: opponent's cards -->
+        <div style="display:flex;justify-content:center;align-items:center;flex:1">
+          <div id="opp-hand"></div>
+          <div id="opp-count" style="color:rgba(200,160,80,.8);font-size:9px;margin-left:5px;font-family:Georgia,serif"></div>
+        </div>
+
+        <!-- Right: Opponent's score + mano indicator -->
+        <div id="score-opp" style="flex-shrink:0;min-width:54px;text-align:center"></div>
       </div>
     </div>
 
-    <!-- TABLE AREA: muestra centered + played cards scattered on table -->
+    <!-- TABLE AREA: perspective layout — muestra to the side, played cards centered -->
     <div id="mesa-area" style="
       position:relative;display:flex;align-items:center;justify-content:center;
-      min-height:190px;flex-shrink:0;overflow:visible">
+      min-height:215px;flex-shrink:0;overflow:visible">
 
       <!-- Round badges top-left -->
       <div id="rounds-badges" style="position:absolute;top:4px;left:4px;display:flex;gap:4px;z-index:2"></div>
 
-      <!-- LOG: floating panel bottom-left, small and out of the way -->
-      <div id="game-log" style="
-        position:absolute;bottom:0;left:0;
-        width:min(180px,42%);max-height:56px;
-        background:rgba(10,5,0,.72);backdrop-filter:blur(3px);
-        border:1px solid rgba(120,80,20,.3);border-radius:6px;
-        padding:3px 6px;overflow-y:auto;
-        font-size:9px;font-family:monospace;color:rgba(180,230,160,.9);
-        z-index:5;pointer-events:none">
-      </div>
-
-      <!-- Table surface: cards scattered naturally -->
+      <!-- Table surface: perspective depth (far=opponent/top/small, near=you/bottom/large) -->
       <div id="table-surface" style="
-        position:relative;width:100%;height:190px;
-        display:flex;align-items:center;justify-content:center;">
+        position:relative;width:100%;height:215px;">
 
-        <!-- Opp played card — falls from above, slight angle -->
-        <div id="mesa-opp-wrap" style="
-          position:absolute;top:10px;left:50%;
-          transform:translateX(calc(-50% - 34px)) rotate(-6deg);
-          filter:drop-shadow(3px 6px 12px rgba(0,0,0,.7));
-          transition:all 0.35s cubic-bezier(.22,1,.36,1);z-index:3">
-          <div id="mesa-opp"></div>
-          <div style="text-align:center;color:rgba(200,240,180,.6);font-size:8px;font-family:Georgia,serif;margin-top:2px">IA</div>
+        <!-- MUESTRA — along the left side, in perspective: small near opponent (top), large near you (bottom) -->
+        <div style="position:absolute;left:6%;top:8%;
+          transform:rotate(-8deg) scale(0.62);transform-origin:top left;
+          filter:drop-shadow(2px 4px 8px rgba(0,0,0,.6));z-index:2;opacity:.92">
+          <div id="mesa-muestra-far"></div>
         </div>
-
-        <!-- MUESTRA — large, centered, leaning -->
-        <div style="position:absolute;top:50%;left:50%;
-          transform:translate(-50%,-52%) rotate(10deg);
-          filter:drop-shadow(4px 8px 16px rgba(0,0,0,.8));z-index:4">
+        <div style="position:absolute;left:2%;bottom:4%;
+          transform:rotate(8deg) scale(1.18);transform-origin:bottom left;
+          filter:drop-shadow(4px 10px 18px rgba(0,0,0,.85));z-index:2">
           <div id="mesa-muestra"></div>
           <div style="text-align:center;color:rgba(240,210,70,.85);font-size:8px;font-weight:700;
             letter-spacing:1px;font-family:Georgia,serif;text-shadow:0 1px 3px rgba(0,0,0,.9);margin-top:2px">MUESTRA</div>
         </div>
 
-        <!-- Player played card — falls from below, opposite angle -->
+        <!-- Opp played card — far side, top-center, smaller (perspective depth) -->
+        <div id="mesa-opp-wrap" style="
+          position:absolute;top:6%;left:54%;
+          transform:translateX(-50%) rotate(-4deg) scale(0.74);
+          transform-origin:top center;
+          filter:drop-shadow(2px 4px 9px rgba(0,0,0,.65));
+          transition:all 0.35s cubic-bezier(.22,1,.36,1);z-index:10">
+          <div id="mesa-opp"></div>
+          <div style="text-align:center;color:rgba(200,240,180,.6);font-size:8px;font-family:Georgia,serif;margin-top:2px">IA</div>
+        </div>
+
+        <!-- Player played card — near side, bottom-center, larger (perspective depth) -->
         <div id="mesa-me-wrap" style="
-          position:absolute;bottom:10px;left:50%;
-          transform:translateX(calc(-50% + 34px)) rotate(5deg);
-          filter:drop-shadow(3px 6px 12px rgba(0,0,0,.7));
-          transition:all 0.35s cubic-bezier(.22,1,.36,1);z-index:3">
+          position:absolute;bottom:4%;left:58%;
+          transform:translateX(-50%) rotate(4deg) scale(1.15);
+          transform-origin:bottom center;
+          filter:drop-shadow(3px 7px 14px rgba(0,0,0,.75));
+          transition:all 0.35s cubic-bezier(.22,1,.36,1);z-index:10">
           <div id="mesa-me"></div>
           <div style="text-align:center;color:rgba(200,240,180,.6);font-size:8px;font-family:Georgia,serif;margin-top:2px">VOS</div>
         </div>
@@ -797,7 +754,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
     <!-- PLAYER HAND — fanned at bottom of table -->
     <div style="position:relative;flex-shrink:0">
       <div id="bubble-p1" class="bubble p1"></div>
-      <div id="my-hand" style="position:relative;min-height:155px;width:100%"></div>
+      <div id="my-hand" style="position:relative;min-height:172px;width:100%"></div>
     </div>
 
     <!-- ACTIONS — fixed action bar -->
@@ -809,6 +766,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
     <div id="actions" style="
       display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
       align-items:center;padding:4px 4px 2px;min-height:48px;flex-shrink:0"></div>
+
+    <!-- LOG: full-width strip at the very bottom -->
+    <div id="game-log" style="
+      background:rgba(15,8,0,.70);backdrop-filter:blur(4px);
+      border:1px solid rgba(140,90,20,.35);border-radius:8px;
+      padding:5px 8px;max-height:54px;overflow-y:auto;flex-shrink:0;
+      font-size:9.5px;font-family:monospace;color:rgba(180,230,160,.9)">
+    </div>
 
     <!-- QUICK REF -->
     <details style="color:rgba(150,120,60,.7);font-size:9px;flex-shrink:0">
@@ -1096,13 +1061,13 @@ let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
 // ===== SISTEMA DE MAZOS =====
-
 const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'MAZO ANTIGUO', nombre: 'MAZO ESTILO VIEJO', desc: 'ESPAÑOL ANTIGUO', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
+
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -1584,7 +1549,7 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
       setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p1',txt:'🌸 ¡La mía es Flor!'}); },650);
     }
   }
-  if (G.fase === 'ai_turn') scheduleAI(900);
+  if (G.fase === 'ai_turn') scheduleAI(1800);
 }
 
 /* ─── HELPERS ─────────────────────────────────────────────── */
@@ -1710,7 +1675,7 @@ function finalizeHand(g) {
   setTimeout(() => {
     initGame(nm === 'p1', ps, os);
     // Note: initGame already calls renderGame() + syncOnline() + sendP2Log for mano/flor
-  }, G.revealHands ? 3200 : 2200);
+  }, G.revealHands ? 5500 : 3200);
 }
 
 function resRound(p1c, p2c) {
@@ -1770,7 +1735,7 @@ function doResolveRound() {
     if(w==='p1') sendP2Log('❌ El rival gana el round.','#e06060');
     else if(w==='p2') sendP2Log('✅ Ganás el round.','#7fba5a');
     else sendP2Log('🔄 Parda (empate).','#70b0d0');
-    if (G.fase === 'ai_turn') scheduleAI(800);
+    if (G.fase === 'ai_turn') scheduleAI(1700);
   }
 }
 
@@ -1806,7 +1771,7 @@ function playCard(idx) {
     G.fase = 'ai_turn';
     renderGame();
     syncOnline();
-    scheduleAI(800);
+    scheduleAI(1700);
   }
 }
 
@@ -1816,7 +1781,10 @@ function canCallEnvido() {
   // y no se haya cantado/resuelto el envido aun
   const myTurn = G.fase === 'p_turn';
   const rivalTurn = G.fase === 'ai_turn';
-  return (myTurn || rivalTurn) && G.envDisp && !G.envDone && !G.envPend &&
+  const normalCall = (myTurn || rivalTurn) && !G.envPend;
+  // También se puede "subir" la apuesta cuando el rival cantó y a mí me toca responder
+  const raisingResponse = G.fase === 'p_resp_env' && G.envPend && G.envPend.by !== MY_ROLE;
+  return (normalCall || raisingResponse) && G.envDisp && !G.envDone &&
     !G.handDone && !G.p1Flor && !G.p2Flor;
 }
 
@@ -1824,7 +1792,7 @@ function callEnvido(level) {
   if (!canCallEnvido()) return;
   const falta = MAX_PTS - Math.min(G.pScore, G.oScore);
   const stakes = { envido: 2, realenvido: 3, faltaenvido: falta };
-  const refuses = { envido: 1, realenvido: 2, faltaenvido: Math.max(1, falta - 1) };
+  const refuses = { envido: 1, realenvido: 2, faltaenvido: 1 };
   const names = { envido: 'Envido', realenvido: 'Real Envido', faltaenvido: 'Falta Envido' };
   if (MODE==='online' && MY_ROLE==='p2') {
     sayAndShow('p2','▶ ¡'+names[level]+'!','#d4890a',names[level]);
@@ -1836,7 +1804,7 @@ function callEnvido(level) {
   G.fase = 'ai_turn';
   renderGame();
   syncOnline();
-  scheduleAI(1100);
+  scheduleAI(2000);
 }
 
 // ── FLOR: batalla de Flor / Contra Flor al Resto (cuando ambos tienen Flor) ─
@@ -1870,7 +1838,7 @@ function finishFlorBattle() {
   if (checkGameOver()) return;
   G.fase = nextFaseAfterInterrupt();
   renderGame();
-  if (G.fase === 'ai_turn') scheduleAI(900);
+  if (G.fase === 'ai_turn') scheduleAI(1800);
 }
 
 // El jugador (respondedor) acepta la Flor-Flor sin escalar
@@ -1901,7 +1869,7 @@ function florCallContraflorResto() {
   G.fase = 'ai_turn';
   renderGame();
   syncOnline();
-  scheduleAI(1100);
+  scheduleAI(2000);
 }
 
 // El jugador, como mano original, responde a la Contra Flor al Resto de la IA
@@ -1980,7 +1948,7 @@ function callTruco() {
   G.fase = 'ai_turn';
   renderGame();
   syncOnline();
-  scheduleAI(1100);
+  scheduleAI(2000);
 }
 
 // ── Jugador responde envido de IA ─────────────────────────────
@@ -2012,7 +1980,7 @@ function respondEnvido(accept) {
   G.fase = nextFaseAfterInterrupt();
   renderGame();
   syncOnline();
-  if (G.fase === 'ai_turn') scheduleAI(700);
+  if (G.fase === 'ai_turn') scheduleAI(1600);
 }
 
 // ── Jugador responde truco/retruco/vale4 de IA ───────────────
@@ -2049,7 +2017,7 @@ function respondTruco(accept, raise = false) {
     G.fase = 'ai_turn';
     renderGame();
     syncOnline();
-    scheduleAI(1100);
+    scheduleAI(2000);
     return;
   }
 
@@ -2061,7 +2029,7 @@ function respondTruco(accept, raise = false) {
     G.fase = nextFaseAfterInterrupt();
     renderGame();
     syncOnline();
-    if (G.fase === 'ai_turn') scheduleAI(1400);
+    if (G.fase === 'ai_turn') scheduleAI(2200);
   } else {
     // No quiero → IA (quien llamó) gana refuseVal
     sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
@@ -2201,7 +2169,7 @@ function aiDecideEnvido() {
   if (checkGameOver()) return;
   G.fase = nextFaseAfterInterrupt();
   renderGame();
-  if (G.fase === 'ai_turn') scheduleAI(1400); // Dar tiempo al jugador de leer el resultado
+  if (G.fase === 'ai_turn') scheduleAI(2200); // Dar tiempo al jugador de leer el resultado
   else renderGame(); // asegurar render si es p_turn
 }
 
@@ -2234,7 +2202,7 @@ function aiDecideTruco() {
     if (checkGameOver()) return;
     G.fase = nextFaseAfterInterrupt();
     renderGame();
-    if (G.fase === 'ai_turn') scheduleAI(700);
+    if (G.fase === 'ai_turn') scheduleAI(1600);
   } else {
     G.trucoPend = null; G.trucoDone = true;
     sayAndShow('p2','🤖 No quiero.','#a78bca','No quiero');
@@ -2274,7 +2242,7 @@ function fanHandHTML(cards,{disabled=false,selIdx=null,isMuestraFn=null}={}){
   const n=cards.length;
   const cfgs={1:[{r:0,ty:0}],2:[{r:-9,ty:8},{r:9,ty:8}],3:[{r:-14,ty:14},{r:0,ty:0},{r:14,ty:14}]};
   const config=cfgs[n]||cfgs[3];
-  const CW=100,spacing=68;
+  const CW=112,spacing=76;
   const totalW=(n-1)*spacing+CW;
   const startX=-(totalW/2)+(CW/2);
   let h='<div style="position:relative;height:130px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
@@ -2368,11 +2336,12 @@ function playerRaiseTruco(level){
   G.fase='ai_turn';
   syncOnline();
   renderGame();
-  scheduleAI(1100);
+  scheduleAI(2000);
 }
 
 function raiseTruco(){
-  respondTruco(false, true);
+  const level = playerCanRaiseTruco();
+  if(level) playerRaiseTruco(level);
 }
 
 function playerCanRaiseTruco(){
@@ -3031,7 +3000,7 @@ function respondAndRaiseEnv(newLevel){
   }
   const falta=MAX_PTS-Math.min(G.pScore,G.oScore);
   const stakes={envido:2,realenvido:3,faltaenvido:falta};
-  const refuses={envido:1,realenvido:2,faltaenvido:Math.max(1,falta-1)};
+  const refuses={envido:1,realenvido:2,faltaenvido:1};
   const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido'};
   // Previous envido is "accepted" at its level
   G.envPend={level:newLevel,by:'p1',stake:stakes[newLevel],refuseVal:refuses[newLevel]};
@@ -3039,7 +3008,7 @@ function respondAndRaiseEnv(newLevel){
   sayAndShow('p1','▶ ¡'+names[newLevel]+'!','#d4890a',names[newLevel]);
   G.fase='ai_turn';
   renderGame();
-  scheduleAI(1100);
+  scheduleAI(2000);
 }
 
 // Track last seen pending call to avoid re-showing the bubble on every render
@@ -3072,19 +3041,24 @@ function renderGame(){
 
   // Scores
   // ── Update score panels + mano indicators ──
+  const _oppName = MODE==='ai'?'IA':'RIVAL';
+  const _meManoTag = myIsMano ? `<div style="font-size:8px;background:rgba(80,160,60,.3);
+    border:1px solid rgba(100,200,80,.5);color:rgba(170,250,150,.95);border-radius:5px;
+    padding:1px 4px;margin-top:2px;font-family:Georgia,serif;white-space:nowrap">👍 sos mano</div>` : '';
+  const _oppManoTag = (!myIsMano && !G.handDone) ? `<div style="font-size:8px;background:rgba(160,60,40,.3);
+    border:1px solid rgba(200,100,80,.5);color:rgba(250,180,150,.95);border-radius:5px;
+    padding:1px 4px;margin-top:2px;font-family:Georgia,serif;white-space:nowrap">👍 es mano</div>` : '';
+
   document.getElementById('score-me').innerHTML=
-    `<div style="color:rgba(130,220,110,.95)">${tallyMarks(G.pScore,'rgba(130,220,110,.95)')}</div>
-     <div style="font-size:11px;color:rgba(160,240,140,.9);font-weight:700;font-family:Georgia,serif">${G.pScore}<span style="opacity:.5;font-size:9px">/30</span></div>`;
+    `<div style="font-size:8px;color:rgba(160,240,140,.7);letter-spacing:1px;font-family:Georgia,serif;margin-bottom:1px">VOS</div>
+     <div style="color:rgba(130,220,110,.95)">${tallyMarks(G.pScore,'rgba(130,220,110,.95)')}</div>
+     <div style="font-size:11px;color:rgba(160,240,140,.9);font-weight:700;font-family:Georgia,serif">${G.pScore}<span style="opacity:.5;font-size:9px">/30</span></div>
+     ${_meManoTag}`;
   document.getElementById('score-opp').innerHTML=
-    `<div style="color:rgba(220,100,80,.95)">${tallyMarks(G.oScore,'rgba(220,100,80,.95)')}</div>
-     <div style="font-size:11px;color:rgba(240,130,110,.9);font-weight:700;font-family:Georgia,serif">${G.oScore}<span style="opacity:.5;font-size:9px">/30</span></div>`;
-  // Mano indicators
-  const meTag = document.getElementById('me-mano-tag');
-  const oppTag = document.getElementById('opp-mano-tag');
-  const oppLabel = document.getElementById('opp-label');
-  if(meTag) meTag.style.display = myIsMano ? 'inline' : 'none';
-  if(oppTag) oppTag.style.display = (!myIsMano && !G.handDone) ? 'inline' : 'none';
-  if(oppLabel) oppLabel.textContent = MODE==='ai'?'IA':'RIVAL';
+    `<div style="font-size:8px;color:rgba(240,130,110,.7);letter-spacing:1px;font-family:Georgia,serif;margin-bottom:1px">${_oppName}</div>
+     <div style="color:rgba(220,100,80,.95)">${tallyMarks(G.oScore,'rgba(220,100,80,.95)')}</div>
+     <div style="font-size:11px;color:rgba(240,130,110,.9);font-weight:700;font-family:Georgia,serif">${G.oScore}<span style="opacity:.5;font-size:9px">/30</span></div>
+     ${_oppManoTag}`;
 
   // Turn badge + mano indicator
   const fase=G.fase;
@@ -3118,7 +3092,11 @@ function renderGame(){
 
   // Muestra
   const muestraEl=document.getElementById('mesa-muestra');
-  if(G.muestra) muestraEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:false,isMuestra:true});
+  const muestraFarEl=document.getElementById('mesa-muestra-far');
+  if(G.muestra){
+    muestraEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:false,isMuestra:true});
+    if(muestraFarEl) muestraFarEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:true,isMuestra:true});
+  }
 
   // Mesa
   const _prevOpp = document.getElementById('mesa-opp').innerHTML;
@@ -3376,7 +3354,7 @@ function renderActions(){
     const raiseLevel = playerCanRaiseTruco();
     const raiseNames = {retruco:'Re-Truco', vale4:'Vale Cuatro'};
     if(raiseLevel && raiseNames[raiseLevel]){
-      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], 'raiseTruco()',
+      trucoRow.appendChild(mkBtn(raiseNames[raiseLevel], `playerRaiseTruco('${raiseLevel}')`,
         {disabled: !showActions || fase==='p_resp_env',
          color:'linear-gradient(135deg,#8a1a1a,#5a0f0f)',
          accent:'#e06060', icon:'⚔️'}));
@@ -4128,7 +4106,7 @@ function handleRemoteAction(action, payload){
       const level = payload.level;
       const falta = MAX_PTS - Math.min(G.pScore, G.oScore);
       const stakes = {envido:2, realenvido:3, faltaenvido:falta};
-      const refuses = {envido:1, realenvido:2, faltaenvido:Math.max(1,falta-1)};
+      const refuses = {envido:1, realenvido:2, faltaenvido:1};
       const names = {envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido'};
       if(payload.isRaise){
         // P2 responded by raising — accept current envPend first, then set new
@@ -4175,7 +4153,7 @@ function handleRemoteAction(action, payload){
         syncOnline();
         // Send P2-perspective log: p2Env is P2's score, p1Env is P1's score
         sendP2Log((p2Win?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+G.p2Env+' vs Rival: '+G.p1Env+'. '+(p2Win?'+'+stake+' pts.':'Rival +'+stake+' pts.'), p2Win?'#7fba5a':'#e06060');
-        if(G.fase==='ai_turn') scheduleAI(700);
+        if(G.fase==='ai_turn') scheduleAI(1600);
       } else {
         sayAndShow('p2','▶ No quiero.','#d4890a','No quiero');
         G.pScore=Math.min(MAX_PTS,G.pScore+refuseVal);
@@ -4186,7 +4164,7 @@ function handleRemoteAction(action, payload){
         syncOnline();
         // P2 refused envido: P1 wins, so P2 loses
         sendP2Log('❌ No quisiste el envido. Rival +'+refuseVal+' pts.','#e06060');
-        if(G.fase==='ai_turn') scheduleAI(700);
+        if(G.fase==='ai_turn') scheduleAI(1600);
       }
       break;
     }
@@ -4218,7 +4196,7 @@ function handleRemoteAction(action, payload){
         renderGame();
         syncOnline();
         sendP2Log('✅ Aceptaste el truco ('+stake+' pts en juego).','#7fba5a');
-        if(G.fase==='ai_turn') scheduleAI(700);
+        if(G.fase==='ai_turn') scheduleAI(1600);
       } else {
         sayAndShow('p2','▶ No quiero. +'+refuseVal+' pts.','#d4890a','No quiero');
         G.trucoDone=true;
