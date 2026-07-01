@@ -3651,10 +3651,11 @@ function renderCampaign(){
 
   lst.innerHTML = CAMPAIGN_LEVELS.map((lv, i) => {
     const p = prog[String(lv.id)] || {};
-    const unlocked = i === 0 || prog[String(CAMPAIGN_LEVELS[i-1].id)]?.completed;
+    const prevCompleted = i === 0 || prog[String(CAMPAIGN_LEVELS[i-1].id)]?.completed;
+    const unlocked = i === 0 || prevCompleted || !!p.unlocked;
     const completed = !!p.completed;
     const objs = lv.objectives.map(o => {
-      const done = p.objectives?.[o.id] >= o.target || (o.id==='no_mazo'&&p.objectives?.[o.id]===0&&p.completed);
+      const done = o.id==='no_mazo' ? p.objectives?.[o.id]===0 : (p.objectives?.[o.id]||0) >= o.target;
       return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-family:Georgia,serif;color:${done?'rgba(180,255,150,.9)':'rgba(200,200,180,.5)'}">
         <span>${done?'✅':''||o.icon}</span>
         <span>${o.label}</span>
@@ -3715,7 +3716,7 @@ function openCampDetail(levelId){
 
   const objEl = document.getElementById('cd-objectives');
   objEl.innerHTML = lv.objectives.map(o=>{
-    const done = p.objectives?.[o.id] >= o.target || (o.id==='no_mazo'&&p.objectives?.[o.id]===0&&p.completed);
+    const done = o.id==='no_mazo' ? p.objectives?.[o.id]===0 : (p.objectives?.[o.id]||0) >= o.target;
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
       background:${done?lv.accentColor+'18':'rgba(0,0,0,.2)'};
       border:1px solid ${done?lv.accentColor+'44':'rgba(255,255,255,.1)'}">
@@ -3794,14 +3795,23 @@ function campOnMatchEnd(playerWon){
 
   // Record objectives progress
   lv.objectives.forEach(o=>{
-    if(o.id==='win_match') p.objectives[o.id]= playerWon ? 1 : 0;
-    else if(o.id==='no_mazo') p.objectives[o.id]= CAMP_MAZO_COUNT;
+    if(o.id==='win_match'){
+      // Only set to 1 on win — never overwrite a previous 1 with 0
+      if(playerWon) p.objectives[o.id] = 1;
+      else p.objectives[o.id] = p.objectives[o.id] || 0;
+    }
+    else if(o.id==='no_mazo'){
+      // Keep best (lowest) mazo count across matches — 0 is perfect
+      const prev = p.objectives[o.id];
+      p.objectives[o.id] = (prev === undefined) ? CAMP_MAZO_COUNT : Math.min(prev, CAMP_MAZO_COUNT);
+    }
     else p.objectives[o.id]= Math.max(p.objectives[o.id]||0, CAMP_OBJ[o.id]||0);
   });
 
-  // Check if all objectives met
+  // Check if all objectives met (can be across different matches)
   const allDone = lv.objectives.every(o=>{
-    if(o.id==='no_mazo') return p.objectives[o.id]===0 && playerWon;
+    if(o.id==='win_match') return (p.objectives[o.id]||0) >= 1;
+    if(o.id==='no_mazo') return p.objectives[o.id] === 0;
     return (p.objectives[o.id]||0) >= o.target;
   });
 
