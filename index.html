@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es" style="background:#000">
 <head>
@@ -1738,8 +1737,12 @@ function doResolveRound() {
 /* ═══════════════════════════════════════════════════════════
    ACCIONES DEL JUGADOR
 ═══════════════════════════════════════════════════════════ */
+let _playCardBusy = false;
 function playCard(idx) {
   if (G.fase !== 'p_turn' || G.handDone) return;
+  if (_playCardBusy) return;  // debounce: ignore rapid double-tap
+  _playCardBusy = true;
+  setTimeout(() => { _playCardBusy = false; }, 800);
   // Online: solo puede jugar el jugador local cuando es su turno
   if (MODE==='online' && G.fase !== 'p_turn') return;
   const hand = myHand();
@@ -2265,10 +2268,10 @@ function fanFaceDown(n){
   if(!n) return '<div style="height:90px"></div>';
   const cfgs={1:[{r:0,ty:0}],2:[{r:-7,ty:7},{r:7,ty:7}],3:[{r:-10,ty:10},{r:0,ty:0},{r:10,ty:10}]};
   const config=cfgs[n]||cfgs[3];
-  const CW=62,spacing=44;
+  const CW=46,spacing=34;
   const totalW=(n-1)*spacing+CW;
   const startX=-(totalW/2)+(CW/2);
-  let h='<div style="position:relative;height:90px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
+  let h='<div style="position:relative;height:70px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
   for(let i=0;i<n;i++){
     const cfg=config[i]||{r:0,ty:0};
     const xPos=startX+i*spacing;
@@ -2289,10 +2292,10 @@ function fanFaceUpSmall(cards){
   const n=cards.length;
   const cfgs={1:[{r:0,ty:0}],2:[{r:-7,ty:7},{r:7,ty:7}],3:[{r:-10,ty:10},{r:0,ty:0},{r:10,ty:10}]};
   const config=cfgs[n]||cfgs[3];
-  const CW=62,spacing=44;
+  const CW=46,spacing=34;
   const totalW=(n-1)*spacing+CW;
   const startX=-(totalW/2)+(CW/2);
-  let h='<div style="position:relative;height:90px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
+  let h='<div style="position:relative;height:70px;width:100%;display:flex;justify-content:center;align-items:flex-end">';
   cards.forEach((card,i)=>{
     const cfg=config[i]||{r:0,ty:0};
     const xPos=startX+i*spacing;
@@ -3036,7 +3039,8 @@ function renderGame(){
   }
 
   // Scores
-  // ── Update score panels + mano indicators ──
+  // Reset playCard debounce when it's player's turn again
+  if(G.fase === 'p_turn') _playCardBusy = false;
   const _oppName = MODE==='ai'?'IA':'RIVAL';
   const _meManoTag = myIsMano ? `<div style="font-size:8px;background:rgba(80,160,60,.3);
     border:1px solid rgba(100,200,80,.5);color:rgba(170,250,150,.95);border-radius:5px;
