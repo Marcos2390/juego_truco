@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es" style="background:#000">
 <head>
@@ -710,15 +711,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;</div>
       <div id="table-surface" style="
         position:relative;width:100%;height:215px;">
 
-        <!-- MUESTRA — along the left side, in perspective: small near opponent (top), large near you (bottom) -->
-        <div style="position:absolute;left:6%;top:8%;
-          transform:rotate(-8deg) scale(0.62);transform-origin:top left;
-          filter:drop-shadow(2px 4px 8px rgba(0,0,0,.6));z-index:2;opacity:.92">
-          <div id="mesa-muestra-far"></div>
-        </div>
-        <div style="position:absolute;left:2%;bottom:4%;
-          transform:rotate(8deg) scale(1.18);transform-origin:bottom left;
-          filter:drop-shadow(4px 10px 18px rgba(0,0,0,.85));z-index:2">
+        <!-- MUESTRA — single card, left side, slightly larger near the player -->
+        <div style="position:absolute;left:4%;top:50%;
+          transform:translateY(-50%) rotate(8deg) scale(1.05);
+          filter:drop-shadow(4px 8px 16px rgba(0,0,0,.8));z-index:2">
           <div id="mesa-muestra"></div>
           <div style="text-align:center;color:rgba(240,210,70,.85);font-size:8px;font-weight:700;
             letter-spacing:1px;font-family:Georgia,serif;text-shadow:0 1px 3px rgba(0,0,0,.9);margin-top:2px">MUESTRA</div>
@@ -1279,12 +1275,12 @@ function drawFigura(val,suit,W,H){
 }
 
 // Carta HTML principal
-function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick='',isMuestra=false}={}){
+function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick='',isMuestra=false,mesa=false}={}){
   const W=small?62:88, H=small?94:132;
   const brd=sel?'3px solid #d4a017':isMuestra?'2.5px solid #ffcc00':'1.5px solid rgba(180,150,80,.5)';
   const shad=sel?'0 20px 40px rgba(212,160,23,.85)':isMuestra?'0 0 18px rgba(255,200,0,.7),0 4px 12px rgba(0,0,0,.6)':'3px 5px 14px rgba(0,0,0,.65)';
   const tr=sel?'translateY(-18px) scale(1.1)':'none';
-  const op=disabled&&!sel?0.55:1;
+  const op=disabled&&!sel&&!mesa?0.55:1;
 
   if(back||!card){
     if(CARD_IMG_BASE){
@@ -2303,7 +2299,7 @@ function fanFaceUpSmall(cards){
     h+=`<div style="position:absolute;bottom:0;left:50%;
       transform:translateX(${xPos-(CW/2)}px) translateY(${cfg.ty}px) rotate(${cfg.r}deg);
       transform-origin:center bottom;z-index:${i+1}">
-      ${cardHTML(card,{disabled:true,small:true})}
+      ${cardHTML(card,{disabled:true,small:true,mesa:true})}
     </div>`;
   });
   h+='</div>';
@@ -3092,17 +3088,15 @@ function renderGame(){
 
   // Muestra
   const muestraEl=document.getElementById('mesa-muestra');
-  const muestraFarEl=document.getElementById('mesa-muestra-far');
   if(G.muestra){
-    muestraEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:false,isMuestra:true});
-    if(muestraFarEl) muestraFarEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:true,isMuestra:true});
+    muestraEl.innerHTML=cardHTML(G.muestra,{disabled:true,small:false,isMuestra:true,mesa:true});
   }
 
   // Mesa
   const _prevOpp = document.getElementById('mesa-opp').innerHTML;
   const _prevMe  = document.getElementById('mesa-me').innerHTML;
-  const _newOpp  = cardHTML(oppMesa(),{disabled:true,small:true});
-  const _newMe   = cardHTML(myMesa(),{disabled:true,small:true});
+  const _newOpp  = cardHTML(oppMesa(),{disabled:true,small:true,mesa:true});
+  const _newMe   = cardHTML(myMesa(),{disabled:true,small:true,mesa:true});
   const oppEl = document.getElementById('mesa-opp');
   const meEl  = document.getElementById('mesa-me');
   if(_newOpp !== _prevOpp){ oppEl.innerHTML=_newOpp; oppEl.classList.remove('card-fall'); void oppEl.offsetWidth; oppEl.classList.add('card-fall'); }
