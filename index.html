@@ -1055,8 +1055,7 @@ function pipPositions(val){
 let CARD_IMG_BASE = '';
 function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object/public/'+bucket+'/'; }
 
-// ===== SISTEMA DE MAZOS =====
-const MAZOS = [
+  const MAZOS = [
   { id: 'TATU', nombre: 'TATU CLASICO', desc: 'BARAJA ESPAÑOLA', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
   { id: 'MAZO URUGUAYO', nombre: 'MAZO URUGUAYO', desc: 'PERSONALIZADO', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'MAZO ANTIGUO', nombre: 'MAZO ESTILO VIEJO', desc: 'ESPAÑOL ANTIGUO', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
@@ -1694,8 +1693,24 @@ function resHand(rounds, mano) {
 
 function doResolveRound() {
   hideBubbles();
+  // If there's a pending truco/envido called by the player that the AI hasn't responded to yet,
+  // defer the round resolution until after the AI responds
+  if(G.trucoPend && G.trucoPend.by === 'p1' && G.fase === 'ai_turn'){
+    // AI needs to respond to truco first — reschedule round resolution after AI acts
+    scheduleAI(500);
+    setTimeout(() => {
+      if(!G.trucoPend && !G.handDone) doResolveRound();
+    }, 2800);
+    return;
+  }
+  if(G.envPend && G.envPend.by === 'p1' && G.fase === 'ai_turn'){
+    scheduleAI(500);
+    setTimeout(() => {
+      if(!G.envPend && !G.handDone) doResolveRound();
+    }, 2800);
+    return;
+  }
   // Safety: if there's a stale trucoPend that never got answered, clear it
-  // (shouldn't happen, but prevents freeze)
   if(G.trucoPend && G.fase !== 'p_resp_truco' && G.fase !== 'ai_turn'){
     console.warn('Clearing stale trucoPend:', G.trucoPend);
     G.trucoPend = null;
