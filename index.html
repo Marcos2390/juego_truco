@@ -339,6 +339,24 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 }
 .bubble.p2{top:4px;background:rgba(15,15,45,.92);border-color:rgba(150,120,240,.8);color:rgba(210,190,255,.98);}
 .bubble.p1{bottom:4px;background:rgba(10,40,10,.92);border-color:rgba(80,200,80,.8);color:rgba(180,255,160,.98);}
+
+/* ── Emojis grandes flotantes (costado de la pantalla, no burbuja) ── */
+.bigemoji{
+  position:fixed;right:6px;z-index:70;font-size:64px;line-height:1;
+  pointer-events:none;opacity:0;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));
+  transform:translateX(40px) scale(0.4);
+}
+.bigemoji-p2{top:14%;}
+.bigemoji-p1{bottom:14%;}
+.bigemoji.show{animation:bigEmojiPop 2.2s ease forwards;}
+@keyframes bigEmojiPop{
+  0%{opacity:0;transform:translateX(40px) scale(0.4);}
+  12%{opacity:1;transform:translateX(0) scale(1.25);}
+  22%{transform:translateX(0) scale(1);}
+  75%{opacity:1;transform:translateX(0) scale(1);}
+  100%{opacity:0;transform:translateX(0) scale(0.85);}
+}
 #audio-toggle{background:transparent;border:1.5px solid #3a6a3a;color:#6a9a6a;
   border-radius:8px;padding:3px 8px;cursor:pointer;font-size:14px;}
 </style>
@@ -825,6 +843,10 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
       background:rgba(20,10,0,.96);border:1.5px solid rgba(180,130,30,.55);border-radius:12px;
       padding:8px;grid-template-columns:repeat(5,1fr);gap:4px;
       box-shadow:0 6px 18px rgba(0,0,0,.65);backdrop-filter:blur(4px)"></div>
+
+    <!-- Emojis grandes flotantes: aparecen a un costado y se desvanecen solos -->
+    <div id="bigemoji-p2" class="bigemoji bigemoji-p2"></div>
+    <div id="bigemoji-p1" class="bigemoji bigemoji-p1"></div>
 
     <!-- IA HAND — top of table, with score panels on each side -->
     <div style="position:relative;flex-shrink:0">
@@ -2637,11 +2659,29 @@ function toggleEmojiPicker(force){
 }
 
 function sendEmoji(emoji){
-  showBubble('p1', emoji);
+  showBigEmoji('p1', emoji);
   if(MODE==='online' && _conn && _conn.open){
     try{ _conn.send({type:'bubble', who:'p2', txt:emoji}); }catch(e){}
   }
   toggleEmojiPicker(false);
+}
+
+// Muestra un emoji grande a un costado de la pantalla; aparece, se mantiene y se desvanece solo.
+function showBigEmoji(who, emoji){
+  const el = document.getElementById('bigemoji-'+who);
+  if(!el) return;
+  el.classList.remove('show');
+  el.style.animation = 'none';
+  el.textContent = emoji;
+  void el.offsetWidth; // reinicia la animación aunque se repita el mismo emoji
+  el.style.animation = '';
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 2300);
+}
+// Distingue un emoji suelto (mostrar grande) de un mensaje de texto (mostrar en burbuja)
+function isEmojiOnly(s){
+  return typeof s === 'string' && s.length > 0 && s.length <= 6 && !/[A-Za-z0-9]/.test(s);
 }
 
 // Cerrar el picker si se toca afuera de él o del botón que lo abre
@@ -2667,7 +2707,7 @@ function aiEmojiReact(kind, chance){
   if(Math.random() > chance) return;
   const pool = AI_EMOJI_REACTIONS[kind] || AI_EMOJI_REACTIONS.win;
   const emoji = pool[Math.floor(Math.random()*pool.length)];
-  setTimeout(()=>showBubble('p2', emoji), 600);
+  setTimeout(()=>showBigEmoji('p2', emoji), 600);
 }
 
 /* ── AUDIO (Web Speech API) ──────────────────────────────────
@@ -4269,7 +4309,7 @@ function createRoom(){
         // P2 is speaking — play their recorded voice on P1's device
         playCustomVoice(data.key, true);
       } else if(data.type==='bubble'){
-        showBubble(data.who, data.txt);
+        if(isEmojiOnly(data.txt)) showBigEmoji(data.who, data.txt); else showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -4339,7 +4379,7 @@ function joinRoom(){
         }
         renderGame();
       } else if(data.type==='bubble'){
-        showBubble(data.who, data.txt);
+        if(isEmojiOnly(data.txt)) showBigEmoji(data.who, data.txt); else showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
