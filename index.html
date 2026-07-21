@@ -375,7 +375,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   transform:translateX(40px) scale(0.4);
 }
 .bigemoji-p2{top:14%;}
-.bigemoji-p1{bottom:14%;}
+.bigemoji-p1{bottom:34%;}
 .bigemoji.show{animation:bigEmojiPop 2.2s ease forwards;}
 @keyframes bigEmojiPop{
   0%{opacity:0;transform:translateX(40px) scale(0.4);}
@@ -896,34 +896,48 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <div id="bigemoji-p2" class="bigemoji bigemoji-p2"></div>
     <div id="bigemoji-p1" class="bigemoji bigemoji-p1"></div>
 
-    <!-- IA HAND — top of table, with score panels on each side -->
+    <!-- IA HAND — top of table, with score panels + character portraits on each side -->
     <div style="position:relative;flex-shrink:0">
       <div id="bubble-p2" class="bubble p2"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;min-height:84px;gap:4px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;min-height:84px;gap:4px">
 
-        <!-- Left: My score + mano indicator -->
-        <div id="score-me" style="flex-shrink:0;min-width:54px;text-align:center"></div>
-
-        <!-- Center: AI portrait + opponent's cards -->
-        <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;flex:1;gap:3px">
-          <!-- AI character portrait (shown when playing vs AI) -->
-          <div id="opp-char-portrait" style="display:none;position:relative;width:54px;height:54px;flex-shrink:0">
-            <img id="opp-char-img" src="" alt=""
-              style="width:54px;height:54px;object-fit:cover;border-radius:8px;
-              border:1.5px solid rgba(200,150,40,.6);display:none;">
-            <div id="opp-char-name" style="position:absolute;bottom:-14px;left:50%;
+        <!-- Left: My own character portrait + My score + mano indicator -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+          <!-- Own character portrait (shown when playing vs AI or Online) -->
+          <div id="player-char-wrap" style="display:none;position:relative;width:44px;height:44px;flex-shrink:0;margin-bottom:12px">
+            <img id="player-char-img" src="" alt=""
+              style="width:44px;height:44px;object-fit:cover;border-radius:8px;
+              border:1.5px solid rgba(140,200,120,.6);display:none;">
+            <div id="player-char-name" style="position:absolute;bottom:-14px;left:50%;
               transform:translateX(-50%);white-space:nowrap;
-              font-size:8px;font-family:Georgia,serif;color:rgba(220,180,60,.85);
+              font-size:8px;font-family:Georgia,serif;color:rgba(180,230,150,.9);
               text-shadow:0 1px 3px rgba(0,0,0,.9)"></div>
           </div>
+          <div id="score-me" style="min-width:54px;text-align:center"></div>
+        </div>
+
+        <!-- Center: opponent's cards -->
+        <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;flex:1;gap:3px">
           <div style="display:flex;align-items:center;gap:4px">
             <div id="opp-hand"></div>
             <div id="opp-count" style="color:rgba(200,160,80,.8);font-size:9px;font-family:Georgia,serif"></div>
           </div>
         </div>
 
-        <!-- Right: Opponent's score + mano indicator -->
-        <div id="score-opp" style="flex-shrink:0;min-width:54px;text-align:center"></div>
+        <!-- Right: AI / rival character portrait + score + mano indicator -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0">
+          <!-- AI / rival character portrait (shown vs AI or Online) -->
+          <div id="opp-char-portrait" style="display:none;position:relative;width:44px;height:44px;flex-shrink:0;margin-bottom:12px">
+            <img id="opp-char-img" src="" alt=""
+              style="width:44px;height:44px;object-fit:cover;border-radius:8px;
+              border:1.5px solid rgba(200,150,40,.6);display:none;">
+            <div id="opp-char-name" style="position:absolute;bottom:-14px;left:50%;
+              transform:translateX(-50%);white-space:nowrap;
+              font-size:8px;font-family:Georgia,serif;color:rgba(220,180,60,.85);
+              text-shadow:0 1px 3px rgba(0,0,0,.9)"></div>
+          </div>
+          <div id="score-opp" style="min-width:54px;text-align:center"></div>
+        </div>
       </div>
     </div>
 
@@ -978,18 +992,6 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <!-- PLAYER HAND — fanned at bottom of table -->
     <div style="position:relative;flex-shrink:0">
       <div id="bubble-p1" class="bubble p1"></div>
-      <!-- Own character portrait (shown when playing vs AI or Online) -->
-      <div style="display:flex;justify-content:center;align-items:center">
-        <div id="player-char-wrap" style="display:none;position:relative;width:54px;height:54px;flex-shrink:0;margin-bottom:16px">
-          <img id="player-char-img" src="" alt=""
-            style="width:54px;height:54px;object-fit:cover;border-radius:8px;
-            border:1.5px solid rgba(140,200,120,.6);display:none;">
-          <div id="player-char-name" style="position:absolute;bottom:-14px;left:50%;
-            transform:translateX(-50%);white-space:nowrap;
-            font-size:8px;font-family:Georgia,serif;color:rgba(180,230,150,.9);
-            text-shadow:0 1px 3px rgba(0,0,0,.9)"></div>
-        </div>
-      </div>
       <div id="my-hand" style="position:relative;min-height:172px;width:100%"></div>
     </div>
 
