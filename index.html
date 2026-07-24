@@ -11,6 +11,7 @@
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiVHJ1Y28gVXJ1Z3VheW8iLCJzaG9ydF9uYW1lIjoiVHJ1Y28iLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6ImZ1bGxzY3JlZW4iLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0IiwiYmFja2dyb3VuZF9jb2xvciI6IiMwYjFhMGIiLCJ0aGVtZV9jb2xvciI6IiMwYjFhMGIifQ==">
 <title>Truco Uruguayo</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -877,6 +878,10 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <span id="online-conn-label" style="color:rgba(200,220,180,.9)">Sin conexión — configurá Supabase en ⚙️</span>
   </div>
 
+  <button class="btn" onclick="show('s-lobby')" style="background:#132a38;border:2px solid #3a8ab0;color:#bfe4f5">
+    🌐 Ver jugadores en línea
+  </button>
+
   <!-- Selector de modo: 2 o 4 jugadores -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
     <button id="online-mode-2p-btn" onclick="setOnlineMode(2)" style="background:#1a2a1a;border:2px solid #7fba5a;
@@ -971,6 +976,24 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     if(menuBgC) menuBgC.style.display='block';
     if(gameBg && gameBg.parentElement) gameBg.parentElement.style.display='none';
   },50);cancelRoom()">← Volver</button>
+</div>
+
+<!-- ═══════ LOBBY DE JUGADORES EN LÍNEA ═══════ -->
+<div id="s-lobby" class="screen inner">
+  <h2 style="margin-top:10px">🌐 Jugadores en línea</h2>
+  <div style="text-align:center;color:rgba(180,200,160,.7);font-size:11px;font-family:Georgia,serif;margin-top:-8px">
+    Sin cuentas ni contraseñas — solo mientras estás en esta pantalla te ven los demás.
+  </div>
+
+  <div id="lobby-invite-banner" style="display:none;background:rgba(40,30,10,.9);border:2px solid #d4a017;
+    border-radius:12px;padding:14px;text-align:center;font-family:Georgia,serif;gap:8px;flex-direction:column"></div>
+
+  <div id="lobby-list" style="display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;padding:2px"></div>
+  <div id="lobby-empty" style="text-align:center;color:rgba(180,180,140,.6);font-size:12px;font-family:Georgia,serif;padding:24px 10px">
+    Buscando otros jugadores...
+  </div>
+
+  <button class="btn" onclick="lobbyLeave();show('s-online')">← Volver</button>
 </div>
 
 <!-- ═══════ GAME (4 JUGADORES) ═══════ -->
@@ -1600,7 +1623,6 @@ const MAZOS = [
   { id: 'MAZO ANTIGUO', nombre: 'MAZO ESTILO VIEJO', desc: 'ESPAÑOL ANTIGUO', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
-
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -5333,8 +5355,8 @@ function rematch(){ if(MODE==='ai') startAI(); else show('s-menu'); }
 ═══════════════════════════════════════════ */
 
 function saveCardImages(){
-  const url=localStorage.getItem('sb_url')||'';
-  const bucket=document.getElementById('inp-bucket').value.trim()||'cartas';
+  const url=localStorage.getItem('sb_url')||SB_URL;
+  const bucket=document.getElementById('inp-bucket')?document.getElementById('inp-bucket').value.trim():'cartas'||'cartas';
   if(!url){showMsg('card-img-msg','❌ Primero configurá la URL de Supabase.','#e06060');return;}
   localStorage.setItem('sb_bucket',bucket);
   setCardImages(url,bucket);
@@ -5345,16 +5367,200 @@ function saveCardImages(){
   img.src=CARD_IMG_BASE+'1-espadas.png';
 }
 
-function getSBConfig(){
-  return{url:localStorage.getItem('sb_url')||'',key:localStorage.getItem('sb_key')||''};
-}
+// Credenciales fijas del proyecto de Supabase (clave "anon public" — pensada
+// para ser expuesta en el cliente; la protección real son las políticas RLS
+// que se definen en las tablas, no el secretismo de esta clave).
+const SB_URL = 'https://ebwnlkfxlphliuwvyzfm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVid25sa2Z4bHBobGl1d3Z5emZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzkxMTMsImV4cCI6MjA5NDYxNTExM30.hXGA31duYsPph_4Zx3V9_ttnUFDb8_aYcwJymVjAyhM';
 
 function initSB(){
-  const {url,key}=getSBConfig();
-  if(!url||!key){ window.SUPABASE_CONFIGURED=false; return false; }
-  SB=window.supabase.createClient(url,key);
-  window.SUPABASE_CONFIGURED=true;
-  return true;
+  if(SB) return true;
+  try{
+    SB=window.supabase.createClient(SB_URL,SB_KEY);
+    window.SUPABASE_CONFIGURED=true;
+    return true;
+  }catch(e){
+    console.error('No se pudo inicializar Supabase:',e);
+    window.SUPABASE_CONFIGURED=false;
+    return false;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   LOBBY DE JUGADORES EN LÍNEA (Supabase, sin login)
+   Cada dispositivo tiene un id anónimo persistido en localStorage.
+   Mientras el jugador está en la pantalla del lobby (o tiene una sala
+   abierta esperando gente) escribe/actualiza una fila de presencia;
+   los demás la leen por polling. Sin cuentas, sin contraseñas.
+══════════════════════════════════════════════════════════ */
+let _lobbyId = null;
+let _lobbyOptedIn = false;
+let _lobbyHeartbeatTimer = null;
+let _lobbyListTimer = null;
+let _lobbyInviteTimer = null;
+let _lobbySeenInviteIds = new Set();
+
+function getLobbyId(){
+  if(_lobbyId) return _lobbyId;
+  let id = localStorage.getItem('lobby_id');
+  if(!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : ('lp-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
+    localStorage.setItem('lobby_id', id);
+  }
+  _lobbyId = id;
+  return id;
+}
+
+async function lobbyUpsertPresence(fields){
+  if(!initSB()) return;
+  const row = { id:getLobbyId(), name:_playerName||'Jugador', char_key:_selectedCharKey||null,
+    updated_at:new Date().toISOString(), ...fields };
+  try{ await SB.from('lobby_presence').upsert(row); }
+  catch(e){ console.warn('lobby upsert error:', e); }
+}
+
+async function lobbyEnter(){
+  _lobbyOptedIn = true;
+  await lobbyUpsertPresence({ status:'lobby', mode:null, room_code:null, players_count:1 });
+  if(_lobbyHeartbeatTimer) clearInterval(_lobbyHeartbeatTimer);
+  _lobbyHeartbeatTimer = setInterval(()=>lobbyUpsertPresence({}), 12000);
+  if(_lobbyListTimer) clearInterval(_lobbyListTimer);
+  lobbyRefreshList();
+  _lobbyListTimer = setInterval(lobbyRefreshList, 4000);
+  if(_lobbyInviteTimer) clearInterval(_lobbyInviteTimer);
+  lobbyCheckInvites();
+  _lobbyInviteTimer = setInterval(lobbyCheckInvites, 3000);
+}
+
+function lobbyLeave(){
+  // Deja de refrescar la LISTA visible, pero mantiene la presencia + chequeo
+  // de invitaciones corriendo en segundo plano mientras el jugador navega
+  // por otras pantallas del menú (por si le llega una invitación).
+  if(_lobbyListTimer){ clearInterval(_lobbyListTimer); _lobbyListTimer=null; }
+}
+
+async function lobbyBackToIdle(){
+  if(!_lobbyOptedIn) return;
+  await lobbyUpsertPresence({ status:'lobby', mode:null, room_code:null, players_count:1 });
+}
+
+async function lobbySetWaiting(mode, roomCode, playersCount){
+  if(!_lobbyOptedIn) return;
+  await lobbyUpsertPresence({ status:'waiting', mode, room_code:roomCode, players_count:playersCount||1 });
+}
+
+async function lobbySetPlaying(){
+  if(!_lobbyOptedIn) return;
+  await lobbyUpsertPresence({ status:'playing', room_code:null });
+}
+
+async function lobbyRefreshList(){
+  if(!initSB()) return;
+  const cutoff = new Date(Date.now()-40000).toISOString();
+  let data, error;
+  try{
+    ({data, error} = await SB.from('lobby_presence').select('*')
+      .gt('updated_at', cutoff).neq('id', getLobbyId()).order('updated_at', {ascending:false}));
+  }catch(e){ error = e; }
+  const listEl = document.getElementById('lobby-list');
+  const emptyEl = document.getElementById('lobby-empty');
+  if(!listEl) return;
+  if(error){
+    if(emptyEl){ emptyEl.style.display='block'; emptyEl.textContent='❌ No se pudo conectar al lobby.'; }
+    listEl.innerHTML=''; return;
+  }
+  if(!data || !data.length){
+    listEl.innerHTML='';
+    if(emptyEl){ emptyEl.style.display='block'; emptyEl.textContent='Buscando otros jugadores...'; }
+    return;
+  }
+  if(emptyEl) emptyEl.style.display='none';
+  listEl.innerHTML = data.map(p=>{
+    const statusTxt = p.status==='playing' ? '🎮 Jugando'
+      : p.status==='waiting' ? (p.mode==='4p' ? `👥 Sala de a 4 (${p.players_count||1}/4)` : '👤 Buscando partida de a 2')
+      : '🌐 En el lobby';
+    let btn = '';
+    if(p.status==='waiting' && p.mode==='2p' && p.room_code){
+      btn = `<button onclick="lobbyJoinRoom2('${p.room_code}')" style="background:#1a4a1a;border:1px solid #4a9a3a;color:#c8e896;border-radius:8px;padding:7px 12px;font-size:12px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Unirse</button>`;
+    } else if(p.status==='waiting' && p.mode==='4p' && p.room_code && (p.players_count||1)<4){
+      btn = `<button onclick="lobbyJoinRoom4('${p.room_code}')" style="background:#1a4a1a;border:1px solid #4a9a3a;color:#c8e896;border-radius:8px;padding:7px 12px;font-size:12px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Unirse</button>`;
+    } else if(p.status==='lobby'){
+      btn = `<button onclick="lobbyInvite('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')" style="background:#2a2a4a;border:1px solid #6a6ab0;color:#c8c8f0;border-radius:8px;padding:7px 12px;font-size:12px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Invitar</button>`;
+    }
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 12px">
+      <div>
+        <div style="color:#e8dfc8;font-family:Georgia,serif;font-size:13px;font-weight:700">${escapeHtml(p.name||'Jugador')}</div>
+        <div style="color:rgba(200,200,160,.65);font-size:11px;font-family:Georgia,serif">${statusTxt}</div>
+      </div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function lobbyInvite(toId, toName){
+  if(!initSB()) return;
+  // Creo mi propia sala de 2 (si no tengo una abierta) y le mando la invitación
+  try{
+    await SB.from('lobby_invites').insert({
+      from_id:getLobbyId(), from_name:_playerName||'Jugador', to_id:toId, mode:'2p', room_code:null
+    });
+  }catch(e){ console.warn('lobby invite error:', e); return; }
+  // Arranco mi sala; en cuanto tenga código se lo mando (ver createRoom()/lobbySetWaiting)
+  _lobbyPendingInviteTo = toId;
+  show('s-online'); setOnlineMode(2); createRoom();
+}
+let _lobbyPendingInviteTo = null;
+
+async function lobbyCheckInvites(){
+  if(!initSB()) return;
+  const cutoff = new Date(Date.now()-30000).toISOString();
+  let data, error;
+  try{
+    ({data, error} = await SB.from('lobby_invites').select('*')
+      .eq('to_id', getLobbyId()).gt('created_at', cutoff).order('created_at', {ascending:false}).limit(5));
+  }catch(e){ error = e; }
+  if(error || !data || !data.length) return;
+  for(const inv of data){
+    if(_lobbySeenInviteIds.has(inv.id)) continue;
+    _lobbySeenInviteIds.add(inv.id);
+    if(inv.room_code) lobbyShowInviteBanner(inv);
+  }
+}
+
+function lobbyShowInviteBanner(inv){
+  const el = document.getElementById('lobby-invite-banner');
+  if(!el) return;
+  el.style.display='flex';
+  el.innerHTML = `
+    <div style="color:#ffd97a;font-weight:700">🎉 ${escapeHtml(inv.from_name||'Alguien')} te invitó a jugar</div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button onclick="lobbyAcceptInvite('${inv.room_code}')" style="background:#1a4a1a;border:1px solid #4a9a3a;color:#c8e896;border-radius:8px;padding:8px 16px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Aceptar</button>
+      <button onclick="document.getElementById('lobby-invite-banner').style.display='none'" style="background:#4a1a1a;border:1px solid #9a4a4a;color:#f0c8c8;border-radius:8px;padding:8px 16px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Ignorar</button>
+    </div>`;
+}
+
+function lobbyAcceptInvite(roomCode){
+  document.getElementById('lobby-invite-banner').style.display='none';
+  show('s-online'); setOnlineMode(2);
+  const inp=document.getElementById('inp-code');
+  if(inp) inp.value = roomCode;
+  joinRoom();
+}
+
+function lobbyJoinRoom2(code){
+  show('s-online'); setOnlineMode(2);
+  const inp=document.getElementById('inp-code');
+  if(inp) inp.value = code;
+  joinRoom();
+}
+function lobbyJoinRoom4(code){
+  show('s-online'); setOnlineMode(4);
+  const inp=document.getElementById('inp-code-4');
+  if(inp) inp.value = code;
+  joinRoom4();
 }
 
 function saveConfig(){
@@ -5452,6 +5658,7 @@ function createRoom4(){
     showMsg('join-msg-4','','');
     renderRoomSlots4('room-slots-4', _players4);
     updateOnlineStatusUI();
+    lobbySetWaiting('4p', code, _players4.length);
   });
 
   _peer.on('connection', (connection)=>{
@@ -5470,6 +5677,7 @@ function createRoom4(){
         renderTeams4('room-teams-4', _players4);
         const startBtn=document.getElementById('btn-start-4');
         if(startBtn) startBtn.style.display = _players4.length===4 ? 'block' : 'none';
+        lobbySetWaiting('4p', code, _players4.length);
       } else if(data.type==='voices'){
         receiveVoicesFromPeer(data.voices);
       }
@@ -5482,6 +5690,7 @@ function createRoom4(){
       const startBtn=document.getElementById('btn-start-4');
       if(startBtn) startBtn.style.display='none';
       broadcastRoster4();
+      lobbySetWaiting('4p', code, _players4.length);
     });
   });
 
@@ -5523,6 +5732,7 @@ function joinRoom4(){
       } else if(data.type==='start4'){
         _players4 = data.players||_players4;
         show('s-game4');
+        lobbySetPlaying();
       } else if(data.type==='sorteo4-state'){
         SORTEO4 = data.state;
         TEAM_OF4 = data.teamOf;
@@ -5541,6 +5751,7 @@ function joinRoom4(){
 function startRoom4(){
   if(_players4.length<4) return;
   Object.values(_conns4).forEach(c=>{ if(c&&c.open) c.send({type:'start4', players:_players4}); });
+  lobbySetPlaying();
   iniciarSorteoHost4();
 }
 
@@ -5683,6 +5894,12 @@ function createRoom(){
     document.getElementById('room-created').style.display = 'flex';
     showMsg('join-msg','','');
     updateOnlineStatusUI();
+    lobbySetWaiting('2p', code, 1);
+    if(_lobbyPendingInviteTo && initSB()){
+      SB.from('lobby_invites').update({room_code:code})
+        .eq('from_id', getLobbyId()).eq('to_id', _lobbyPendingInviteTo)
+        .then(()=>{ _lobbyPendingInviteTo = null; });
+    }
   });
 
   _peer.on('connection', (connection) => {
@@ -5698,6 +5915,7 @@ function createRoom(){
       if(wm){ wm.classList.remove('thinking'); wm.textContent='¡Rival conectado! Iniciando...'; }
       setTimeout(()=>{
         show('s-game');
+        lobbySetPlaying();
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName, charKey:_selectedCharKey});
         sendVoicesToPeer(_conn); // Send P1's recorded voices to P2
@@ -5788,6 +6006,7 @@ function joinRoom(){
           _p2GameStarted=true;
           addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
           show('s-game');
+          lobbySetPlaying();
         }
         renderGame();
         // El host (p1) ya mapeó pScore/oScore desde la perspectiva de P2:
@@ -6106,6 +6325,7 @@ function cancelRoom(){
   const teams4g=document.getElementById('room-teams-4-guest'); if(teams4g) teams4g.textContent='';
   const startBtn=document.getElementById('btn-start-4'); if(startBtn) startBtn.style.display='none';
   setOnlineMode(2);
+  lobbyBackToIdle();
 }
 
 function copyRoomCode(){
@@ -6147,6 +6367,7 @@ function show(id){
   }
   if(id==='s-anotador'){ try{ anotadorLoad(); }catch(e){ console.warn('anotadorLoad:',e); } }
   if(id==='s-sorteo'){ try{ sorteoLoad(); }catch(e){ console.warn('sorteoLoad:',e); } }
+  if(id==='s-menu'){ try{ lobbyBackToIdle(); }catch(e){ console.warn('lobbyBackToIdle:',e); } }
   // ── Switch background: menu=campo, game=wood ──
   const menuBgC = document.getElementById('menu-bg-container');
   const gameBg  = document.getElementById('game-bg-img');
@@ -6192,10 +6413,11 @@ function show(id){
     el.style.flexDirection='column';
     const bgs={
       's-rules':'#0a1208','s-setup':'#070f07',
-      's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000'
+      's-online':'#070f07','s-gameover':'#0a1208','s-menu':'#000','s-lobby':'#070f07'
     };
     if(bgs[id]) el.style.background=bgs[id];
     if(id==='s-online'){ setTimeout(updateOnlineStatusUI,50); }
+    if(id==='s-lobby'){ setTimeout(lobbyEnter,50); }
     if(id==='s-campaign'){ setTimeout(renderCampaign,30); }
   }
  }catch(err){
