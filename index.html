@@ -1005,6 +1005,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <div id="g4-mesa-wrap" style="display:none;flex-direction:column;gap:8px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div id="g4-score" style="color:#d4a017;font-family:Georgia,serif;font-size:14px;font-weight:700"></div>
+        <div id="g4-muestra" style="text-align:center"></div>
         <button onclick="if(confirm('¿Salir de la partida?')){cancelRoom();show('s-menu');}"
           style="background:none;border:none;color:#7fba5a;font-size:20px;cursor:pointer;line-height:1">✕</button>
       </div>
@@ -2100,7 +2101,8 @@ function canCallEnvido4(role){
   if(!G4 || G4.phase!=='playing') return false;
   if(!G4.envDisp || G4.envDone || G4.envPend) return false;
   if(G4.roundNum>0) return false;
-  return turnoActual4()===role;
+  if(G4.played[role]) return false; // ya jugaste tu carta esta baza, no podés cantar
+  return true;
 }
 function callEnvido4(role, level){
   if(!canCallEnvido4(role)) return false;
@@ -2147,7 +2149,8 @@ function respondEnvido4(role, accept, raiseLevel){
 function canCallTruco4(role){
   if(!G4 || G4.phase!=='playing') return false;
   if(G4.trucoDone || G4.trucoPend) return false;
-  return turnoActual4()===role;
+  if(G4.played[role] && G4.roundNum>=3) return false; // ya no queda nada por jugar
+  return true;
 }
 function callTruco4(role){
   if(!canCallTruco4(role)) return false;
@@ -2254,8 +2257,23 @@ function renderGame4(){
   if(sorteoWrap) sorteoWrap.style.display='none';
   if(mesaWrap) mesaWrap.style.display='flex';
 
+  // Blindaje: si por algún desorden de red este cliente todavía no tiene
+  // el resultado del sorteo (TEAM_OF4), no seguimos — antes esto tiraba una
+  // excepción silenciosa y el jugador quedaba trancado viendo una mesa a medio
+  // renderizar (sin muestra, sin cantos, con lo último que se había dibujado).
+  if(!TEAM_OF4 || !TEAM_OF4[MY_ROLE]){
+    const mesaEl=document.getElementById('g4-mesa');
+    if(mesaEl) mesaEl.innerHTML = '<div style="color:#a89060;font-family:Georgia,serif;text-align:center">Sincronizando equipos...</div>';
+    return;
+  }
+
+  try{
+
   const scEl=document.getElementById('g4-score');
   if(scEl) scEl.textContent = `Equipo A: ${G4.score.A||0} — Equipo B: ${G4.score.B||0}  (a ${G4.meta})`;
+
+  const muEl=document.getElementById('g4-muestra');
+  if(muEl) muEl.innerHTML = G4.muestra ? cardHTML(G4.muestra,{small:true,disabled:true,isMuestra:true}) : '';
 
   const myTeam = TEAM_OF4[MY_ROLE];
   const partnerRole = ROLES4.find(r=>r!==MY_ROLE && TEAM_OF4[r]===myTeam);
@@ -2324,6 +2342,15 @@ function renderGame4(){
 
   const hoEl=document.getElementById('g4-handover');
   if(hoEl) hoEl.style.display = (G4.phase==='handover' && MY_ROLE==='p1') ? 'flex' : 'none';
+
+  } catch(err){
+    // Si algo falla acá, que quede a la vista en el log en vez de trancar
+    // la pantalla en silencio (esto era lo que hacía que algunos jugadores
+    // quedaran sin cantos/toques ni muestra sin ningún aviso).
+    console.error('renderGame4 error:', err);
+    const logEl=document.getElementById('g4-log');
+    if(logEl) logEl.innerHTML = `<div style="color:#e06060">⚠️ Error al renderizar: ${err.message}</div>` + logEl.innerHTML;
+  }
 }
 
 /* ── Botones de canto/toque (envido, truco, mazo) para 4 jugadores ── */
@@ -2440,7 +2467,7 @@ function nuevoTurno(p1IsMano) {
     fase: p1IsMano ? 'p_turn' : 'ai_turn',
     // Envido — solo se puede en la primera ronda (antes de que cualquiera juegue carta)
     envDisp: true,  // disponible hasta que alguien juegue la primera carta de la mano
-    envPend: null, envDone: false, envAccepted: false,
+    envPend: null, envDone: false, envAccepted: false, envWinner: null,
     p1Env: ep1.score, p2Env: ep2.score, p1Flor: ep1.flor, p2Flor: ep2.flor,
     p1FlorPts: calcFlorPts(p1H, ms, mc), p2FlorPts: calcFlorPts(p2H, ms, mc),
     // Flor: si alguien tiene flor, se anota automáticamente al inicio de la mano.
@@ -2477,19 +2504,20 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
     G.pScore=Math.min(MAX_PTS,G.pScore+3);
     addLog('🌸 Tenés Flor! +3 pts.','#f8a5c2');
     setTimeout(()=>{ sayAndShow('p1','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },300);
-    if(G.pScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(true); showGameOver(true); },1200); }
+    if(G.pScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(true); showGameOver(true); },2600); }
   } else if(h.p2Flor){
     G.envDone=true;
     G.oScore=Math.min(MAX_PTS,G.oScore+3);
     addLog('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
     setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },600);
-    if(G.oScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(false); showGameOver(false); },1200); }
+    if(G.oScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(false); showGameOver(false); },2600); }
   }
 
   renderGame();
   syncOnline(); // Send new hand state to P2
   // Send P2-perspective logs after syncOnline
   if(MODE==='online'){
+    sendP2Log('🃏 Nueva mano. ' + (p1IsMano ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
     if(h.p1Flor){
       sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
       setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },350);
@@ -2668,8 +2696,16 @@ function checkGameOver() {
   if (G.pScore >= winPts || G.oScore >= winPts) {
     renderGame();
     const playerWon = G.pScore >= winPts;
-    if (CAMP_LEVEL) campOnMatchEnd(playerWon);
-    showGameOver(playerWon);
+    // Online: el host debe avisarle al rival que la partida terminó, si no
+    // el rival queda "trancado" viendo la última acción sin enterarse del final.
+    if (MODE === 'online' && MY_ROLE === 'p1') syncOnline();
+    // Dar unos segundos para leer el resultado (quién ganó el envido/truco y
+    // con cuántos puntos) antes de tapar todo con la pantalla de fin de partida.
+    // Antes esto pasaba instantáneo y la mano terminaba "de golpe".
+    setTimeout(() => {
+      if (CAMP_LEVEL) campOnMatchEnd(playerWon);
+      showGameOver(playerWon);
+    }, 2600);
     return true;
   }
   return false;
@@ -2695,12 +2731,16 @@ function finalizeHand(g) {
   logEnvidoReveal();
 
   // ── Mostrar cartas no jugadas automáticamente ──────────────
-  // Solo si el envido/flor fue aceptado y se jugó: se dan vuelta para verificar los puntos.
-  // Si fue rechazado (No quiero), NO se muestran ni giran las cartas.
-  if (G.envAccepted && (G.p1Hand.length > 0 || G.p2Hand.length > 0)) {
+  // Solo se giran las cartas de quien GANÓ el envido (o tiene flor), para
+  // verificar sus puntos. El que pierde el envido no muestra su mano,
+  // aunque haya dicho "quiero".
+  const p1Reveal = !!G.p1Flor || (G.envAccepted && G.envWinner === 'p1');
+  const p2Reveal = !!G.p2Flor || (G.envAccepted && G.envWinner === 'p2');
+  G.p1Reveal = p1Reveal; G.p2Reveal = p2Reveal;
+  if ((p1Reveal && G.p1Hand.length > 0) || (p2Reveal && G.p2Hand.length > 0)) {
     G.revealHands = true;
-    if (G.p1Hand.length) addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
-    if (G.p2Hand.length) addLog('🔍 Cartas sin jugar de IA: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
+    if (p1Reveal && G.p1Hand.length) addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
+    if (p2Reveal && G.p2Hand.length) addLog('🔍 Cartas sin jugar de IA: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
   }
 
   addLog(
@@ -2901,6 +2941,7 @@ function finishFlorBattle() {
   if (checkGameOver()) return;
   G.fase = nextFaseAfterInterrupt();
   renderGame();
+  syncOnline(); // el rival necesita el puntaje y la fase actualizados, si no queda trancado
   if (G.fase === 'ai_turn') scheduleAI(1800);
 }
 
@@ -3028,6 +3069,7 @@ function respondEnvido(accept) {
     G.envAccepted = true;
     sayAndShow('p1','▶ ¡Quiero!','#7fba5a','Quiero');
     const winner = G.p1Env >= G.p2Env ? 'p1' : 'p2';
+    G.envWinner = winner;
     const myWin = winner === 'p1';
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
       '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
@@ -3217,13 +3259,23 @@ function aiActuar() {
 
 function aiDecideEnvido() {
   if (!G.envPend) return;
-  const { stake, refuseVal } = G.envPend;
+  const { level, stake, refuseVal } = G.envPend;
   G.envPend = null; G.envDone = true;
-  const accept = G.p2Env >= 21;
+  // El umbral para aceptar sube con lo que hay en juego: un Envido común se acepta
+  // con un valor decente, pero Real Envido y sobre todo Falta Envido (puede cerrar
+  // la partida de golpe) exigen mucha más confianza. Antes usaba el mismo ">=21"
+  // para los tres niveles, por eso "siempre" aceptaba la falta envido.
+  let thresh = 21;
+  if (level === 'realenvido') thresh = 25;
+  else if (level === 'faltaenvido') thresh = (G.oScore >= G.pScore) ? 28 : 31;
+  // Un poco de variación para que no sea 100% adivinable
+  thresh += Math.round((Math.random() - 0.5) * 4);
+  const accept = G.p2Env >= thresh;
   if (accept) {
     G.envAccepted = true;
     sayAndShow('p2','🤖 ¡Quiero!','#a78bca','Quiero');
     const myWin = G.p1Env >= G.p2Env;
+    G.envWinner = myWin ? 'p1' : 'p2';
     addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
       (myWin ? ' +' + stake + ' pts.' : ' IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
     if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
@@ -3247,10 +3299,26 @@ function aiDecideEnvido() {
 function aiDecideTruco() {
   if (!G.trucoPend) return;
   const { level, stake, refuseVal } = G.trucoPend;
-  const avg = G.p2Hand.reduce((s, c) => s + c.p, 0) / Math.max(1, G.p2Hand.length);
+  // Poder promedio de lo que le queda por jugar. Si ya jugó todas sus cartas
+  // de mano, mirar solo G.p2Hand (que quedaría vacío) subestimaba muchísimo su
+  // posición — por eso "casi nunca aceptaba a pesar de tener cartas de alto
+  // poder" cuando esas cartas ya estaban jugadas o en la mesa. Ahora también
+  // pesa cuántas rondas ya ganó en esta mano.
+  const avg = G.p2Hand.length ? G.p2Hand.reduce((s, c) => s + c.p, 0) / G.p2Hand.length
+            : (G.mesa.p2 ? G.mesa.p2.p : 0);
+  const wonByMe  = (G.rounds||[]).filter(r=>r.w==='p2').length;
+  const wonByOpp = (G.rounds||[]).filter(r=>r.w==='p1').length;
+  const winningHand = wonByMe > wonByOpp;
+
   const canRaise = level !== 'vale4' && G.trucoLastCaller === 'p1';
-  const raiseThresh = window._campAiRaise  || (level === 'truco' ? 9 : 10);
-  const acceptThresh= window._campAiAccept || 5;
+  let raiseThresh = window._campAiRaise  || (level === 'truco' ? 9 : 10);
+  let acceptThresh= window._campAiAccept || 5;
+  if (winningHand) { raiseThresh -= 2; acceptThresh -= 2; } // ya viene ganando la mano, le alcanza con menos
+  // Un margen aleatorio para que no sea 100% leíble: a veces se anima con menos
+  // poder (blofea) y a veces duda con cartas buenas.
+  const bluff = (Math.random() - 0.5) * 3;
+  raiseThresh -= bluff; acceptThresh -= bluff;
+
   const willRaise = canRaise && avg >= raiseThresh;
   const willAccept = !willRaise && avg >= acceptThresh;
 
@@ -4498,8 +4566,11 @@ function renderGame(){
     tb2.textContent='⚔ '+tn[G.trucoStake]+' ('+G.trucoStake+' pts)';
   } else tb2.textContent='';
 
-  // Opponent hand (face down, salvo cuando se revela al final de la mano)
-  document.getElementById('opp-hand').innerHTML = G.revealHands ? fanFaceUpSmall(oppH) : fanFaceDown(oppH.length);
+  // Opponent hand (face down, salvo cuando corresponde revelarla al final de la mano:
+  // solo si el rival ganó el envido o tiene flor — si perdió, sus cartas quedan ocultas)
+  const oppRole = MY_ROLE==='p1' ? 'p2' : 'p1';
+  const oppShouldReveal = oppRole==='p1' ? G.p1Reveal : G.p2Reveal;
+  document.getElementById('opp-hand').innerHTML = oppShouldReveal ? fanFaceUpSmall(oppH) : fanFaceDown(oppH.length);
   document.getElementById('opp-count').textContent=oppH.length+'✦';
 
   // Muestra
@@ -5617,10 +5688,6 @@ function createRoom(){
   _peer.on('connection', (connection) => {
     _conn = connection;
     _conn.on('open', () => {
-      // Init game with P1 as mano
-      G = {...nuevoTurno(true), pScore:0, oScore:0,
-            logs:[{txt:'🃏 Partida iniciada. ¡A jugar!', color:'#d4a017'}],
-            p2Joined:true};
       // Update waiting UI
       const pc = document.getElementById('room-player-count');
       if(pc) pc.innerHTML =
@@ -5631,20 +5698,13 @@ function createRoom(){
       if(wm){ wm.classList.remove('thinking'); wm.textContent='¡Rival conectado! Iniciando...'; }
       setTimeout(()=>{
         show('s-game');
-        renderGame();
         // Send P1's name to P2 before the state so _opponentName is set
         if(_conn && _conn.open) _conn.send({type:'name', name:_playerName, charKey:_selectedCharKey});
         sendVoicesToPeer(_conn); // Send P1's recorded voices to P2
-        syncOnline(); // Send properly inverted state to P2
-        // Now send P2-perspective logs (replaces P1's versions)
-        const p1IsManoNow = G.mano === 'p1';
-        sendP2Log('🃏 Nueva mano. ' + (p1IsManoNow ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
-        // Flor announcements if applicable
-        if(G.p1Flor && !G.p2Flor && G.envDone){
-          setTimeout(()=>sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2'), 100);
-        } else if(G.p2Flor && !G.p1Flor && G.envDone){
-          setTimeout(()=>sendP2Log('🌸 Tenés Flor! +3 pts.','#f8a5c2'), 100);
-        }
+        // Init game with P1 as mano — initGame() ya detecta y anuncia la Flor,
+        // otorga sus puntos, arma la batalla de Contra Flor al Resto si corresponde,
+        // renderiza, sincroniza el estado y manda los logs con la perspectiva de P2.
+        initGame(true, 0, 0);
       }, 600);
     });
     _conn.on('data', (data) => {
@@ -5713,6 +5773,7 @@ function joinRoom(){
     });
 
     let _p2GameStarted = false;
+    let _p2GameOverShown = false;
     _conn.on('data', (data) => {
       if(data.type==='init'){
         // Legacy handler kept for safety
@@ -5729,6 +5790,19 @@ function joinRoom(){
           show('s-game');
         }
         renderGame();
+        // El host (p1) ya mapeó pScore/oScore desde la perspectiva de P2:
+        // si alguno llegó al puntaje máximo, mostrar el resultado acá también
+        // (antes esto solo se mostraba en la pantalla del host y el rival
+        // quedaba trancado sin ver el final de la partida, típicamente tras
+        // un falta envido que cierra la mano de golpe).
+        if(!_p2GameOverShown){
+          const winPts = window._campWinPts || MAX_PTS;
+          if(G.pScore>=winPts || G.oScore>=winPts){
+            _p2GameOverShown = true;
+            const p2Won = G.pScore>=winPts;
+            setTimeout(()=>showGameOver(p2Won), 2600);
+          }
+        }
       } else if(data.type==='bubble'){
         if(isEmojiOnly(data.txt)) showBigEmoji(data.who, data.txt); else showBubble(data.who, data.txt);
       } else if(data.type==='p2log'){
@@ -5839,6 +5913,7 @@ function handleRemoteAction(action, payload){
         G.envAccepted = true;
         sayAndShow('p2','▶ ¡Quiero!','#7fba5a','Quiero');
         const winner = G.p1Env >= G.p2Env ? 'p1':'p2';
+        G.envWinner = winner;
         const myWin = winner==='p1';  // from P1's perspective
         const p2Win = !myWin;         // from P2's perspective
         addLog((myWin?'✅ Ganás':'❌ Perdés')+' el envido! Vos: '+G.p1Env+' vs Rival: '+G.p2Env+'. '+(myWin?'+'+stake+' pts.':'Rival +'+stake+' pts.'), myWin?'#7fba5a':'#e06060');
