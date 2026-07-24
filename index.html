@@ -1623,6 +1623,7 @@ const MAZOS = [
   { id: 'MAZO ANTIGUO', nombre: 'MAZO ESTILO VIEJO', desc: 'ESPAÑOL ANTIGUO', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
+
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -6446,13 +6447,9 @@ function showMsg(id,msg,color){
    INIT
 ═══════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded',()=>{
-  const{url,key}=getSBConfig();
-  if(url) document.getElementById('inp-url').value=url;
-  if(key) document.getElementById('inp-key').value=key;
-  if(url&&key) initSB();
+  initSB();
   const savedBucket=localStorage.getItem('sb_bucket');
-  if(url&&savedBucket) setCardImages(url,savedBucket);
-  if(savedBucket) document.getElementById('inp-bucket').value=savedBucket;
+  if(savedBucket) setCardImages(SB_URL,savedBucket);
   document.getElementById('inp-code').addEventListener('input',function(){
     this.value=this.value.toUpperCase();
   });
