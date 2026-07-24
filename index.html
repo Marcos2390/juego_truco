@@ -1019,8 +1019,11 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
       </div>
 
       <div id="g4-turn-indicator" style="text-align:center;color:#7fba5a;font-family:Georgia,serif;font-size:13px;font-weight:700;min-height:18px"></div>
+      <div id="g4-pending" style="text-align:center;color:#ffcc66;font-family:Georgia,serif;font-size:12px;font-weight:700;min-height:16px"></div>
 
       <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px"></div>
+
+      <div id="g4-actions" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 0"></div>
 
       <div id="g4-log" style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px;max-height:110px;overflow-y:auto;
         font-family:Georgia,serif;font-size:11px;color:#c8b890;display:flex;flex-direction:column-reverse;gap:3px"></div>
@@ -1984,7 +1987,9 @@ function nuevoTurno4(manoRole, meta){
   };
   return {
     hands,
+    origHands: { p1: hands.p1.slice(), p2: hands.p2.slice(), p3: hands.p3.slice(), p4: hands.p4.slice() },
     played: {p1:null,p2:null,p3:null,p4:null},
+    trickShown: null, // {plays, winner} — se muestra un instante antes de limpiar la mesa
     history: [],
     muestra: mc, muestraSuit: ms,
     mano: manoRole,
@@ -1997,10 +2002,37 @@ function nuevoTurno4(manoRole, meta){
     stake: 1,
     phase: 'playing',
     logs: (G4 && G4.logs) || [],
+    // ── Envido ──
+    envDisp: true, envDone: false, envAccepted: false, envPend: null,
+    // ── Truco ──
+    trucoDone: false, trucoAcep: false, trucoPend: null, trucoLastCallerTeam: null,
   };
 }
 
+function calcEnvidoTeam4(team){
+  const roles = ROLES4.filter(r=>TEAM_OF4[r]===team);
+  let best = 0;
+  roles.forEach(r=>{
+    const hand = (G4.origHands && G4.origHands[r]) || G4.hands[r] || [];
+    const {score} = calcEnvido(hand, G4.muestraSuit, G4.muestra);
+    if(score>best) best = score;
+  });
+  return best;
+}
+
 function turnoActual4(){ return G4 ? G4.order[G4.turnIdx] : null; }
+
+function nameFor4(r){ return (_players4.find(p=>p.role===r)||{}).name || r; }
+
+function checkGameOver4(){
+  if((G4.score.A||0) >= G4.meta || (G4.score.B||0) >= G4.meta){
+    const w = (G4.score.A||0) >= G4.meta ? 'A' : 'B';
+    G4.phase = 'gameover';
+    G4.logs.push({txt:`🎉 ¡Partida ganada por el Equipo ${w}!`, color:'#ffd700'});
+    return true;
+  }
+  return false;
+}
 
 function jugarCarta4(role, cardId){
   if(!G4 || G4.phase!=='playing') return false;
@@ -2016,6 +2048,8 @@ function jugarCarta4(role, cardId){
   return true;
 }
 
+// Al completarse la baza (los 4 jugaron), se deja la mesa visible con las
+// 4 cartas un instante antes de limpiarla y pasar a la próxima baza/mano.
 function resolverRonda4(){
   const plays = ROLES4.map(r=>({role:r, card:G4.played[r]}));
   let best = plays[0];
@@ -2023,30 +2057,169 @@ function resolverRonda4(){
   const winnerRole = best.role, winnerTeam = TEAM_OF4[winnerRole];
   G4.teamWins[winnerTeam]++;
   G4.history.push({ plays: {...G4.played}, winner: winnerRole });
-  G4.logs.push({txt:`🃏 Baza ${G4.roundNum+1}: gana ${winnerRole} (Equipo ${winnerTeam})`, color:'#d4a017'});
+  G4.logs.push({txt:`🃏 Baza ${G4.roundNum+1}: gana ${nameFor4(winnerRole)} (Equipo ${winnerTeam})`, color:'#d4a017'});
   G4.roundNum++;
+  G4.phase = 'trick_done';
+  G4.pendingWinner = winnerRole;
+}
 
+// HOST: se ejecuta tras una pausa (para que se vea la mesa completa) y recién
+// ahí limpia las cartas jugadas y sigue con la próxima baza o cierra la mano.
+function avanzarTrasBaza4(){
+  if(!G4 || G4.phase!=='trick_done') return;
+  const winnerRole = G4.pendingWinner;
+  G4.pendingWinner = null;
   if(G4.teamWins.A>=2 || G4.teamWins.B>=2 || G4.roundNum>=3){
     finalizarMano4();
   } else {
     G4.played = {p1:null,p2:null,p3:null,p4:null};
     G4.order = rotateFrom4(winnerRole);
     G4.turnIdx = 0;
+    G4.phase = 'playing';
   }
+  broadcastState4();
 }
 
 function finalizarMano4(){
   const A=G4.teamWins.A, B=G4.teamWins.B;
   const winnerTeam = A>B ? 'A' : (B>A ? 'B' : TEAM_OF4[G4.mano]);
-  G4.score[winnerTeam] = (G4.score[winnerTeam]||0) + G4.stake;
+  G4.score[winnerTeam] = Math.min(G4.meta, (G4.score[winnerTeam]||0) + G4.stake);
   G4.logs.push({txt:`🏆 Gana la mano el Equipo ${winnerTeam} (+${G4.stake} pts)`, color:'#7fba5a'});
-  if(G4.score[winnerTeam] >= G4.meta){
-    G4.phase = 'gameover';
-    G4.logs.push({txt:`🎉 ¡Partida ganada por el Equipo ${winnerTeam}!`, color:'#ffd700'});
+  if(!checkGameOver4()) G4.phase = 'handover';
+}
+
+/* ══════════════════════════════════════════════════════════
+   CANTOS — 4 JUGADORES POR EQUIPOS
+   Cualquier jugador puede cantar en su propio turno; cualquiera
+   del equipo contrario puede responder (el primero que conteste
+   define la jugada). El HOST valida todo antes de aplicar.
+══════════════════════════════════════════════════════════ */
+function getFalta4(){ return (G4.meta||30) - Math.min(G4.score.A||0, G4.score.B||0); }
+
+function canCallEnvido4(role){
+  if(!G4 || G4.phase!=='playing') return false;
+  if(!G4.envDisp || G4.envDone || G4.envPend) return false;
+  if(G4.roundNum>0) return false;
+  return turnoActual4()===role;
+}
+function callEnvido4(role, level){
+  if(!canCallEnvido4(role)) return false;
+  const falta = getFalta4();
+  const stakes = { envido:2, realenvido:3, faltaenvido:falta };
+  const refuses = { envido:1, realenvido:2, faltaenvido:1 };
+  const names = { envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido' };
+  G4.envPend = { level, byRole:role, byTeam:TEAM_OF4[role], stake:stakes[level], refuseVal:refuses[level] };
+  G4.phase = 'resp_env';
+  G4.logs.push({txt:`▶ ${nameFor4(role)} canta ¡${names[level]}!`, color:'#d4890a'});
+  return true;
+}
+function canRespondEnvido4(role){
+  return !!(G4 && G4.envPend && G4.phase==='resp_env' && TEAM_OF4[role]!==G4.envPend.byTeam);
+}
+function respondEnvido4(role, accept, raiseLevel){
+  if(!canRespondEnvido4(role)) return false;
+  const names = { envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido' };
+  if(raiseLevel){
+    if(G4.envPend.level==='faltaenvido' || raiseLevel===G4.envPend.level) return false;
+    const falta = getFalta4();
+    const stakes = { realenvido:3, faltaenvido:falta };
+    const refuses = { realenvido:2, faltaenvido:1 };
+    G4.logs.push({txt:`▶ ${nameFor4(role)} sube a ¡${names[raiseLevel]}!`, color:'#d4890a'});
+    G4.envPend = { level:raiseLevel, byRole:role, byTeam:TEAM_OF4[role], stake:stakes[raiseLevel], refuseVal:refuses[raiseLevel] };
+    return true;
+  }
+  const {stake, refuseVal, byTeam} = G4.envPend;
+  G4.envPend = null; G4.envDone = true;
+  if(accept){
+    G4.envAccepted = true;
+    const teamA = calcEnvidoTeam4('A'), teamB = calcEnvidoTeam4('B');
+    const winner = teamA>=teamB ? 'A' : 'B';
+    G4.score[winner] = Math.min(G4.meta, (G4.score[winner]||0) + stake);
+    G4.logs.push({txt:`✅ Envido: Equipo A ${teamA} vs Equipo B ${teamB}. Gana Equipo ${winner} (+${stake} pts)`, color:'#7fba5a'});
   } else {
-    G4.phase = 'handover';
+    G4.score[byTeam] = Math.min(G4.meta, (G4.score[byTeam]||0) + refuseVal);
+    G4.logs.push({txt:`❌ ${nameFor4(role)} dice no quiero. Equipo ${byTeam} +${refuseVal} pts`, color:'#e06060'});
+  }
+  if(!checkGameOver4()) G4.phase = 'playing';
+  return true;
+}
+
+function canCallTruco4(role){
+  if(!G4 || G4.phase!=='playing') return false;
+  if(G4.trucoDone || G4.trucoPend) return false;
+  return turnoActual4()===role;
+}
+function callTruco4(role){
+  if(!canCallTruco4(role)) return false;
+  G4.trucoPend = { level:'truco', byRole:role, byTeam:TEAM_OF4[role], stake:2, refuseVal:1 };
+  G4.trucoLastCallerTeam = TEAM_OF4[role];
+  G4.phase = 'resp_truco';
+  G4.logs.push({txt:`▶ ${nameFor4(role)} canta ¡Truco!`, color:'#e04040'});
+  return true;
+}
+function canRespondTruco4(role){
+  return !!(G4 && G4.trucoPend && G4.phase==='resp_truco' && TEAM_OF4[role]!==G4.trucoPend.byTeam);
+}
+function respondTruco4(role, accept, raise){
+  if(!canRespondTruco4(role)) return false;
+  const names = { retruco:'Re-Truco', vale4:'Vale Cuatro' };
+  if(raise){
+    const next = { truco:'retruco', retruco:'vale4' }[G4.trucoPend.level];
+    if(!next) return false;
+    const stakes2 = { retruco:3, vale4:4 }, refuses2 = { retruco:2, vale4:3 };
+    G4.logs.push({txt:`▶ ${nameFor4(role)} sube: ¡${names[next]}!`, color:'#c0392b'});
+    G4.trucoPend = { level:next, byRole:role, byTeam:TEAM_OF4[role], stake:stakes2[next], refuseVal:refuses2[next] };
+    G4.trucoLastCallerTeam = TEAM_OF4[role];
+    return true;
+  }
+  const {stake, refuseVal, byTeam} = G4.trucoPend;
+  G4.trucoPend = null;
+  if(accept){
+    G4.trucoAcep = true; G4.stake = stake;
+    G4.logs.push({txt:`✅ ${nameFor4(role)} quiere (${stake} pts en juego)`, color:'#7fba5a'});
+    G4.phase = 'playing';
+  } else {
+    G4.trucoDone = true;
+    G4.score[byTeam] = Math.min(G4.meta, (G4.score[byTeam]||0) + refuseVal);
+    G4.logs.push({txt:`❌ ${nameFor4(role)} no quiere. Equipo ${byTeam} +${refuseVal} pts`, color:'#e06060'});
+    if(!checkGameOver4()) G4.phase = 'handover';
+  }
+  return true;
+}
+
+function irAlMazo4(role){
+  if(!G4 || G4.phase!=='playing') return false;
+  if(turnoActual4()!==role) return false;
+  const myTeam = TEAM_OF4[role], otherTeam = myTeam==='A' ? 'B' : 'A';
+  G4.logs.push({txt:`▶ ${nameFor4(role)} se va al mazo`, color:'#d4890a'});
+  G4.score[otherTeam] = Math.min(G4.meta, (G4.score[otherTeam]||0) + (G4.stake||1));
+  if(!checkGameOver4()) G4.phase = 'handover';
+  return true;
+}
+
+/* ── Despacho de acciones (HOST) y envío remoto (invitados) ── */
+function hostHandleAction4(role, data){
+  let changed = false;
+  if(data.action==='play') changed = jugarCarta4(role, data.cardId);
+  else if(data.action==='callEnvido') changed = callEnvido4(role, data.level);
+  else if(data.action==='respondEnvido') changed = respondEnvido4(role, data.accept, data.raiseLevel);
+  else if(data.action==='callTruco') changed = callTruco4(role);
+  else if(data.action==='respondTruco') changed = respondTruco4(role, data.accept, data.raise);
+  else if(data.action==='mazo') changed = irAlMazo4(role);
+  if(changed){
+    broadcastState4();
+    if(G4.phase==='trick_done') setTimeout(avanzarTrasBaza4, 1400);
   }
 }
+function sendAction4(action, payload){
+  if(MY_ROLE==='p1') hostHandleAction4('p1', {action, ...(payload||{})});
+  else if(_conn && _conn.open) _conn.send({type:'action4', action, ...(payload||{})});
+}
+function uiCallEnvido4(level){ sendAction4('callEnvido', {level}); }
+function uiRespondEnvido4(accept, raiseLevel){ sendAction4('respondEnvido', {accept, raiseLevel}); }
+function uiCallTruco4(){ sendAction4('callTruco', {}); }
+function uiRespondTruco4(accept, raise){ sendAction4('respondTruco', {accept, raise}); }
+function uiMazo4(){ sendAction4('mazo', {}); }
 
 function siguienteMano4(){
   if(!G4) return;
@@ -2062,9 +2235,7 @@ function iniciarPartida4Host(){
   Object.entries(_conns4).forEach(([role, conn])=>{
     if(conn.removeAllListeners) conn.removeAllListeners('data');
     conn.on('data', (data)=>{
-      if(data.type==='action4' && data.action==='play'){
-        if(jugarCarta4(role, data.cardId)) broadcastState4();
-      }
+      if(data.type==='action4') hostHandleAction4(role, data);
     });
   });
   renderGame4();
@@ -2073,9 +2244,6 @@ function iniciarPartida4Host(){
 function broadcastState4(){
   Object.values(_conns4).forEach(c=>{ if(c&&c.open) c.send({type:'state4', state:G4}); });
   renderGame4();
-}
-function jugarCarta4Remoto(cardId){
-  if(_conn && _conn.open) _conn.send({type:'action4', action:'play', cardId});
 }
 
 /* ── Render de la mesa de 4 ── */
@@ -2113,14 +2281,32 @@ function renderGame4(){
   if(mesaEl){
     mesaEl.innerHTML = ROLES4.map(r=>{
       const c = G4.played[r];
-      const label = `<div style="font-size:9px;color:#7a6a3a;text-align:center;margin-top:2px">${nameFor(r)}</div>`;
+      const isMe = r===MY_ROLE;
+      const label = `<div style="font-size:9px;color:${isMe?'#d4a017':'#7a6a3a'};font-weight:${isMe?'700':'400'};text-align:center;margin-top:2px">${nameFor(r)}${isMe?' (vos)':''}</div>`;
       return `<div style="display:flex;flex-direction:column;align-items:center">${c?cardHTML(c,{small:true,mesa:true}):'<div style="width:62px;height:94px"></div>'}${label}</div>`;
     }).join('');
   }
 
   const turnEl=document.getElementById('g4-turn-indicator');
   const actual = turnoActual4();
-  if(turnEl) turnEl.textContent = G4.phase==='playing' ? (actual===MY_ROLE?'🟢 Tu turno':`Turno de ${nameFor(actual)}`) : '';
+  if(turnEl){
+    if(G4.phase==='playing') turnEl.textContent = actual===MY_ROLE?'🟢 Tu turno':`Turno de ${nameFor(actual)}`;
+    else if(G4.phase==='trick_done') turnEl.textContent = '🃏 Baza completa...';
+    else turnEl.textContent = '';
+  }
+
+  const pendEl=document.getElementById('g4-pending');
+  if(pendEl){
+    if(G4.phase==='resp_env' && G4.envPend){
+      const names = { envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido' };
+      pendEl.textContent = `${nameFor(G4.envPend.byRole)} cantó ¡${names[G4.envPend.level]}! (Equipo ${G4.envPend.byTeam})`;
+    } else if(G4.phase==='resp_truco' && G4.trucoPend){
+      const names = { truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro' };
+      pendEl.textContent = `${nameFor(G4.trucoPend.byRole)} cantó ¡${names[G4.trucoPend.level]}! (Equipo ${G4.trucoPend.byTeam})`;
+    } else {
+      pendEl.textContent = '';
+    }
+  }
 
   const bottomEl=document.getElementById('g4-seat-bottom');
   if(bottomEl){
@@ -2131,6 +2317,8 @@ function renderGame4(){
         onclick:canPlay?`handleCardClick4('${c.id}')`:''})).join('')}</div>`;
   }
 
+  renderActions4();
+
   const logEl=document.getElementById('g4-log');
   if(logEl) logEl.innerHTML = (G4.logs||[]).slice(-20).reverse().map(l=>`<div style="color:${l.color||'#c8b890'}">${l.txt}</div>`).join('');
 
@@ -2138,13 +2326,49 @@ function renderGame4(){
   if(hoEl) hoEl.style.display = (G4.phase==='handover' && MY_ROLE==='p1') ? 'flex' : 'none';
 }
 
-function handleCardClick4(cardId){
-  if(!G4) return;
-  if(MY_ROLE==='p1'){
-    if(jugarCarta4('p1', cardId)) broadcastState4();
-  } else {
-    jugarCarta4Remoto(cardId);
+/* ── Botones de canto/toque (envido, truco, mazo) para 4 jugadores ── */
+function mkBtn4(label, onclick, color, accent){
+  color = color || '#5a3a1a'; accent = accent || '#c8963e';
+  return `<button onclick="${onclick}" style="padding:8px 12px;border-radius:8px;
+    border:1.5px solid ${accent};background:${color};color:rgba(255,240,200,0.95);
+    font-size:12px;font-family:Georgia,serif;font-weight:700;cursor:pointer;
+    min-width:64px;">${label}</button>`;
+}
+function renderActions4(){
+  const el=document.getElementById('g4-actions');
+  if(!el || !G4) return;
+  const role = MY_ROLE;
+  let html = '';
+
+  if(G4.phase==='resp_env' && canRespondEnvido4(role)){
+    html += mkBtn4('✅ Quiero', `uiRespondEnvido4(true)`, '#2a4a1a', '#7fba5a');
+    html += mkBtn4('❌ No quiero', `uiRespondEnvido4(false)`, '#4a1a1a', '#c05050');
+    if(G4.envPend.level==='envido') html += mkBtn4('Real Envido', `uiRespondEnvido4(false,'realenvido')`, '#4a3a10', '#d4a017');
+    if(G4.envPend.level!=='faltaenvido') html += mkBtn4('Falta Envido', `uiRespondEnvido4(false,'faltaenvido')`, '#4a3a10', '#d4a017');
+  } else if(G4.phase==='resp_truco' && canRespondTruco4(role)){
+    html += mkBtn4('✅ Quiero', `uiRespondTruco4(true)`, '#2a4a1a', '#7fba5a');
+    html += mkBtn4('❌ No quiero', `uiRespondTruco4(false)`, '#4a1a1a', '#c05050');
+    if(G4.trucoPend.level!=='vale4') {
+      const nextName = G4.trucoPend.level==='truco' ? 'Re-Truco' : 'Vale Cuatro';
+      html += mkBtn4(nextName, `uiRespondTruco4(false,true)`, '#4a1010', '#e04040');
+    }
+  } else if(G4.phase==='playing'){
+    if(canCallEnvido4(role)){
+      html += mkBtn4('Envido', `uiCallEnvido4('envido')`, '#4a3a10', '#d4a017');
+      html += mkBtn4('Real Envido', `uiCallEnvido4('realenvido')`, '#4a3a10', '#d4a017');
+      html += mkBtn4('Falta Envido', `uiCallEnvido4('faltaenvido')`, '#4a3a10', '#d4a017');
+    }
+    if(canCallTruco4(role)) html += mkBtn4('¡Truco!', `uiCallTruco4()`, '#4a1010', '#e04040');
+    if(turnoActual4()===role) html += mkBtn4('Al mazo', `if(confirm('¿Irte al mazo?')) uiMazo4()`, '#3a2a1a', '#8a6a3a');
   }
+
+  el.innerHTML = html;
+}
+
+function handleCardClick4(cardId){
+  if(!G4 || G4.phase!=='playing') return;
+  if(turnoActual4()!==MY_ROLE || G4.played[MY_ROLE]) return;
+  sendAction4('play', {cardId});
 }
 function hostSiguienteMano4(){
   if(MY_ROLE!=='p1') return;
