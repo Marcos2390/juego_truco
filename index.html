@@ -786,7 +786,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <p style="margin:0 0 6px">Solo en la <b>primera ronda</b>, incluso si ya se gritó Truco. Opciones: Envido (2pts), Real Envido (3pts), Falta Envido (pts que faltan al que va primero).</p>
     <div style="color:#e8c84a;font-size:10px;background:#0a1a0a;border-radius:6px;padding:6px;margin-bottom:10px">Pieza 2=30 · 4=29 · 5=28 · Cba/Sota=27 · Dos mismo palo +20 · Negras (S/C/R)=0</div>
     <div style="color:#f8a5c2;font-weight:700;font-size:13px;margin-bottom:6px">🌸 Flor (Cantos)</div>
-    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual.</p>
+    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 3 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual.</p>
     <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🃏 Al Mazo · Mano y Pie</div>
     <p style="margin:0 0 0">Tirarse al mazo = ceder 1 pt al rival. Gana la mano quien gana 2 de 3 rondas. En caso de parda, lidera la siguiente ronda quien lideró esa. La mano se alterna cada partida. Si se discutió Envido o Flor, las cartas que no se llegaron a jugar se dan vuelta automáticamente al final de la mano para verificar los puntos.</p>
   </div>
@@ -1074,7 +1074,10 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <!-- MESA DE JUEGO (aparece cuando termina el sorteo) -->
     <div id="g4-mesa-wrap" style="display:none;flex-direction:column;gap:8px">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div id="g4-score" style="color:#d4a017;font-family:Georgia,serif;font-size:14px;font-weight:700"></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
+          <div id="g4-score" style="color:#d4a017;font-family:Georgia,serif;font-size:14px;font-weight:700"></div>
+          <div id="g4-truco-badge" style="color:#e04040;font-family:Georgia,serif;font-size:11px;font-weight:700;min-height:14px"></div>
+        </div>
         <div id="g4-muestra" style="text-align:center"></div>
         <button onclick="if(confirm('¿Salir de la partida?')){cancelRoom();show('s-menu');}"
           style="background:none;border:none;color:#7fba5a;font-size:20px;cursor:pointer;line-height:1">✕</button>
@@ -2056,6 +2059,10 @@ function nuevoTurno4(manoRole, meta){
     p3: aplicarMuestra(d.slice(6,9), ms, mc),
     p4: aplicarMuestra(d.slice(9,12), ms, mc),
   };
+  const florInfo = {};
+  ROLES4.forEach(r=>{
+    florInfo[r] = { has: calcFlor(hands[r], ms, mc), pts: calcFlorPts(hands[r], ms, mc) };
+  });
   return {
     hands,
     origHands: { p1: hands.p1.slice(), p2: hands.p2.slice(), p3: hands.p3.slice(), p4: hands.p4.slice() },
@@ -2077,6 +2084,8 @@ function nuevoTurno4(manoRole, meta){
     envDisp: true, envDone: false, envAccepted: false, envPend: null,
     // ── Truco ──
     trucoDone: false, trucoAcep: false, trucoPend: null, trucoLastCallerTeam: null,
+    // ── Flor ──
+    florInfo, florDisp: true, florDone: false, florPend: null, florReveal: null,
   };
 }
 
@@ -2156,7 +2165,18 @@ function finalizarMano4(){
   const winnerTeam = A>B ? 'A' : (B>A ? 'B' : TEAM_OF4[G4.mano]);
   G4.score[winnerTeam] = Math.min(G4.meta, (G4.score[winnerTeam]||0) + G4.stake);
   G4.logs.push({txt:`🏆 Gana la mano el Equipo ${winnerTeam} (+${G4.stake} pts)`, color:'#7fba5a'});
+  revelarFlor4();
   if(!checkGameOver4()) G4.phase = 'handover';
+}
+
+// Recién ahora, con la mano ya terminada (no quedan más cartas por jugar),
+// se revelan los puntos exactos de la Flor cantada durante la mano.
+function revelarFlor4(){
+  if(!G4.florReveal) return;
+  const { kind, ptsA, ptsB, winner } = G4.florReveal;
+  const label = kind==='contra' ? 'Contra Flor al Resto' : 'También Flor';
+  G4.logs.push({txt:`🌸 Flor revelada (${label}): Equipo A ${ptsA} vs Equipo B ${ptsB} — ganó Equipo ${winner}`, color:'#c8a0b8'});
+  G4.florReveal = null;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2216,6 +2236,99 @@ function respondEnvido4(role, accept, raiseLevel){
   return true;
 }
 
+/* ── Flor — 4 jugadores por equipos ──
+   Cualquier jugador con Flor puede cantarla en su turno (antes de jugar
+   carta, antes de que se resuelva el envido). Si el equipo rival no tiene
+   Flor, se anotan 3 pts automáticos. Si el rival también tiene Flor, puede
+   responder "También Flor" (gana el de más puntos, 3 pts) o subir a
+   "Contra Flor al Resto" (se juega lo que falta para la meta, +6 si no se
+   quiere). Cantar Flor cancela el Envido de esa mano. */
+function equipoTieneFlor4(team){
+  return ROLES4.some(r=>TEAM_OF4[r]===team && G4.florInfo[r] && G4.florInfo[r].has);
+}
+function mejorFlorTeam4(team){
+  let best=-1;
+  ROLES4.forEach(r=>{
+    if(TEAM_OF4[r]===team && G4.florInfo[r] && G4.florInfo[r].has){
+      if(G4.florInfo[r].pts>best) best=G4.florInfo[r].pts;
+    }
+  });
+  return best;
+}
+function canCallFlor4(role){
+  if(!G4 || G4.phase!=='playing') return false;
+  if(!G4.florDisp || G4.florDone || G4.florPend) return false;
+  if(G4.roundNum>0) return false;
+  if(G4.played[role]) return false;
+  if(!G4.florInfo || !G4.florInfo[role] || !G4.florInfo[role].has) return false;
+  return true;
+}
+function callFlor4(role){
+  if(!canCallFlor4(role)) return false;
+  const myTeam = TEAM_OF4[role], rivalTeam = myTeam==='A'?'B':'A';
+  G4.envDisp = false; // la Flor cancela el Envido de esta mano
+  G4.logs.push({txt:`🌸 ${nameFor4(role)} canta ¡Flor!`, color:'#f8a5c2'});
+  if(!equipoTieneFlor4(rivalTeam)){
+    // El rival no tiene Flor: 3 pts automáticos, no hay nada que responder.
+    G4.score[myTeam] = Math.min(G4.meta, (G4.score[myTeam]||0) + 3);
+    G4.florDone = true;
+    G4.logs.push({txt:`✅ Equipo ${myTeam} +3 pts (Flor sin respuesta)`, color:'#7fba5a'});
+    checkGameOver4();
+  } else {
+    G4.florPend = { level:'flor', byRole:role, byTeam:myTeam };
+    G4.phase = 'resp_flor';
+  }
+  return true;
+}
+function canRespondFlor4(role){
+  return !!(G4 && G4.florPend && G4.phase==='resp_flor' && G4.florPend.level==='flor' &&
+    TEAM_OF4[role]!==G4.florPend.byTeam && G4.florInfo[role] && G4.florInfo[role].has);
+}
+function respondFlor4(role, raise){
+  if(!canRespondFlor4(role)) return false;
+  const { byTeam } = G4.florPend;
+  const myTeam = TEAM_OF4[role];
+  if(raise){
+    G4.logs.push({txt:`🌺 ${nameFor4(role)} sube: ¡Contra Flor al Resto!`, color:'#f8a5c2'});
+    G4.florPend = { level:'contraflor_resto', byRole:role, byTeam:myTeam, stake:getFalta4(), refuseVal:6 };
+    return true;
+  }
+  // "También Flor": gana el equipo con más puntos de Flor, 3 pts (no se suman, gana el mejor).
+  // No mostramos los puntos exactos todavía: revelarlos ahora, mientras
+  // todavía quedan cartas por jugar, le daría a jugadores con experiencia
+  // pistas de qué cartas tiene cada equipo. Se revelan recién al final de la mano.
+  const ptsA = mejorFlorTeam4('A'), ptsB = mejorFlorTeam4('B');
+  const winner = ptsA>=ptsB ? 'A' : 'B';
+  G4.score[winner] = Math.min(G4.meta, (G4.score[winner]||0) + 3);
+  G4.logs.push({txt:`🌸 También Flor: gana Equipo ${winner} (+3 pts)`, color:'#7fba5a'});
+  G4.florReveal = { kind:'tambien', ptsA, ptsB, winner };
+  G4.florPend = null; G4.florDone = true;
+  if(!checkGameOver4()) G4.phase = 'playing';
+  return true;
+}
+function canRespondContraflor4(role){
+  return !!(G4 && G4.florPend && G4.phase==='resp_flor' && G4.florPend.level==='contraflor_resto' &&
+    TEAM_OF4[role]===(G4.florPend.byTeam==='A'?'B':'A'));
+}
+function respondContraflor4(role, accept){
+  if(!canRespondContraflor4(role)) return false;
+  const { stake, refuseVal, byTeam } = G4.florPend;
+  const rivalTeam = byTeam==='A'?'B':'A';
+  if(accept){
+    const ptsA = mejorFlorTeam4('A'), ptsB = mejorFlorTeam4('B');
+    const winner = ptsA>=ptsB ? 'A' : 'B';
+    G4.score[winner] = Math.min(G4.meta, (G4.score[winner]||0) + stake);
+    G4.logs.push({txt:`✅ ${nameFor4(role)} quiere. Contra Flor al Resto: gana Equipo ${winner} (+${stake} pts)`, color:'#7fba5a'});
+    G4.florReveal = { kind:'contra', ptsA, ptsB, winner };
+  } else {
+    G4.score[byTeam] = Math.min(G4.meta, (G4.score[byTeam]||0) + refuseVal);
+    G4.logs.push({txt:`❌ ${nameFor4(role)} no quiere. Equipo ${byTeam} +${refuseVal} pts`, color:'#e06060'});
+  }
+  G4.florPend = null; G4.florDone = true;
+  if(!checkGameOver4()) G4.phase = 'playing';
+  return true;
+}
+
 function canCallTruco4(role){
   if(!G4 || G4.phase!=='playing') return false;
   if(G4.trucoDone || G4.trucoPend) return false;
@@ -2266,6 +2379,7 @@ function irAlMazo4(role){
   const myTeam = TEAM_OF4[role], otherTeam = myTeam==='A' ? 'B' : 'A';
   G4.logs.push({txt:`▶ ${nameFor4(role)} se va al mazo`, color:'#d4890a'});
   G4.score[otherTeam] = Math.min(G4.meta, (G4.score[otherTeam]||0) + (G4.stake||1));
+  revelarFlor4();
   if(!checkGameOver4()) G4.phase = 'handover';
   return true;
 }
@@ -2275,6 +2389,9 @@ function voiceKeyForAction4(data, accepted){
   if(data.action==='callEnvido') return {envido:'envido', realenvido:'realenv', faltaenvido:'faltaenv'}[data.level];
   if(data.action==='callTruco') return 'truco';
   if(data.action==='mazo') return 'mazo';
+  if(data.action==='callFlor') return 'flor';
+  if(data.action==='respondFlor') return data.raise ? 'contraflor' : 'flor';
+  if(data.action==='respondContraflor') return data.accept ? 'quiero' : 'noquiero';
   if(data.action==='respondEnvido'){
     if(data.raiseLevel) return data.raiseLevel==='realenvido'?'realenv':'faltaenv';
     return data.accept ? 'quiero' : 'noquiero';
@@ -2293,6 +2410,9 @@ function hostHandleAction4(role, data){
   else if(data.action==='respondEnvido') changed = respondEnvido4(role, data.accept, data.raiseLevel);
   else if(data.action==='callTruco') changed = callTruco4(role);
   else if(data.action==='respondTruco') changed = respondTruco4(role, data.accept, data.raise);
+  else if(data.action==='callFlor') changed = callFlor4(role);
+  else if(data.action==='respondFlor') changed = respondFlor4(role, data.raise);
+  else if(data.action==='respondContraflor') changed = respondContraflor4(role, data.accept);
   else if(data.action==='mazo') changed = irAlMazo4(role);
   if(changed){
     if(data.action!=='play'){
@@ -2312,6 +2432,9 @@ function uiCallEnvido4(level){ sendAction4('callEnvido', {level}); }
 function uiRespondEnvido4(accept, raiseLevel){ sendAction4('respondEnvido', {accept, raiseLevel}); }
 function uiCallTruco4(){ sendAction4('callTruco', {}); }
 function uiRespondTruco4(accept, raise){ sendAction4('respondTruco', {accept, raise}); }
+function uiCallFlor4(){ sendAction4('callFlor', {}); }
+function uiRespondFlor4(raise){ sendAction4('respondFlor', {raise}); }
+function uiRespondContraflor4(accept){ sendAction4('respondContraflor', {accept}); }
 function uiMazo4(){ sendAction4('mazo', {}); }
 
 function siguienteMano4(){
@@ -2362,6 +2485,14 @@ function renderGame4(){
   const scEl=document.getElementById('g4-score');
   if(scEl) scEl.textContent = `Equipo A: ${G4.score.A||0} — Equipo B: ${G4.score.B||0}  (a ${G4.meta})`;
 
+  const tbEl=document.getElementById('g4-truco-badge');
+  if(tbEl){
+    if(G4.trucoAcep && G4.stake>1){
+      const tn={2:'Truco',3:'Re-Truco',4:'Vale Cuatro'};
+      tbEl.textContent = '⚔ '+(tn[G4.stake]||'Truco')+' ('+G4.stake+' pts)';
+    } else tbEl.textContent = '';
+  }
+
   const muEl=document.getElementById('g4-muestra');
   if(muEl) muEl.innerHTML = G4.muestra ? cardHTML(G4.muestra,{small:true,disabled:true,isMuestra:true}) : '';
 
@@ -2387,12 +2518,22 @@ function renderGame4(){
 
   const mesaEl=document.getElementById('g4-mesa');
   if(mesaEl){
-    mesaEl.innerHTML = ROLES4.map(r=>{
-      const c = G4.played[r];
-      const isMe = r===MY_ROLE;
-      const label = `<div style="font-size:9px;color:${isMe?'#d4a017':'#7a6a3a'};font-weight:${isMe?'700':'400'};text-align:center;margin-top:2px">${nameFor(r)}${isMe?' (vos)':''}</div>`;
+    // Cruz: la carta de cada jugador se muestra del lado de la mesa que le
+    // corresponde a su asiento (arriba/izq/der/abajo), con su nombre debajo,
+    // para identificar de un vistazo quién jugó qué.
+    const seatCard = (role)=>{
+      const c = G4.played[role];
+      const isMe = role===MY_ROLE;
+      const label = `<div style="font-size:9px;color:${isMe?'#d4a017':'#7a6a3a'};font-weight:${isMe?'700':'400'};text-align:center;margin-top:2px;white-space:nowrap">${nameFor(role)}${isMe?' (vos)':''}</div>`;
       return `<div style="display:flex;flex-direction:column;align-items:center">${c?cardHTML(c,{small:true,mesa:true}):'<div style="width:62px;height:94px"></div>'}${label}</div>`;
-    }).join('');
+    };
+    mesaEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
+      gap:4px;place-items:center;width:100%;max-width:260px;margin:0 auto">
+      <div style="grid-column:2;grid-row:1">${seatCard(partnerRole)}</div>
+      <div style="grid-column:1;grid-row:2">${seatCard(leftRole)}</div>
+      <div style="grid-column:3;grid-row:2">${seatCard(rightRole)}</div>
+      <div style="grid-column:2;grid-row:3">${seatCard(MY_ROLE)}</div>
+    </div>`;
   }
 
   const turnEl=document.getElementById('g4-turn-indicator');
@@ -2411,6 +2552,9 @@ function renderGame4(){
     } else if(G4.phase==='resp_truco' && G4.trucoPend){
       const names = { truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro' };
       pendEl.textContent = `${nameFor(G4.trucoPend.byRole)} cantó ¡${names[G4.trucoPend.level]}! (Equipo ${G4.trucoPend.byTeam})`;
+    } else if(G4.phase==='resp_flor' && G4.florPend){
+      const names = { flor:'Flor', contraflor_resto:'Contra Flor al Resto' };
+      pendEl.textContent = `🌸 ${nameFor(G4.florPend.byRole)} cantó ¡${names[G4.florPend.level]}! (Equipo ${G4.florPend.byTeam})`;
     } else {
       pendEl.textContent = '';
     }
@@ -2469,7 +2613,14 @@ function renderActions4(){
       const nextName = G4.trucoPend.level==='truco' ? 'Re-Truco' : 'Vale Cuatro';
       html += mkBtn4(nextName, `uiRespondTruco4(false,true)`, '#4a1010', '#e04040');
     }
+  } else if(G4.phase==='resp_flor' && canRespondFlor4(role)){
+    html += mkBtn4('🌸 También Flor', `uiRespondFlor4(false)`, '#7a2a5a', '#f8a5c2');
+    html += mkBtn4('🌺 Contra Flor al Resto', `uiRespondFlor4(true)`, '#7a1a4a', '#e0609a');
+  } else if(G4.phase==='resp_flor' && canRespondContraflor4(role)){
+    html += mkBtn4('✅ Quiero', `uiRespondContraflor4(true)`, '#2a4a1a', '#7fba5a');
+    html += mkBtn4('❌ No quiero', `uiRespondContraflor4(false)`, '#4a1a1a', '#c05050');
   } else if(G4.phase==='playing'){
+    if(canCallFlor4(role)) html += mkBtn4('🌸 Flor', `uiCallFlor4()`, '#7a2a5a', '#f8a5c2');
     if(canCallEnvido4(role)){
       html += mkBtn4('Envido', `uiCallEnvido4('envido')`, '#4a3a10', '#d4a017');
       html += mkBtn4('Real Envido', `uiCallEnvido4('realenvido')`, '#4a3a10', '#d4a017');
