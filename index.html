@@ -1654,7 +1654,7 @@ const MAZOS = [
   { id: 'CARTAS-TRUCO', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
   { id: 'MAZO ANTIGUO', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
-]; 
+];
 
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
@@ -4059,16 +4059,16 @@ const WIN_SOUNDS = [
 ];
 function playWinSound(){ playRandomFrom(WIN_SOUNDS); }
 
-// Combina ambos: el lado que pierde escucha su propio sonido de derrota
-// y, a continuación, el festejo/burla del que ganó. En online, si el que
-// pierde es el rival, le mandamos la señal para que las reproduzca él.
+// Cada uno escucha SU sonido correspondiente, en SU propio dispositivo:
+// quien gana escucha su festejo, quien pierde escucha su sonido de derrota.
+// (Antes ambos sonidos terminaban sonando juntos del lado de quien perdía.)
 function reactToOutcome(myWin){
-  if(!myWin){
-    playLossSound();
-    playWinSound();
-  } else if(MODE==='online' && _conn && _conn.open){
-    try{ _conn.send({type:'playMeme'}); }catch(e){}
-    try{ _conn.send({type:'playWin'}); }catch(e){}
+  if(myWin){
+    playWinSound(); // gano yo → festejo acá
+    if(MODE==='online' && _conn && _conn.open) try{ _conn.send({type:'playMeme'}); }catch(e){} // el rival perdió, que escuche su sonido de derrota
+  } else {
+    playLossSound(); // pierdo yo → mi sonido de derrota acá
+    if(MODE==='online' && _conn && _conn.open) try{ _conn.send({type:'playWin'}); }catch(e){} // el rival ganó, que escuche su festejo
   }
 }
 
@@ -6241,12 +6241,6 @@ function createRoom(){
           addLog(data.txt, data.color||'#4a7a4a');
         }
         renderGame();
-      } else if(data.type==='voices'){
-        // P1 sent their recorded voices — store them for local playback
-        receiveVoicesFromPeer(data.voices);
-      } else if(data.type==='playvoice'){
-        // P1 is speaking — play their recorded voice on P2's device
-        playCustomVoice(data.key, true);
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
         _opponentCharKey = data.charKey||null;
@@ -6320,8 +6314,18 @@ function joinRoom(){
         }
       } else if(data.type==='bubble'){
         if(isEmojiOnly(data.txt)) showBigEmoji(data.who, data.txt); else showBubble(data.who, data.txt);
+      } else if(data.type==='voices'){
+        // El host mandó sus voces grabadas — sin este caso, el invitado
+        // nunca las recibía y por eso solo el que crea la sala escuchaba
+        // los audios del otro (nunca al revés).
+        receiveVoicesFromPeer(data.voices);
+      } else if(data.type==='playvoice'){
+        // El host está "hablando" — reproducir su voz grabada acá
+        playCustomVoice(data.key, true);
       } else if(data.type==='playMeme'){
         playLossSound();
+      } else if(data.type==='playWin'){
+        playWinSound();
       } else if(data.type==='p2log'){
         // Replace the last log entry with P2's perspective version
         if(G && G.logs && G.logs.length > 0){
@@ -6354,8 +6358,15 @@ function applyRemoteState(st){
 }
 
 // P2 sends an action to P1 instead of modifying G locally
+let _sendActionBusy = false;
 function sendAction(action, payload){
   if(MODE!=='online'||MY_ROLE!=='p2'||!_conn||!_conn.open) return false;
+  // Debounce: si tocás dos veces rápido (por ejemplo "Quiero" dos veces antes
+  // de que llegue la confirmación), la segunda se ignora acá en vez de viajar
+  // igual y terminar procesándose dos veces del lado del host.
+  if(_sendActionBusy) return false;
+  _sendActionBusy = true;
+  setTimeout(()=>{ _sendActionBusy = false; }, 900);
   try{ _conn.send({type:'action', action, payload}); return true; }
   catch(e){ console.error('sendAction error',e); return false; }
 }
@@ -6423,8 +6434,9 @@ function handleRemoteAction(action, payload){
       break;
     }
     case 'respondEnvido': {
+      if(!G.envPend) return; // ya se había resuelto — evita reprocesar un doble click del rival
       const accept = payload.accept;
-      const {stake, refuseVal, by} = G.envPend||{};
+      const {stake, refuseVal, by} = G.envPend;
       G.envPend = null; G.envDone = true;
       if(accept){
         G.envAccepted = true;
@@ -6461,8 +6473,9 @@ function handleRemoteAction(action, payload){
       break;
     }
     case 'respondTruco': {
+      if(!G.trucoPend) return; // ya se había resuelto — evita reprocesar un doble click del rival
       const accept = payload.accept, raise = payload.raise;
-      const {level, stake, refuseVal} = G.trucoPend||{};
+      const {level, stake, refuseVal} = G.trucoPend;
       if(raise){
         const next = {truco:'retruco', retruco:'vale4'}[level];
         if(!next) return;
@@ -6500,6 +6513,7 @@ function handleRemoteAction(action, payload){
       break;
     }
     case 'mazo': {
+      if(G.handDone) return; // la mano ya había terminado — evita duplicar el punto
       sayAndShow('p2','▶ Rival al mazo. +1 pt.','#d4890a','Me voy al mazo');
       G.handDone=true; G.handWinner='p1'; G.fase='hand_done';
       renderGame();
