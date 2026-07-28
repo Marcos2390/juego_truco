@@ -427,7 +427,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   }
 }
 @media (orientation:landscape) and (max-height:520px){
-  #s-game4 > div{max-width:920px !important;}
+  #s-game4 > div{max-width:640px !important;}
   #g4-mesa{min-height:120px !important;}
   #g4-log{max-height:80px !important;}
 }
@@ -1101,9 +1101,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <div id="g4-seat-top" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px"></div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:420px;margin:0 auto">
         <div id="g4-seat-left" style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:70px"></div>
-        <div id="g4-mesa" style="flex:1;min-height:150px;display:flex;align-items:center;justify-content:center;
+        <div id="g4-mesa" style="flex:1;min-height:150px;max-width:280px;display:flex;align-items:center;justify-content:center;
           gap:8px;background:rgba(0,0,0,.2);border-radius:16px;padding:10px"></div>
         <div id="g4-seat-right" style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:70px"></div>
       </div>
@@ -2382,7 +2382,7 @@ function respondFlor4(role, raise){
   const myTeam = TEAM_OF4[role];
   if(raise){
     G4.logs.push({txt:`🌺 ${nameFor4(role)} sube: ¡Contra Flor al Resto!`, color:'#f8a5c2'});
-    G4.florPend = { level:'contraflor_resto', byRole:role, byTeam:myTeam, stake:getFalta4(), refuseVal:6 };
+    G4.florPend = { level:'contraflor_resto', byRole:role, byTeam:myTeam, stake:getFalta4(), refuseVal:3 };
     return true;
   }
   // "También Flor": gana el equipo con más puntos de Flor, 3 pts (no se suman, gana el mejor).
@@ -3256,7 +3256,7 @@ function florAccept() {
   }
   sayAndShow('p1','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
   syncOnline();
-  resolveFlorBattle(6);
+  resolveFlorBattle(3);
 }
 
 // El jugador (respondedor) escala a Contra Flor al Resto
@@ -3268,7 +3268,7 @@ function florCallContraflorResto() {
     return;
   }
   const stake = getFalta() + 6;
-  G.florPend = { level: 'contraflor_resto', by: 'p1', stake, refuseVal: 6 };
+  G.florPend = { level: 'contraflor_resto', by: 'p1', stake, refuseVal: 3 };
   G.florStage = 'await_resto_response';
   sayAndShow('p1','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
   G.fase = 'ai_turn';
@@ -3301,14 +3301,14 @@ function aiDecideFlorResponse() {
   const strong = G.p2FlorPts >= 30;
   if (strong) {
     const stake = getFalta() + 6;
-    G.florPend = { level: 'contraflor_resto', by: 'p2', stake, refuseVal: 6 };
+    G.florPend = { level: 'contraflor_resto', by: 'p2', stake, refuseVal: 3 };
     G.florStage = 'await_resto_response';
     sayAndShow('p2','🤖 ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
     G.fase = 'p_resp_flor';
     renderGame();
   } else {
     sayAndShow('p2','🤖 ¡La mía también es Flor!','#f8a5c2','La mía es flor');
-    resolveFlorBattle(6);
+    resolveFlorBattle(3);
   }
 }
 
@@ -3678,7 +3678,7 @@ function tallyMarks(score,color){
     if(cnt>=2)svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y1}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
     if(cnt>=3)svg+=`<line x1="${x2}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
     if(cnt>=4)svg+=`<line x1="${x1}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
-    if(cnt>=5)svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    if(cnt>=5){ const mx=(x1+x2)/2; svg+=`<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}" stroke="${cc}" stroke-width="${sw}" stroke-linecap="round"/>`; }
   }
   const TW=COLS*(GW+GAP)-GAP,TH=ROWS*(GH+GAP)-GAP;
   return `<svg viewBox="0 0 ${TW} ${TH}" width="${TW}" height="${TH}" style="display:block">${svg}</svg>`;
@@ -4775,30 +4775,28 @@ function anotadorLoad(){
 function anotadorSave(){
   try{ localStorage.setItem('anotador_state', JSON.stringify(ANOT)); }catch(e){}
 }
+function tallyGroupSVG(n, color){
+  // Dibuja UN grupo de hasta 5 tantos al estilo del anotador de truco de
+  // toda la vida: los primeros 4 tantos arman un cuadrito (un lado cada
+  // uno) y el 5to es el palito que lo cruza al medio — no 4 rayitas
+  // paradas con una diagonal tachándolas (eso es el tally a la inglesa).
+  const GW=18, GH=22, sw=2.4;
+  const x1=1.5, y1=1.5, x2=GW-1.5, y2=GH-1.5;
+  let svg = '';
+  if(n>=1) svg += `<line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado izquierdo
+  if(n>=2) svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y1}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado de arriba
+  if(n>=3) svg += `<line x1="${x2}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado derecho
+  if(n>=4) svg += `<line x1="${x1}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado de abajo (cierra el cuadro)
+  if(n>=5){ const mx=(x1+x2)/2; svg += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; } // palito del medio
+  return `<svg viewBox="0 0 ${GW} ${GH}" width="${GW}" height="${GH}" style="display:block;flex-shrink:0">${svg}</svg>`;
+}
 function renderRayas(elId, count, color){
   const el = document.getElementById(elId);
   if(!el) return;
   el.innerHTML = '';
   const groups = Math.floor(count/5), rem = count % 5;
-  const mkBundle = (n)=>{
-    const w = 6 + n*5;
-    const bundle = document.createElement('div');
-    bundle.style.cssText = `position:relative;width:${w}px;height:24px;margin:0 2px 4px`;
-    for(let i=0;i<n;i++){
-      const line=document.createElement('div');
-      line.style.cssText = `position:absolute;left:${3+i*5}px;top:2px;width:2px;height:20px;background:${color};border-radius:1px`;
-      bundle.appendChild(line);
-    }
-    return bundle;
-  };
-  for(let g=0; g<groups; g++){
-    const bundle = mkBundle(4);
-    const diag = document.createElement('div');
-    diag.style.cssText = `position:absolute;left:1px;top:10px;width:${6+4*5-2}px;height:2px;background:${color};transform:rotate(-32deg);border-radius:1px`;
-    bundle.appendChild(diag);
-    el.appendChild(bundle);
-  }
-  if(rem>0) el.appendChild(mkBundle(rem));
+  for(let g=0; g<groups; g++) el.insertAdjacentHTML('beforeend', tallyGroupSVG(5, color));
+  if(rem>0) el.insertAdjacentHTML('beforeend', tallyGroupSVG(rem, color));
 }
 function anotadorRender(){
   const s1=document.getElementById('anotador-score1'), s2=document.getElementById('anotador-score2');
@@ -6050,6 +6048,21 @@ ALTER PUBLICATION supabase_realtime ADD TABLE games;`;
 ══════════════════════════════════════════════════════════ */
 let _conns4 = {};   // host: {p2:DataConnection, p3:..., p4:...}
 let _players4 = []; // [{role:'p1', name, charKey}, ...]
+let _clientRoleMap4 = {}; // host: {clientId: 'p2'|'p3'|'p4'} — para que si alguien
+                          // se desconecta y vuelve a entrar (por ej. al girar el
+                          // celular y cortarse la red un instante), recupere su
+                          // mismo asiento en vez de que el sistema le asigne el
+                          // primer lugar libre (eso era lo que hacía que un
+                          // jugador "no encontrara" su lugar y quedara trabado).
+function getClientId4(){
+  let id = null;
+  try{ id = localStorage.getItem('truco_client_id'); }catch(e){}
+  if(!id){
+    id = 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+    try{ localStorage.setItem('truco_client_id', id); }catch(e){}
+  }
+  return id;
+}
 
 function setOnlineMode(n){
   const b2=document.getElementById('online-mode-2p-btn'), b4=document.getElementById('online-mode-4p-btn');
@@ -6092,6 +6105,7 @@ function copyRoomCode4(){
 function createRoom4(){
   if(_peer){ try{ _peer.destroy(); }catch(e){} _peer=null; _conn=null; }
   _conns4 = {};
+  _clientRoleMap4 = {};
   const code = genCode();
   ROOM=code; MY_ROLE='p1'; MODE='online4';
   loadVoices();
@@ -6122,46 +6136,80 @@ function createRoom4(){
   });
 
   _peer.on('connection', (connection)=>{
-    const nextRole = ['p2','p3','p4'].find(r=>!_conns4[r]);
-    if(!nextRole){ try{ connection.close(); }catch(e){} return; } // sala llena
-    _conns4[nextRole] = connection;
+    // OJO: antes acá se decidía el asiento (nextRole) apenas entraba la
+    // conexión, solo mirando qué lugares estaban libres en ese instante.
+    // Si un invitado se desconectaba un segundo (wifi que titila, el celular
+    // que se bloquea, girar de pantalla, etc.) y volvía a entrar, el sistema
+    // lo mandaba al primer asiento libre, que podía ser uno DISTINTO al que
+    // tenía antes. Eso dejaba el estado de la partida (que ya tenía cartas
+    // repartidas para p2/p3/p4) desincronizado con quién era cada uno, y el
+    // jugador se quedaba viendo una mesa que no le correspondía ("no
+    // encontró al participante"). Ahora esperamos el mensaje 'name' (que
+    // incluye un id de cliente guardado en este navegador) para decidir el
+    // asiento: si ese id ya tenía un asiento asignado y quedó libre, se lo
+    // devolvemos a él; si no, recién ahí se le da el primer libre.
+    let myRole4 = null;
 
     connection.on('data', (data)=>{
       if(data.type==='name'){
-        const existing = _players4.find(p=>p.role===nextRole);
-        if(existing){ existing.name=data.name||nextRole; existing.charKey=data.charKey||null; }
-        else _players4.push({role:nextRole, name:data.name||nextRole, charKey:data.charKey||null});
-        connection.send({type:'assign', role:nextRole, players:_players4});
+        let role = null;
+        const savedRole = data.clientId ? _clientRoleMap4[data.clientId] : null;
+        if(savedRole && !_conns4[savedRole]) role = savedRole; // reconexión: recupera su asiento
+        if(!role) role = ['p2','p3','p4'].find(r=>!_conns4[r]);
+        if(!role){ try{ connection.close(); }catch(e){} return; } // sala llena
+        myRole4 = role;
+        _conns4[role] = connection;
+        if(data.clientId) _clientRoleMap4[data.clientId] = role;
+
+        const existing = _players4.find(p=>p.role===role);
+        if(existing){ existing.name=data.name||role; existing.charKey=data.charKey||null; }
+        else _players4.push({role, name:data.name||role, charKey:data.charKey||null});
+        connection.send({type:'assign', role, players:_players4});
         broadcastRoster4();
         renderRoomSlots4('room-slots-4', _players4);
         renderTeams4('room-teams-4', _players4);
         const startBtn=document.getElementById('btn-start-4');
         if(startBtn) startBtn.style.display = _players4.length===4 ? 'block' : 'none';
         lobbySetWaiting('4p', code, _players4.length);
+        // Si esto es una reconexión en medio de una partida ya empezada, le
+        // reenviamos el estado actual para que se ponga al día en el acto
+        // en vez de quedar viendo una pantalla vieja o vacía.
+        if(G4){ try{ connection.send({type:'state4', state:G4}); }catch(e){} }
+        else if(SORTEO4){ try{ connection.send({type:'sorteo4-state', state:SORTEO4, teamOf:TEAM_OF4}); }catch(e){} }
       } else if(data.type==='voices'){
         // Guardo la voz de este invitado, la sumo a mi propio mapa remoto
         // (para escucharla acá también), y se la reenvío a los otros que ya
         // estaban conectados. A este mismo invitado le mando todas las voces
         // que ya tenía guardadas de los demás.
-        _rawVoiceBundles4[nextRole] = data.voices;
-        receiveVoicesFromPeer4(nextRole, data.voices);
+        if(!myRole4) return;
+        _rawVoiceBundles4[myRole4] = data.voices;
+        receiveVoicesFromPeer4(myRole4, data.voices);
         Object.entries(_conns4).forEach(([r,c])=>{
-          if(r!==nextRole && c && c.open) try{ c.send({type:'voices4', role:nextRole, voices:data.voices}); }catch(e){}
+          if(r!==myRole4 && c && c.open) try{ c.send({type:'voices4', role:myRole4, voices:data.voices}); }catch(e){}
         });
         Object.entries(_rawVoiceBundles4).forEach(([r,voices])=>{
-          if(r!==nextRole) try{ connection.send({type:'voices4', role:r, voices}); }catch(e){}
+          if(r!==myRole4) try{ connection.send({type:'voices4', role:r, voices}); }catch(e){}
         });
       }
     });
     connection.on('close', ()=>{
-      _players4 = _players4.filter(p=>p.role!==nextRole);
-      delete _conns4[nextRole];
+      if(!myRole4) return;
+      delete _conns4[myRole4];
+      // Si la partida ya arrancó (G4 existe), dejamos su lugar reservado
+      // (con su nombre) para que pueda reconectarse y retomarlo; si todavía
+      // estábamos en la sala de espera, sí lo sacamos de la lista.
+      if(!G4){ _players4 = _players4.filter(p=>p.role!==myRole4); }
       renderRoomSlots4('room-slots-4', _players4);
       renderTeams4('room-teams-4', _players4);
       const startBtn=document.getElementById('btn-start-4');
-      if(startBtn) startBtn.style.display='none';
+      if(startBtn) startBtn.style.display = _players4.length===4 && !G4 ? 'block' : 'none';
       broadcastRoster4();
       lobbySetWaiting('4p', code, _players4.length);
+      if(G4){
+        G4.logs = G4.logs || [];
+        G4.logs.push({txt:'⚠️ '+(nameFor4(myRole4)||myRole4)+' se desconectó. Puede volver a entrar con el mismo código.', color:'#e06060'});
+        broadcastState4();
+      }
     });
   });
 
@@ -6183,7 +6231,7 @@ function joinRoom4(){
     _conn = _peer.connect('truco4-'+code, { reliable:true });
 
     _conn.on('open', ()=>{
-      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey });
+      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey, clientId:getClientId4() });
       sendVoicesToPeer(_conn);
       showMsg('join-msg-4','🟢 Conectado — esperando a los demás...','#7fba5a');
       const slotsEl=document.getElementById('room-slots-4-guest');
@@ -6208,9 +6256,13 @@ function joinRoom4(){
         SORTEO4 = data.state;
         TEAM_OF4 = data.teamOf;
         if(TEAM_OF4) SEAT_ORDER4 = computeSeatOrder4();
+        show('s-game4'); // por si esto llega tras una reconexión y seguíamos en el lobby
+        lobbySetPlaying();
         renderSorteo4();
       } else if(data.type==='state4'){
         G4 = data.state;
+        show('s-game4'); // idem: reconexión en medio de la partida
+        lobbySetPlaying();
         renderGame4();
       } else if(data.type==='voices4'){
         receiveVoicesFromPeer4(data.role, data.voices);
@@ -6240,13 +6292,17 @@ function startRoom4(){
 let SORTEO4 = null;
 
 function iniciarSorteo4(){
-  const d = crearMazo();
+  // Antes se apartaba una carta como "muestra" antes de repartir; eso no
+  // pinta nada acá (la muestra real es la del juego, no la del sorteo de
+  // pareja) y solo sumaba confusión visual, así que ahora se reparte
+  // directo del mazo completo.
+  const deck = crearMazo();
   SORTEO4 = {
-    muestra: d[0],
-    deck: d.slice(1),
-    order: ['p1','p2','p3','p4'],
+    deck,
+    order: ['p1','p2','p3','p4'],        // orden fijo de la vuelta
+    activeRoles: ['p1','p2','p3','p4'],  // quiénes siguen recibiendo cartas
     turnIdx: 0,
-    history: [],
+    history: [],                          // [{role,card}] en el orden real en que salieron
     kingRoles: [],
     phase: 'drawing',
     teams: null,
@@ -6257,15 +6313,25 @@ function iniciarSorteo4(){
   const deckEl=document.getElementById('g4-sorteo-deck');
   if(deckEl) deckEl.dataset.count = '';
 }
-function turnoSorteo4(){ return SORTEO4 ? SORTEO4.order[SORTEO4.turnIdx % 4] : null; }
+function turnoSorteo4(){
+  if(!SORTEO4 || !SORTEO4.activeRoles.length) return null;
+  return SORTEO4.activeRoles[SORTEO4.turnIdx % SORTEO4.activeRoles.length];
+}
 function sacarCartaSorteo4(role){
   if(!SORTEO4 || SORTEO4.phase!=='drawing') return false;
   if(turnoSorteo4()!==role) return false;
   if(!SORTEO4.deck.length) return false; // no debería pasar (sobran cartas de sobra)
   const card = SORTEO4.deck.shift();
   SORTEO4.history.push({role, card});
-  if(card.v===12 && !SORTEO4.kingRoles.includes(role)) SORTEO4.kingRoles.push(role);
-  SORTEO4.turnIdx++;
+  if(card.v===12){
+    if(!SORTEO4.kingRoles.includes(role)) SORTEO4.kingRoles.push(role);
+    // Sacó rey: ya no le tocan más cartas. Lo sacamos de la ronda; como
+    // no tocamos turnIdx, el índice queda apuntando naturalmente al que
+    // seguía en el orden (el array se corrió un lugar al filtrar a este).
+    SORTEO4.activeRoles = SORTEO4.activeRoles.filter(r=>r!==role);
+  } else {
+    SORTEO4.turnIdx++;
+  }
   if(SORTEO4.kingRoles.length>=2){
     const teamA = SORTEO4.kingRoles.slice(0,2);
     const teamB = ROLES4.filter(r=>!teamA.includes(r));
@@ -6309,15 +6375,17 @@ function handleSorteoDrawClick(){
   if(MY_ROLE==='p1'){ if(sacarCartaSorteo4('p1')) broadcastSorteo4(); }
   else sacarCartaSorteo4Remoto();
 }
-let _sorteoAnimatedCount = 0;
+let _sorteoAnimatedCounts = {p1:0,p2:0,p3:0,p4:0};
 
 function renderSorteo4(){
   if(!SORTEO4) return;
-  if(SORTEO4.history.length===0) _sorteoAnimatedCount = 0;
+  if(SORTEO4.history.length===0) _sorteoAnimatedCounts = {p1:0,p2:0,p3:0,p4:0};
   const nameFor = r => (_players4.find(p=>p.role===r)||{}).name || r;
 
+  // Ya no se muestra ninguna "muestra" acá: es del juego, no del sorteo de
+  // pareja, y solo generaba confusión con la carta de la muestra real.
   const muestraEl=document.getElementById('g4-sorteo-muestra');
-  if(muestraEl) muestraEl.innerHTML = `<div style="color:#a89060;font-size:11px;font-family:Georgia,serif;margin-bottom:4px">Muestra (aparte)</div>${cardHTML(SORTEO4.muestra,{small:true})}`;
+  if(muestraEl) muestraEl.innerHTML = '';
 
   // Mazo boca abajo apilado en el centro de la mesa (se achica a medida que se reparte)
   const deckEl=document.getElementById('g4-sorteo-deck');
@@ -6335,36 +6403,55 @@ function renderSorteo4(){
   const order = rotateFrom4(MY_ROLE);
   const posForRole = { [order[0]]:'bottom', [order[1]]:'right', [order[2]]:'top', [order[3]]:'left' };
 
-  ['top','left','right','bottom'].forEach(pos=>{
-    const el = document.getElementById('g4-sorteo-slot-'+pos);
-    if(el) el.innerHTML = '';
-  });
+  // Cartas de cada jugador agrupadas en orden: se van a dibujar apiladas
+  // unas sobre otras (la última que le tocó, arriba de todo), en vez de
+  // amontonarse una al lado de la otra como pasaba antes.
+  const cardsByRole = {p1:[],p2:[],p3:[],p4:[]};
+  SORTEO4.history.forEach(h=> cardsByRole[h.role].push(h.card));
 
-  SORTEO4.history.forEach((h, i)=>{
-    const pos = posForRole[h.role] || 'bottom';
+  ROLES4.forEach(role=>{
+    const pos = posForRole[role] || 'bottom';
     const slotEl = document.getElementById('g4-sorteo-slot-'+pos);
     if(!slotEl) return;
-    const isKing = h.card.v===12;
-    const isNew = i >= _sorteoAnimatedCount;
-    const cardWrap = document.createElement('div');
-    cardWrap.className = isNew ? 'sorteo-dealt-card' : '';
-    cardWrap.innerHTML = cardHTML(h.card,{small:true});
+    slotEl.innerHTML = '';
+
+    const cards = cardsByRole[role];
+    const gotKing = SORTEO4.kingRoles.includes(role);
+    const pile = document.createElement('div');
+    pile.style.cssText = 'position:relative;width:62px;height:94px';
+
+    cards.forEach((card,i)=>{
+      const isNew = i >= (_sorteoAnimatedCounts[role]||0);
+      const isTop = i === cards.length-1;
+      const cardWrap = document.createElement('div');
+      cardWrap.className = isNew ? 'sorteo-dealt-card' : '';
+      // Cada carta queda apilada arriba de la anterior: mismo lugar, un
+      // pelín corrida y rotada para que se note el bulto de la pila, con
+      // la más nueva siempre tapando a las de abajo (z-index creciente).
+      const offset = Math.min(i, 6) * 2;
+      const rot = (i%2===0 ? -1 : 1) * Math.min(i, 5) * 2.2;
+      cardWrap.style.cssText = `position:absolute;left:0;top:${-offset}px;transform:rotate(${rot}deg);z-index:${i}`;
+      cardWrap.innerHTML = cardHTML(card,{small:true});
+      pile.appendChild(cardWrap);
+      if(isNew && deckEl){
+        const deckRect = deckEl.getBoundingClientRect();
+        const cardRect = cardWrap.getBoundingClientRect();
+        const dx = (deckRect.left + deckRect.width/2) - (cardRect.left + cardRect.width/2);
+        const dy = (deckRect.top + deckRect.height/2) - (cardRect.top + cardRect.height/2);
+        cardWrap.style.setProperty('--dx0', dx+'px');
+        cardWrap.style.setProperty('--dy0', dy+'px');
+        cardWrap.style.setProperty('--r0', (Math.random()*50-25).toFixed(0)+'deg');
+      }
+    });
+    slotEl.appendChild(pile);
+
     const label = document.createElement('div');
-    label.style.cssText = `font-size:9px;font-family:Georgia,serif;color:${isKing?'#ffd700':'#a89060'};margin-top:2px`;
-    label.textContent = nameFor(h.role) + (isKing ? ' 👑' : '');
-    slotEl.appendChild(cardWrap);
+    label.style.cssText = `font-size:9px;font-family:Georgia,serif;color:${gotKing?'#ffd700':'#a89060'};margin-top:2px;text-align:center`;
+    label.textContent = nameFor(role) + (gotKing ? ' 👑 ¡Rey!' : '');
     slotEl.appendChild(label);
-    if(isNew && deckEl){
-      const deckRect = deckEl.getBoundingClientRect();
-      const cardRect = cardWrap.getBoundingClientRect();
-      const dx = (deckRect.left + deckRect.width/2) - (cardRect.left + cardRect.width/2);
-      const dy = (deckRect.top + deckRect.height/2) - (cardRect.top + cardRect.height/2);
-      cardWrap.style.setProperty('--dx0', dx+'px');
-      cardWrap.style.setProperty('--dy0', dy+'px');
-      cardWrap.style.setProperty('--r0', (Math.random()*50-25).toFixed(0)+'deg');
-    }
+
+    _sorteoAnimatedCounts[role] = cards.length;
   });
-  _sorteoAnimatedCount = SORTEO4.history.length;
 
   const turnEl=document.getElementById('g4-sorteo-turn');
   const btnEl=document.getElementById('g4-sorteo-btn');
@@ -6747,12 +6834,12 @@ function handleRemoteAction(action, payload){
     }
     case 'florAccept': {
       sayAndShow('p2','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
-      resolveFlorBattle(6);
+      resolveFlorBattle(3);
       break;
     }
     case 'florCallContraflorResto': {
       const stakeF = getFalta()+6;
-      G.florPend={level:'contraflor_resto', by:'p2', stake:stakeF, refuseVal:6};
+      G.florPend={level:'contraflor_resto', by:'p2', stake:stakeF, refuseVal:3};
       G.florStage='await_resto_response';
       sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
       G.fase='p_resp_flor';
