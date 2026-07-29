@@ -118,22 +118,55 @@ h2{font-size:22px;font-weight:700;color:var(--gold);text-align:center;letter-spa
 
 /* Unified wood buttons — estilo profesional grafito/dorado */
 .btn-wood-main{
-  width:220px;max-width:80vw;margin:0 auto;padding:8px 16px;border-radius:8px;cursor:pointer;
+  width:220px;max-width:80vw;margin:0 auto;padding:10px 18px;border-radius:10px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(155deg,rgba(42,48,46,.97) 0%,rgba(28,34,32,.98) 50%,rgba(18,22,21,.99) 100%);
-  border:1px solid rgba(212,175,90,.35);
-  box-shadow:0 3px 10px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.03),inset 0 1px 0 rgba(255,220,150,.1);
+  background:linear-gradient(180deg,#141414 0%,#0a0a0a 100%);
+  border:1.5px solid #c9a84c;
+  box-shadow:0 4px 14px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(0,0,0,.4);
   transition:all .2s cubic-bezier(.34,1.56,.64,1);
   position:relative;overflow:hidden;
 }
-.btn-wood-main::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
-  background:linear-gradient(45deg,transparent 40%,rgba(255,215,120,.12) 50%,transparent 60%);
-  transform:translateX(-100%);transition:transform .6s ease;pointer-events:none;}
-.btn-wood-main:hover{border-color:rgba(230,190,100,.55);box-shadow:0 6px 20px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.04),inset 0 1px 0 rgba(255,220,150,.15);transform:translateY(-2px);}
-.btn-wood-main:hover::after{transform:translateX(100%);}
-.btn-wood-main:active{transform:scale(.97) translateY(0);filter:brightness(.92);}
-.btn-wood-main.pressing{animation:btnPress .18s ease forwards;}
-.bw-icon{display:none!important;}
+.btn-wood-main::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:10px;
+  padding:1.5px;
+  background:linear-gradient(180deg,rgba(201,168,76,.4) 0%,rgba(201,168,76,0) 60%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  pointer-events:none;
+  opacity:.6;
+}
+.btn-wood-main .bw-text{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  position:relative;z-index:2;
+}
+.btn-wood-main .bw-title{
+  color:#ffffff !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 10px rgba(201,168,76,.25) !important;
+  font-weight:800 !important;
+  letter-spacing:.8px;
+  font-size:15px;
+  text-transform:uppercase;
+}
+.btn-wood-main:hover{
+  transform:translateY(-2px);
+  border-color:#e8c96a;
+  box-shadow:0 8px 24px rgba(0,0,0,.7),0 0 12px rgba(201,168,76,.15),inset 0 1px 0 rgba(255,255,255,.1);
+}
+.btn-wood-main:hover::after{
+  opacity:1;
+  background:linear-gradient(180deg,rgba(232,201,106,.5) 0%,rgba(232,201,106,0) 50%);
+}
+.btn-wood-main:active{
+  transform:translateY(0) scale(.98);
+  border-color:#a68a3a;
+}.bw-icon{display:none!important;}
 .bw-icon img{width:26px;height:26px;object-fit:contain;display:block;}
 .bw-text{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;}
 .bw-title{font-family:Georgia,serif;font-size:14px;font-weight:700;
@@ -493,6 +526,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);openCharsFor('online')">
         <span class="bw-text"><span class="bw-title">Partida Online</span></span>
+      </button>
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-tournament')">
+        <span class="bw-text"><span class="bw-title">🏆 Campeonato</span></span>
       </button>
 
       <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-campaign')">
@@ -7144,6 +7180,399 @@ window.addEventListener('DOMContentLoaded',()=>{
   }, {once:true});
 });
 
+
+/* ===================== SISTEMA DE CAMPEONATO ===================== */
+let tournament = {
+  code: null,
+  isHost: false,
+  mode: '2v2',
+  size: 4,
+  players: [],
+  bracket: [],
+  currentRound: 0,
+  myMatch: null
+};
+
+function generateTournamentCode(){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let code='';
+  for(let i=0;i<4;i++) code+=chars.charAt(Math.floor(Math.random()*chars.length));
+  return code;
+}
+
+function createTournament(){
+  tournament.code = generateTournamentCode();
+  tournament.isHost = true;
+  tournament.mode = '2v2';
+  tournament.size = 4;
+  tournament.players = [{id:'host', name:'Tú (Organizador)', isHost:true}];
+  tournament.bracket = [];
+  tournament.currentRound = 0;
+
+  document.getElementById('tournament-code-display').textContent = tournament.code;
+  document.getElementById('tournament-role').textContent = 'Organizador';
+  document.getElementById('tournament-max-players').textContent = tournament.size;
+  document.getElementById('tournament-player-count').textContent = tournament.players.length;
+  document.getElementById('tournament-start-area').style.display = 'block';
+  document.getElementById('tournament-admin-controls').style.display = 'block';
+
+  renderTournamentPlayers();
+  show('s-tournament');
+  document.getElementById('tournament-menu').style.display = 'none';
+  document.getElementById('tournament-lobby').style.display = 'block';
+  document.getElementById('tournament-bracket').style.display = 'none';
+  console.log('Torneo creado:', tournament.code);
+}
+
+function joinTournament(){
+  const code = document.getElementById('tournament-join-code').value.toUpperCase().trim();
+  if(code.length!==4){ alert('Ingresa un código de 4 letras'); return; }
+
+  tournament.code = code;
+  tournament.isHost = false;
+  tournament.players = [{id:'me', name:'Tú', isHost:false}];
+
+  document.getElementById('tournament-code-display').textContent = code;
+  document.getElementById('tournament-role').textContent = 'Jugador';
+  document.getElementById('tournament-start-area').style.display = 'none';
+  document.getElementById('tournament-admin-controls').style.display = 'none';
+
+  renderTournamentPlayers();
+  show('s-tournament');
+  document.getElementById('tournament-menu').style.display = 'none';
+  document.getElementById('tournament-lobby').style.display = 'block';
+  document.getElementById('tournament-bracket').style.display = 'none';
+
+  alert('Te uniste al torneo '+code+'.\nEspera a que el organizador inicie.');
+}
+
+function updateTournamentConfig(){
+  if(!tournament.isHost) return;
+  tournament.mode = document.getElementById('tournament-mode').value;
+  tournament.size = parseInt(document.getElementById('tournament-size').value);
+  document.getElementById('tournament-max-players').textContent = tournament.size;
+}
+
+function validateTournamentSize() {
+  const mode = document.getElementById('tournament-mode').value;
+  const input = document.getElementById('tournament-size');
+  const hint = document.getElementById('tournament-size-hint');
+  let val = parseInt(input.value) || 4;
+
+  if (mode === '1v1') {
+    // Cualquier número >= 2
+    if (val < 2) val = 2;
+    if (val > 64) val = 64;
+    hint.textContent = 'Cualquier número (2-64)';
+    hint.style.color = '#8bc34a';
+  } else {
+    // 2vs2: múltiplos de 2 (2,4,6,8...)
+    if (val < 2) val = 2;
+    if (val > 64) val = 64;
+    if (val % 2 !== 0) {
+      val = val + 1; // Redondear al siguiente par
+      hint.textContent = 'Ajustado a múltiplo de 2';
+      hint.style.color = '#ff9800';
+    } else {
+      hint.textContent = 'Múltiplo de 2 (2,4,6...)';
+      hint.style.color = '#8bc34a';
+    }
+  }
+
+  input.value = val;
+  updateTournamentConfig();
+}
+
+
+function renderTournamentPlayers(){
+  const list = document.getElementById('tournament-player-list');
+  let html = '';
+  tournament.players.forEach((p,i)=>{
+    html += '<div>'+(i===0?'🟢':'🟡')+' '+p.name+'</div>';
+  });
+  for(let i=tournament.players.length; i<tournament.size; i++){
+    html += '<div style="opacity:.4">⚪ Vacío '+(i+1)+'</div>';
+  }
+  list.innerHTML = html;
+  document.getElementById('tournament-player-count').textContent = tournament.players.length;
+}
+
+function startTournamentBracket(){
+  if(!tournament.isHost){ alert('Solo el organizador puede iniciar'); return; }
+  if(tournament.players.length < tournament.size){
+    if(!confirm('Faltan jugadores. ¿Iniciar con bots/vacantes?')) return;
+  }
+
+  buildBracket();
+  showBracket();
+
+  document.getElementById('tournament-lobby').style.display = 'none';
+  document.getElementById('tournament-bracket').style.display = 'block';
+}
+
+function buildBracket(){
+  let entrants = tournament.players.slice();
+  // Llenar con bots hasta el tamaño deseado
+  while(entrants.length < tournament.size){
+    entrants.push({id:'bot_'+entrants.length, name:'Bot '+(entrants.length+1), isBot:true});
+  }
+  // Mezclar aleatoriamente
+  for(let i=entrants.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [entrants[i], entrants[j]] = [entrants[j], entrants[i]];
+  }
+
+  tournament.bracket = [];
+  const pairSize = tournament.mode==='2v2' ? 2 : 1;
+
+  // Calcular número de "equipos" o "slots" individuales
+  const numSlots = Math.ceil(entrants.length / pairSize);
+  const nextPow2 = Math.pow(2, Math.ceil(Math.log2(numSlots)));
+  const numByes = nextPow2 - numSlots;
+
+  // Crear lista de equipos (cada equipo es un array de jugadores)
+  let teams = [];
+  for(let i=0; i<entrants.length; i+=pairSize){
+    teams.push(entrants.slice(i, i+pairSize));
+  }
+
+  // Los primeros 'numByes' equipos avanzan automáticamente (bye)
+  let round1 = [];
+  let byeTeams = teams.slice(0, numByes);
+  let remainingTeams = teams.slice(numByes);
+
+  // Crear partidos con bye (ganador predefinido)
+  for(let i=0; i<byeTeams.length; i++){
+    round1.push({
+      id: 'M'+i,
+      teamA: byeTeams[i],
+      teamB: [{id:'bye', name:'BYE', isBye:true}],
+      winner: byeTeams[i], // Ganador automático
+      roomCode: null
+    });
+  }
+
+  // Crear partidos reales entre los equipos restantes
+  for(let i=0; i<remainingTeams.length; i+=2){
+    round1.push({
+      id: 'M'+(numByes + Math.floor(i/2)),
+      teamA: remainingTeams[i],
+      teamB: remainingTeams[i+1] || [{id:'bye', name:'BYE', isBye:true}],
+      winner: null,
+      roomCode: generateTournamentCode()
+    });
+  }
+
+  tournament.bracket.push(round1);
+  tournament.currentRound = 0;
+}
+
+function showBracket(){
+  const container = document.getElementById('bracket-container');
+  let html = '';
+
+  tournament.bracket.forEach((round, rIdx)=>{
+    html += '<div style="margin-bottom:14px;border-left:3px solid #ffd700;padding-left:8px">';
+    html += '<div style="color:#ffd700;font-weight:bold;margin-bottom:6px">Ronda '+(rIdx+1)+'</div>';
+    round.forEach(m=>{
+      const isByeMatch = m.teamB.length === 1 && m.teamB[0].isBye;
+      const tA = m.teamA.map(x=>x.name).join(' + ');
+      const tB = m.teamB.map(x=>x.name).join(' + ');
+      const w = m.winner ? ' ✅ '+m.winner.map(x=>x.name).join(' + ') : '';
+
+      if(isByeMatch){
+        html += '<div style="background:rgba(139,195,74,.1);border-radius:4px;padding:6px 8px;margin-bottom:6px;border-left:3px solid #8bc34a">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="color:#e8dcb5;font-weight:600">'+tA+'</span>'+
+          '<span style="color:#8bc34a;font-size:11px;font-weight:bold">BYE → Avanza automático</span></div>'+
+          '<div style="font-size:11px;color:#8bc34a;margin-top:4px">'+w+'</div></div>';
+      } else {
+        html += '<div style="background:rgba(255,255,255,.05);border-radius:4px;padding:6px 8px;margin-bottom:6px">'+
+          '<div style="display:flex;justify-content:space-between">'+
+          '<span>'+tA+'</span><span style="color:#ffd700">VS</span><span>'+tB+'</span></div>'+
+          '<div style="font-size:11px;color:#8bc34a;margin-top:4px">Sala: '+m.roomCode+w+'</div></div>';
+      }
+    });
+    html += '</div>';
+  });
+
+  let remaining = tournament.bracket[tournament.bracket.length-1].length;
+  let future = 1;
+  while(remaining > 1){
+    html += '<div style="margin-bottom:14px;border-left:3px solid #555;padding-left:8px;opacity:.5">';
+    html += '<div style="color:#888;font-weight:bold;margin-bottom:6px">Ronda '+(tournament.bracket.length+future)+'</div>';
+    for(let k=0;k<Math.ceil(remaining/2);k++){
+      html += '<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:6px 8px;margin-bottom:6px;color:#888">Por definir...</div>';
+    }
+    html += '</div>';
+    remaining = Math.ceil(remaining/2);
+    future++;
+  }
+
+  container.innerHTML = html;
+  detectMyMatch();
+}
+
+function detectMyMatch(){
+  const round = tournament.bracket[tournament.currentRound];
+  if(!round) return;
+
+  const myId = tournament.isHost ? 'host' : 'me';
+  const myMatch = round.find(m => 
+    m.teamA.some(p=>p.id===myId) || m.teamB.some(p=>p.id===myId)
+  );
+
+  const infoBox = document.getElementById('tournament-match-info');
+  if(myMatch){
+    const isA = myMatch.teamA.some(p=>p.id===myId);
+    const rival = isA ? myMatch.teamB : myMatch.teamA;
+    const rivalName = rival.map(x=>x.name).join(' + ');
+
+    document.getElementById('tournament-match-details').textContent = 
+      'Vs '+rivalName+' ('+(tournament.mode==='2v2'?'Parejas':'Individual')+')';
+    document.getElementById('tournament-match-code').textContent = myMatch.roomCode;
+    infoBox.style.display = 'block';
+    tournament.myMatch = myMatch;
+  } else {
+    infoBox.style.display = 'none';
+    tournament.myMatch = null;
+  }
+}
+
+function enterTournamentMatch(){
+  if(!tournament.myMatch) return;
+  document.getElementById('join-code').value = tournament.myMatch.roomCode;
+  show('s-online');
+}
+
+function nextTournamentRound(){
+  if(!tournament.isHost){ alert('Solo el organizador avanza la ronda'); return; }
+
+  const prevRound = tournament.bracket[tournament.bracket.length-1];
+  const winners = prevRound.map(m => m.winner).filter(w=>w);
+  if(winners.length < prevRound.length){
+    alert('Aún faltan partidos por completar. Marca los ganadores manualmente o espera resultados.');
+    return;
+  }
+
+  if(winners.length === 1){
+    alert('🏆 ¡Campeón: '+winners[0].map(x=>x.name).join(' + ')+'!');
+    return;
+  }
+
+  let nextRound = [];
+  for(let i=0; i<winners.length; i+=2){
+    const teamB = winners[i+1];
+    // Si teamB es undefined (número impar, no debería pasar con byes), crear bye
+    if(!teamB){
+      nextRound.push({
+        id: 'R'+tournament.bracket.length+'M'+Math.floor(i/2),
+        teamA: winners[i],
+        teamB: [{id:'bye', name:'BYE', isBye:true}],
+        winner: winners[i], // Avanza automáticamente
+        roomCode: null
+      });
+    } else {
+      nextRound.push({
+        id: 'R'+tournament.bracket.length+'M'+Math.floor(i/2),
+        teamA: winners[i],
+        teamB: teamB,
+        winner: null,
+        roomCode: generateTournamentCode()
+      });
+    }
+  }
+  tournament.bracket.push(nextRound);
+  tournament.currentRound++;
+  showBracket();
+}
+
+function resetTournament(){
+  tournament = {
+    code: null, isHost: false, mode: '2v2', size: 4,
+    players: [], bracket: [], currentRound: 0, myMatch: null
+  };
+  document.getElementById('tournament-menu').style.display = 'block';
+  document.getElementById('tournament-lobby').style.display = 'none';
+  document.getElementById('tournament-bracket').style.display = 'none';
+  document.getElementById('tournament-join-code').value = '';
+}
+
 </script>
+<!-- ===================== CAMPEONATO / TORNEO ===================== -->
+<div id="s-tournament" class="screen" style="display:none">
+  <div class="wood-panel" style="max-width:420px;width:92vw;margin:0 auto;padding:22px 18px;">
+    <h2 class="wood-title" style="margin-bottom:14px">🏆 Campeonato</h2>
+
+    <div id="tournament-menu">
+      <p style="color:#d4c48c;text-align:center;font-size:15px;margin-bottom:18px">
+        Crea un torneo o únete con código
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+        <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);createTournament()">
+          <span class="bw-text"><span class="bw-title">Crear Torneo</span></span>
+        </button>
+        <div style="display:flex;gap:8px;width:100%;max-width:260px">
+          <input id="tournament-join-code" placeholder="Código (4 letras)" maxlength="4" style="flex:1;text-align:center;text-transform:uppercase;font-size:18px;padding:10px;border-radius:6px;border:1px solid #d4b45a;background:#0f1a0f;color:#e8dcb5">
+          <button class="btn-wood" onclick="woodClick(this);joinTournament()">Unirse</button>
+        </div>
+        <button class="btn-wood" onclick="woodClick(this);show('s-menu')">⬅ Volver</button>
+      </div>
+    </div>
+
+    <div id="tournament-lobby" style="display:none">
+      <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="color:#ffd700;font-size:13px">Código: <b id="tournament-code-display" style="font-size:18px;letter-spacing:2px">----</b></span>
+          <span id="tournament-role" style="color:#8bc34a;font-size:12px">Organizador</span>
+        </div>
+        <div style="font-size:13px;color:#a0b595;margin-bottom:8px">
+          Modo: <select id="tournament-mode" onchange="validateTournamentSize()" style="background:#1a2a1a;color:#e8dcb5;border:1px solid #d4b45a;border-radius:4px;padding:2px 6px">
+            <option value="2v2">Parejas (2 vs 2)</option>
+            <option value="1v1">Individual (1 vs 1)</option>
+          </select>
+        </div>
+        <div style="font-size:13px;color:#a0b595;margin-bottom:8px">
+          Participantes: <input type="number" id="tournament-size" value="4" min="2" max="64" onchange="validateTournamentSize()" style="background:#1a2a1a;color:#e8dcb5;border:1px solid #d4b45a;border-radius:4px;padding:2px 6px;width:60px;text-align:center">
+          <span id="tournament-size-hint" style="font-size:11px;color:#8bc34a;margin-left:6px">Mínimo 2</span>
+        </div>
+      </div>
+
+      <h3 style="color:#d4c48c;font-size:15px;margin:10px 0 6px">Jugadores (<span id="tournament-player-count">1</span>/<span id="tournament-max-players">4</span>)</h3>
+      <div id="tournament-player-list" style="min-height:60px;background:rgba(0,0,0,.2);border-radius:6px;padding:8px;margin-bottom:14px;font-size:14px;color:#c8d6b0">
+        <div>🟢 Tú (Organizador)</div>
+      </div>
+
+      <div id="tournament-start-area" style="text-align:center;display:none">
+        <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);startTournamentBracket()" style="margin-bottom:10px">
+          <span class="bw-text"><span class="bw-title">Iniciar Campeonato</span></span>
+        </button>
+      </div>
+
+      <button class="btn-wood" onclick="woodClick(this);show('s-tournament');resetTournament()">⬅ Salir</button>
+    </div>
+
+    <div id="tournament-bracket" style="display:none">
+      <h3 style="color:#ffd700;font-size:16px;margin-bottom:10px;text-align:center">📋 Llave del Torneo</h3>
+      <div id="bracket-container" style="background:rgba(0,0,0,.25);border-radius:8px;padding:12px;margin-bottom:14px;min-height:120px;font-size:13px;color:#e8dcb5">
+      </div>
+
+      <div id="tournament-match-info" style="display:none;background:rgba(0,56,168,.15);border:1px solid #0038a8;border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="color:#ffd700;font-weight:bold;margin-bottom:6px">Tu próximo partido</div>
+        <div id="tournament-match-details" style="color:#fff;font-size:14px"></div>
+        <div style="margin-top:8px;font-size:12px;color:#a0b595">Sala: <b id="tournament-match-code" style="color:#ffd700;letter-spacing:1px">----</b></div>
+        <button class="btn-wood" onclick="woodClick(this);enterTournamentMatch()" style="margin-top:8px">Entrar a la Sala</button>
+      </div>
+
+      <div id="tournament-admin-controls" style="display:none;margin-bottom:14px;text-align:center">
+        <button class="btn-wood" onclick="woodClick(this);nextTournamentRound()">Avanzar Ronda</button>
+      </div>
+
+      <button class="btn-wood" onclick="woodClick(this);show('s-tournament');resetTournament()">⬅ Finalizar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
