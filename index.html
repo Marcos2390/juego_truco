@@ -6347,11 +6347,26 @@ function sacarCartaSorteo4(role){
 
 function iniciarSorteoHost4(){
   iniciarSorteo4();
+  // Reparto automático: el host saca carta por carta cada 900 ms
+  if(window._sorteo4AutoInterval) clearInterval(window._sorteo4AutoInterval);
+  window._sorteo4AutoInterval = setInterval(()=>{
+    if(!SORTEO4 || SORTEO4.phase !== 'drawing'){
+      if(window._sorteo4AutoInterval){ clearInterval(window._sorteo4AutoInterval); window._sorteo4AutoInterval=null; }
+      return;
+    }
+    const role = turnoSorteo4();
+    if(!role){
+      if(window._sorteo4AutoInterval){ clearInterval(window._sorteo4AutoInterval); window._sorteo4AutoInterval=null; }
+      return;
+    }
+    if(sacarCartaSorteo4(role)) broadcastSorteo4();
+  }, 900);
+
   Object.entries(_conns4).forEach(([role, conn])=>{
     if(conn.removeAllListeners) conn.removeAllListeners('data');
     conn.on('data', (data)=>{
       if(data.type==='sorteo4-draw'){
-        if(sacarCartaSorteo4(role)) broadcastSorteo4();
+        // Ignorado: el reparto es automático, no necesita clics de clientes
       } else if(data.type==='action4' && data.action==='play'){
         if(jugarCarta4(role, data.cardId)) broadcastState4();
       }
@@ -6364,6 +6379,7 @@ function broadcastSorteo4(){
   Object.values(_conns4).forEach(c=>{ if(c&&c.open) c.send({type:'sorteo4-state', state:SORTEO4, teamOf:TEAM_OF4}); });
   renderSorteo4();
   if(SORTEO4.phase==='done' && MY_ROLE==='p1'){
+    if(window._sorteo4AutoInterval){ clearInterval(window._sorteo4AutoInterval); window._sorteo4AutoInterval=null; }
     setTimeout(()=>{ iniciarPartida4Host(); }, 2200); // pausa para que se vea el resultado del sorteo
   }
 }
@@ -6371,9 +6387,11 @@ function sacarCartaSorteo4Remoto(){
   if(_conn && _conn.open) _conn.send({type:'sorteo4-draw'});
 }
 function handleSorteoDrawClick(){
-  if(!SORTEO4 || SORTEO4.phase!=='drawing' || turnoSorteo4()!==MY_ROLE) return;
-  if(MY_ROLE==='p1'){ if(sacarCartaSorteo4('p1')) broadcastSorteo4(); }
-  else sacarCartaSorteo4Remoto();
+  if(!SORTEO4 || SORTEO4.phase!=='drawing') return;
+  if(MY_ROLE !== 'p1') return; // Solo el host puede forzar (fallback manual)
+  const role = turnoSorteo4();
+  if(!role) return;
+  if(sacarCartaSorteo4(role)) broadcastSorteo4();
 }
 let _sorteoAnimatedCounts = {p1:0,p2:0,p3:0,p4:0};
 
@@ -6458,8 +6476,19 @@ function renderSorteo4(){
   const resEl=document.getElementById('g4-sorteo-result');
   if(SORTEO4.phase==='drawing'){
     const actual=turnoSorteo4();
-    if(turnEl) turnEl.textContent = actual===MY_ROLE ? '🟢 ¡Te toca sacar carta!' : `Turno de ${nameFor(actual)}...`;
-    if(btnEl) btnEl.style.display = actual===MY_ROLE ? 'block' : 'none';
+    const isHost = MY_ROLE === 'p1';
+    if(turnEl){
+      if(isHost && actual === MY_ROLE){
+        turnEl.textContent = '🟢 Repartiendo automáticamente...';
+      } else {
+        turnEl.textContent = `Turno de ${nameFor(actual)}...`;
+      }
+    }
+    if(btnEl){
+      // Solo el host ve el botón como fallback manual; los demás solo observan
+      btnEl.style.display = isHost ? 'block' : 'none';
+      if(isHost) btnEl.textContent = '🎴 Sacar carta (auto)';
+    }
     if(resEl) resEl.textContent = '';
   } else {
     if(turnEl) turnEl.textContent = '';
