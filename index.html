@@ -1113,7 +1113,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px"></div>
 
-      <div id="g4-actions" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 0"></div>
+      <div id="g4-actions" style="display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:4px 0"></div>
 
       <div id="g4-log" style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px;max-height:110px;overflow-y:auto;
         font-family:Georgia,serif;font-size:11px;color:#c8b890;display:flex;flex-direction:column-reverse;gap:3px"></div>
@@ -2641,10 +2641,10 @@ function renderGame4(){
 /* ── Botones de canto/toque (envido, truco, mazo) para 4 jugadores ── */
 function mkBtn4(label, onclick, color, accent){
   color = color || '#5a3a1a'; accent = accent || '#c8963e';
-  return `<button onclick="${onclick}" style="padding:8px 12px;border-radius:8px;
+  return `<button onclick="${onclick}" style="padding:5px 8px;border-radius:6px;
     border:1.5px solid ${accent};background:${color};color:rgba(255,240,200,0.95);
-    font-size:12px;font-family:Georgia,serif;font-weight:700;cursor:pointer;
-    min-width:64px;">${label}</button>`;
+    font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer;
+    width:100%;box-sizing:border-box;min-height:28px;">${label}</button>`;
 }
 function renderActions4(){
   const el=document.getElementById('g4-actions');
