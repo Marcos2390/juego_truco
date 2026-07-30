@@ -1736,7 +1736,6 @@ const MAZOS = [
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
 
-
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
 function getDeckById(id){ return MAZOS.find(m=>m.id===id) || MAZOS[0]; }
@@ -3016,9 +3015,21 @@ function showGameOver(playerWon){
   p1Pts.style.color = playerWon  ? '#7fba5a' : 'rgba(255,255,255,.5)';
   p2Pts.style.color = !playerWon ? '#e06060' : 'rgba(255,255,255,.5)';
 
-  // Restore normal buttons (campaign may have overridden)
+  // Restore normal buttons (campaign/tournament may have overridden)
   const row = document.getElementById('go-btn-row');
-  if(CAMP_LEVEL){
+  if(TOURNAMENT_MATCH){
+    row.innerHTML=`
+      <button onclick="TOURNAMENT_MATCH=null;show('s-tournament');showBracket()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(180,140,20,.7);border:2px solid rgba(255,215,0,.6);
+        color:rgba(255,235,180,.95);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        🏆 Volver al Torneo
+      </button>
+      <button onclick="TOURNAMENT_MATCH=null;show('s-menu')" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
+        background:rgba(20,40,80,.7);border:2px solid rgba(60,120,200,.5);
+        color:rgba(160,200,255,.9);font-size:15px;font-weight:700;font-family:Georgia,serif">
+        🏠 Menú
+      </button>`;
+  } else if(CAMP_LEVEL){
     row.innerHTML=`
       <button onclick="show('s-campaign');renderCampaign()" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;
         background:rgba(80,40,120,.7);border:2px solid rgba(150,80,220,.5);
@@ -3059,6 +3070,7 @@ function checkGameOver() {
     // Antes esto pasaba instantáneo y la mano terminaba "de golpe".
     setTimeout(() => {
       if (CAMP_LEVEL) campOnMatchEnd(playerWon);
+      if (TOURNAMENT_MATCH) recordTournamentMatchResult(playerWon);
       showGameOver(playerWon);
     }, 2600);
     return true;
@@ -3071,6 +3083,18 @@ function finalizeHand(g) {
   const state = g || G;
   if (state._scored) return;
   state._scored = true;
+  if (!state.handWinner) {
+    // Salvaguarda: no debería pasar nunca (resHand siempre debe devolver
+    // 'p1' o 'p2' en este punto), pero si pasa, no le regalamos el punto
+    // al rival por default — solo lo dejamos registrado y no sumamos nada.
+    console.warn('finalizeHand: handWinner vacío, no se otorgan puntos', state.rounds);
+    renderGame();
+    syncOnline();
+    if (checkGameOver()) return;
+    const ps = G.pScore, os = G.oScore, nm = opp(G.mano);
+    setTimeout(() => { initGame(nm === 'p1', ps, os); }, 3200);
+    return;
+  }
   const pts = state.trucoAcep ? state.trucoStake : 1;
   const myWin = state.handWinner === 'p1';
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
@@ -3129,10 +3153,15 @@ function resHand(rounds, mano) {
   if (p2 >= 2) return 'p2';
   if (rounds.length >= 2) {
     const r1 = rounds[0].w, r2 = rounds[1].w;
-    if (r1 === 'tie') { if (rounds.length === 2) return r2 !== 'tie' ? r2 : mano; return mano; }
-    if (r2 === 'tie') return r1;
+    if (r1 === 'tie' && r2 !== 'tie') return r2; // parda en la 1ra: decide la 2da
+    if (r1 !== 'tie' && r2 === 'tie') return r1; // parda en la 2da: gana quien ganó la 1ra
+    // r1==='tie' && r2==='tie': ambas pardas, hace falta la 3ra ronda para decidir
   }
-  if (rounds.length === 3) return mano;
+  if (rounds.length === 3) {
+    const r3 = rounds[2].w;
+    if (r3 !== 'tie') return r3; // 1ra y 2da parda: gana quien gane la 3ra
+    return mano; // las 3 rondas empataron: gana quien es mano
+  }
   return null;
 }
 
@@ -5683,6 +5712,11 @@ let CAMP_LEVEL = null;   // current level config
 let CAMP_OBJ   = {};     // objective counters for current run
 let CAMP_MAZO_COUNT = 0; // times player went al mazo this run
 
+// Partido de Campeonato en curso (si el jugador entró a jugar un partido del
+// torneo contra un bot en modo 1vs1). Se usa para, al terminar la partida,
+// registrar el resultado en la llave del torneo en vez de perderlo.
+let TOURNAMENT_MATCH = null;
+
 function campProgress(){
   try{ return JSON.parse(localStorage.getItem('campProgress')||'{}'); }
   catch(e){ return {}; }
@@ -7626,10 +7660,42 @@ function detectMyMatch(){
 function enterTournamentMatch(){
   if(!tournament.myMatch) return;
   const m = tournament.myMatch;
-  const code = m.roomCode;
-  if(!code){ alert('Este partido no tiene sala (es un pase por BYE).'); return; }
+  if(!m.roomCode){ alert('Este partido no tiene sala (es un pase por BYE).'); return; }
 
   const myId = tournament.myId;
+  const isA = m.teamA.some(p=>p.id===myId);
+  const myTeam = isA ? m.teamA : m.teamB;
+  const rivalTeam = isA ? m.teamB : m.teamA;
+  const anyBotInvolved = m.teamA.some(p=>p.isBot) || m.teamB.some(p=>p.isBot);
+
+  if(!anyBotInvolved){
+    // Partido 100% entre jugadores reales: se juega online de verdad.
+    enterTournamentMatchOnline(m, myTeam);
+    return;
+  }
+
+  if(tournament.mode !== '2v2'){
+    // 1vs1 contra un bot: no hay ningún dispositivo real del otro lado
+    // esperando para conectarse a una sala — eso es lo que colgaba acá.
+    // En cambio, se juega una partida local normal contra la IA.
+    TOURNAMENT_MATCH = m;
+    CAMP_LEVEL = null;
+    window._campWinPts = null;
+    show('s-menu'); // limpia cualquier pantalla previa antes de arrancar
+    startAI();
+    return;
+  }
+
+  // 2v2 con algún bot de por medio: el juego todavía no tiene un modo real
+  // de "parejas contra bots" (el motor de 4 jugadores solo sabe conectar
+  // dispositivos reales). En vez de dejar al jugador colgado esperando una
+  // sala a la que nadie se va a unir, se resuelve el partido al toque.
+  autoResolveTournamentMatch(m, myTeam, rivalTeam);
+}
+
+function enterTournamentMatchOnline(m, myTeam){
+  const myId = tournament.myId;
+  const code = m.roomCode;
   // Un solo jugador crea la sala con el código fijo de la llave (el
   // primer integrante del equipo A); todos los demás —incluido su propio
   // compañero de equipo— se unen a ese mismo código. Si cada equipo creara
@@ -7649,6 +7715,36 @@ function enterTournamentMatch(){
     if(inp) inp.value = code;
     if(amCreator) createRoom(code); else joinRoom();
   }
+}
+
+// Resuelve al toque un partido de parejas que involucra bots, ya que no hay
+// forma de jugarlo de verdad (los bots no tienen un dispositivo que se
+// conecte a la sala). Da más chances de ganar al equipo con más jugadores
+// reales, ya que se asume que juegan mejor que los bots de relleno.
+function autoResolveTournamentMatch(m, myTeam, rivalTeam){
+  const myReal = myTeam.filter(p=>!p.isBot).length;
+  const rivalReal = rivalTeam.filter(p=>!p.isBot).length;
+  const myWeight = 1 + myReal;   // más peso por cada jugador real en mi equipo
+  const rivalWeight = 1 + rivalReal;
+  const iWin = Math.random() * (myWeight + rivalWeight) < myWeight;
+  m.winner = iWin ? myTeam.slice() : rivalTeam.slice();
+  alert('Este partido incluye bots de relleno y el juego todavía no tiene un modo real de parejas contra bots, así que se resolvió automáticamente.\n\nGanador: ' + m.winner.map(x=>x.name).join(' + '));
+  showBracket();
+  broadcastTournamentState();
+}
+
+// Se llama cuando termina una partida 1vs1 jugada como parte de un partido
+// de Campeonato contra un bot, para registrar el resultado en la llave.
+function recordTournamentMatchResult(playerWon){
+  if(!TOURNAMENT_MATCH) return;
+  const m = TOURNAMENT_MATCH;
+  const myId = tournament.myId;
+  const isA = m.teamA.some(p=>p.id===myId);
+  const myTeam = isA ? m.teamA : m.teamB;
+  const rivalTeam = isA ? m.teamB : m.teamA;
+  m.winner = playerWon ? myTeam.slice() : rivalTeam.slice();
+  showBracket();
+  broadcastTournamentState();
 }
 
 function nextTournamentRound(){
