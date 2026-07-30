@@ -518,48 +518,48 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         text-shadow:0 2px 8px rgba(0,0,0,.9)">URUGUAYO</div>
     </div>
 
-        <div style="width:100%;max-width:420px;margin:0 auto;padding:6px 12px;display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;box-sizing:border-box;">
+        <div style="width:100%;max-width:420px;margin:0 auto;padding:6px 12px;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;box-sizing:border-box;">
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);openCharsFor('ai')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);openCharsFor('ai')">
         <span class="bw-text"><span class="bw-title">Contra la IA</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);openCharsFor('online')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);openCharsFor('online')">
         <span class="bw-text"><span class="bw-title">Partida Online</span></span>
       </button>
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-tournament')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-tournament')">
         <span class="bw-text"><span class="bw-title">🏆 Campeonato</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-campaign')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-campaign')">
         <span class="bw-text"><span class="bw-title">Campaña</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-ranking')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-ranking')">
         <span class="bw-text"><span class="bw-title">Ranking</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-rules')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-rules')">
         <span class="bw-text"><span class="bw-title">Reglas</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-decks')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-decks')">
         <span class="bw-text"><span class="bw-title">Mazos</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-voices')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-voices')">
         <span class="bw-text"><span class="bw-title">Voces</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-setup')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-setup')">
         <span class="bw-text"><span class="bw-title">Configuración</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-anotador')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-anotador')">
         <span class="bw-text"><span class="bw-title">Anotador</span></span>
       </button>
 
-      <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);show('s-sorteo')">
+      <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);show('s-sorteo')">
         <span class="bw-text"><span class="bw-title">Sorteo</span></span>
       </button>
 
@@ -1160,7 +1160,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px"></div>
 
-      <div id="g4-actions" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px;max-width:92%;margin:0 auto;border-radius:8px;align-items:stretch;justify-items:stretch"></div>
+      <div id="g4-actions" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px;max-width:92%;margin:0 auto;border-radius:8px"></div>
 
       <div id="g4-log" style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px;max-height:110px;overflow-y:auto;
         font-family:Georgia,serif;font-size:11px;color:#c8b890;display:flex;flex-direction:column-reverse;gap:3px"></div>
@@ -1455,14 +1455,13 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
     <!-- ACTIONS — fixed action bar -->
     <!-- Response zone: shown only when opponent calls envido/truco/flor -->
-    <div id="resp-zone" style="display:none;flex-direction:column;align-items:center;
-      gap:3px;padding:4px 8px;background:rgba(0,0,0,0.35);border-radius:8px;
-      margin:2px auto;flex-shrink:0;max-width:92%"></div>
+    <div id="resp-zone" style="display:none;flex-direction:column;align-items:stretch;
+      gap:4px;padding:4px 8px;background:rgba(0,0,0,0.35);border-radius:8px;
+      margin:2px 4px;flex-shrink:0"></div>
     <!-- Fixed action bar: always visible, buttons enabled/disabled by state -->
     <div id="actions" style="
-      display:flex;flex-direction:column;flex-wrap:wrap;gap:3px;justify-content:center;
-      align-items:center;padding:4px 8px 2px;min-height:40px;flex-shrink:0;
-      max-width:92%;margin:0 auto;border-radius:8px"></div>
+      display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
+      align-items:center;padding:4px 4px 2px;min-height:48px;flex-shrink:0"></div>
 
     <!-- LOG: full-width strip at the very bottom -->
     <div id="game-log" style="
@@ -5232,7 +5231,7 @@ function renderActions(){
         text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
         ${caller}: ¡${names[pend.level]}! &nbsp;• Tus puntos: <b>${myEnv()}</b></div>`;
       const btnRow = document.createElement('div');
-      btnRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:auto;margin:0 auto';
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
       // Raise buttons first
       const raises={envido:'realenvido',realenvido:'faltaenvido'};
       const nextEnv=raises[pend.level];
@@ -5257,7 +5256,7 @@ function renderActions(){
         text-align:center;font-family:Georgia,serif;padding:2px 0;text-shadow:0 1px 3px rgba(0,0,0,.8)">
         ${caller}: ¡${names[pend.level]}!</div>`;
       const btnRow = document.createElement('div');
-      btnRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:auto;margin:0 auto';
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
       if(canRaise && nextNames[pend.level]){
         btnRow.appendChild(mkBtn(nextNames[pend.level], `respondTruco(false,true)`,
           {color:'linear-gradient(135deg,#7a1a1a,#4a0f0f)',accent:'#e06060',icon:'⚔️'}));
@@ -5276,7 +5275,7 @@ function renderActions(){
         text-align:center;font-family:Georgia,serif;padding:2px 0">
         ${caller}: ${names[pend.level]||pend.level}</div>`;
       const btnRow = document.createElement('div');
-      btnRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:auto;margin:0 auto';
+      btnRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
       if(pend.level==='flor_resp'){
         btnRow.appendChild(mkBtn('Contra Flor al Resto', `florCallContraflorResto()`,
           {color:'linear-gradient(135deg,#7a1a8a,#4a0f5a)',accent:'#c060e0',icon:'🌸'}));
@@ -5318,7 +5317,7 @@ function renderActions(){
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
     const envRow = document.createElement('div');
-    envRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:auto;margin:0 auto';
+    envRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
     const envLabels=[
       {label:'Envido',     fn:"callEnvido('envido')",     icon:'🎯'},
       {label:'Real Envido',fn:"callEnvido('realenvido')", icon:'🎯'},
@@ -5335,7 +5334,7 @@ function renderActions(){
 
   // ── Truco / raise buttons ────────────────────────────────────────────────
   const trucoRow = document.createElement('div');
-  trucoRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:auto;margin:0 auto';
+  trucoRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;width:100%';
 
   if(!respondingToEnv && !respondingToTruco && !respondingToFlor){
     // Initial truco call
@@ -7636,7 +7635,7 @@ function resetTournament(){
       </p>
 
       <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
-        <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);createTournament()">
+        <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);createTournament()">
           <span class="bw-text"><span class="bw-title">Crear Torneo</span></span>
         </button>
         <div style="display:flex;gap:8px;width:100%;max-width:260px">
@@ -7671,7 +7670,7 @@ function resetTournament(){
       </div>
 
       <div id="tournament-start-area" style="text-align:center;display:none">
-        <button class="btn-wood-main" style="width:auto;flex:1 1 calc(50% - 6px);max-width:180px;font-size:12px;padding:8px 4px;" onclick="woodClick(this);startTournamentBracket()" style="margin-bottom:10px">
+        <button class="btn-wood-main" style="width:100%;font-size:13px;padding:12px 4px;" onclick="woodClick(this);startTournamentBracket()" style="margin-bottom:10px">
           <span class="bw-text"><span class="bw-title">Iniciar Campeonato</span></span>
         </button>
       </div>
