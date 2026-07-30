@@ -7190,8 +7190,30 @@ let tournament = {
   players: [],
   bracket: [],
   currentRound: 0,
-  myMatch: null
+  myMatch: null,
+  myId: null
 };
+
+// Conexión PeerJS del torneo (mismo esquema estrella que las salas de
+// juego: el organizador es el host y cada invitado se conecta solo con
+// él; el host reenvía el estado a todos cada vez que algo cambia).
+let _tPeer = null;
+let _tConns = {}; // host: {clientId: DataConnection}; invitado: {host: DataConnection}
+
+function broadcastTournamentState(){
+  if(!tournament.isHost) return;
+  const payload = {
+    type: 'state',
+    mode: tournament.mode,
+    size: tournament.size,
+    players: tournament.players,
+    bracket: tournament.bracket,
+    currentRound: tournament.currentRound
+  };
+  Object.values(_tConns).forEach(c=>{
+    if(c && c.open) try{ c.send(payload); }catch(e){}
+  });
+}
 
 function generateTournamentCode(){
   const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -7201,11 +7223,15 @@ function generateTournamentCode(){
 }
 
 function createTournament(){
+  if(_tPeer){ try{ _tPeer.destroy(); }catch(e){} _tPeer=null; }
+  _tConns = {};
+
   tournament.code = generateTournamentCode();
   tournament.isHost = true;
   tournament.mode = '2v2';
   tournament.size = 4;
-  tournament.players = [{id:'host', name:'Tú (Organizador)', isHost:true}];
+  tournament.myId = getClientId4();
+  tournament.players = [{id:tournament.myId, name:(_playerName||'Tú')+' (Organizador)', isHost:true}];
   tournament.bracket = [];
   tournament.currentRound = 0;
 
@@ -7215,27 +7241,78 @@ function createTournament(){
   document.getElementById('tournament-player-count').textContent = tournament.players.length;
   document.getElementById('tournament-start-area').style.display = 'block';
   document.getElementById('tournament-admin-controls').style.display = 'block';
+  if(document.getElementById('tournament-mode')) document.getElementById('tournament-mode').disabled = false;
+  if(document.getElementById('tournament-size')) document.getElementById('tournament-size').disabled = false;
 
   renderTournamentPlayers();
   show('s-tournament');
   document.getElementById('tournament-menu').style.display = 'none';
   document.getElementById('tournament-lobby').style.display = 'block';
   document.getElementById('tournament-bracket').style.display = 'none';
-  console.log('Torneo creado:', tournament.code);
+
+  _tPeer = new Peer('torneo-'+tournament.code, { debug:0 });
+
+  _tPeer.on('open', ()=>{ console.log('Torneo creado:', tournament.code); });
+
+  _tPeer.on('connection', (conn)=>{
+    conn.on('data', (data)=>{
+      if(data.type==='join'){
+        let p = tournament.players.find(pl=>pl.id===data.clientId);
+        if(!p){
+          if(tournament.players.length >= tournament.size){
+            try{ conn.send({type:'full'}); }catch(e){}
+            return;
+          }
+          p = {id:data.clientId, name:data.name||'Jugador', isHost:false};
+          tournament.players.push(p);
+        } else {
+          p.name = data.name || p.name;
+        }
+        _tConns[data.clientId] = conn;
+        renderTournamentPlayers();
+        broadcastTournamentState();
+      }
+    });
+    conn.on('close', ()=>{
+      const id = Object.keys(_tConns).find(k=>_tConns[k]===conn);
+      if(!id) return;
+      delete _tConns[id];
+      // Si el torneo todavía no arrancó, saco al jugador de la lista.
+      // Si ya arrancó (hay llave armada), le guardo el lugar por si vuelve
+      // a entrar con el mismo código.
+      if(!tournament.bracket.length){
+        tournament.players = tournament.players.filter(pl=>pl.id!==id);
+      }
+      renderTournamentPlayers();
+      broadcastTournamentState();
+    });
+  });
+
+  _tPeer.on('error', (err)=>{
+    alert('❌ Error de conexión del torneo: '+((err&&err.type)||'desconocido'));
+  });
 }
 
 function joinTournament(){
   const code = document.getElementById('tournament-join-code').value.toUpperCase().trim();
   if(code.length!==4){ alert('Ingresa un código de 4 letras'); return; }
 
+  if(_tPeer){ try{ _tPeer.destroy(); }catch(e){} _tPeer=null; }
+  _tConns = {};
+
   tournament.code = code;
   tournament.isHost = false;
-  tournament.players = [{id:'me', name:'Tú', isHost:false}];
+  tournament.myId = getClientId4();
+  tournament.players = [{id:tournament.myId, name:_playerName||'Tú', isHost:false}];
+  tournament.bracket = [];
+  tournament.currentRound = 0;
 
   document.getElementById('tournament-code-display').textContent = code;
   document.getElementById('tournament-role').textContent = 'Jugador';
   document.getElementById('tournament-start-area').style.display = 'none';
   document.getElementById('tournament-admin-controls').style.display = 'none';
+  if(document.getElementById('tournament-mode')) document.getElementById('tournament-mode').disabled = true;
+  if(document.getElementById('tournament-size')) document.getElementById('tournament-size').disabled = true;
 
   renderTournamentPlayers();
   show('s-tournament');
@@ -7243,7 +7320,49 @@ function joinTournament(){
   document.getElementById('tournament-lobby').style.display = 'block';
   document.getElementById('tournament-bracket').style.display = 'none';
 
-  alert('Te uniste al torneo '+code+'.\nEspera a que el organizador inicie.');
+  _tPeer = new Peer(undefined, { debug:0 });
+
+  _tPeer.on('open', ()=>{
+    const conn = _tPeer.connect('torneo-'+code, { reliable:true });
+    _tConns.host = conn;
+
+    conn.on('open', ()=>{
+      conn.send({ type:'join', name:_playerName||'Tú', clientId:tournament.myId });
+    });
+
+    conn.on('data', (data)=>{
+      if(data.type==='full'){
+        alert('❌ Ese torneo ya está lleno.');
+        return;
+      }
+      if(data.type==='state'){
+        tournament.mode = data.mode;
+        tournament.size = data.size;
+        tournament.players = data.players || [];
+        tournament.bracket = data.bracket || [];
+        tournament.currentRound = data.currentRound || 0;
+
+        document.getElementById('tournament-max-players').textContent = tournament.size;
+        if(document.getElementById('tournament-mode')) document.getElementById('tournament-mode').value = tournament.mode;
+        if(document.getElementById('tournament-size')) document.getElementById('tournament-size').value = tournament.size;
+        renderTournamentPlayers();
+
+        if(tournament.bracket.length){
+          document.getElementById('tournament-lobby').style.display = 'none';
+          document.getElementById('tournament-bracket').style.display = 'block';
+          showBracket();
+        }
+      }
+    });
+
+    conn.on('close', ()=>{
+      alert('⚠️ Se perdió la conexión con el organizador del torneo.');
+    });
+  });
+
+  _tPeer.on('error', (err)=>{
+    alert('❌ No se pudo conectar al torneo: '+((err&&err.type)||'desconocido'));
+  });
 }
 
 function updateTournamentConfig(){
@@ -7251,6 +7370,8 @@ function updateTournamentConfig(){
   tournament.mode = document.getElementById('tournament-mode').value;
   tournament.size = parseInt(document.getElementById('tournament-size').value);
   document.getElementById('tournament-max-players').textContent = tournament.size;
+  renderTournamentPlayers();
+  broadcastTournamentState();
 }
 
 function validateTournamentSize() {
@@ -7308,6 +7429,7 @@ function startTournamentBracket(){
 
   document.getElementById('tournament-lobby').style.display = 'none';
   document.getElementById('tournament-bracket').style.display = 'block';
+  broadcastTournamentState();
 }
 
 function buildBracket(){
@@ -7417,7 +7539,7 @@ function detectMyMatch(){
   const round = tournament.bracket[tournament.currentRound];
   if(!round) return;
 
-  const myId = tournament.isHost ? 'host' : 'me';
+  const myId = tournament.myId;
   const myMatch = round.find(m => 
     m.teamA.some(p=>p.id===myId) || m.teamB.some(p=>p.id===myId)
   );
@@ -7485,12 +7607,15 @@ function nextTournamentRound(){
   tournament.bracket.push(nextRound);
   tournament.currentRound++;
   showBracket();
+  broadcastTournamentState();
 }
 
 function resetTournament(){
+  if(_tPeer){ try{ _tPeer.destroy(); }catch(e){} _tPeer=null; }
+  _tConns = {};
   tournament = {
     code: null, isHost: false, mode: '2v2', size: 4,
-    players: [], bracket: [], currentRound: 0, myMatch: null
+    players: [], bracket: [], currentRound: 0, myMatch: null, myId: null
   };
   document.getElementById('tournament-menu').style.display = 'block';
   document.getElementById('tournament-lobby').style.display = 'none';
@@ -7515,7 +7640,7 @@ function resetTournament(){
         </button>
         <div style="display:flex;gap:8px;width:100%;max-width:260px">
           <input id="tournament-join-code" placeholder="Código (4 letras)" maxlength="4" style="flex:1;text-align:center;text-transform:uppercase;font-size:18px;padding:10px;border-radius:6px;border:1px solid #d4b45a;background:#0f1a0f;color:#e8dcb5">
-          <button class="btn-wood" onclick="woodClick(this);joinTournament()">Unirse</button>
+          <button class="btn-wood" style="width:auto;flex:0 0 auto;white-space:nowrap;padding:10px 18px;font-size:15px" onclick="woodClick(this);joinTournament()">Unirse</button>
         </div>
         <button class="btn-wood" onclick="woodClick(this);show('s-menu')">⬅ Volver</button>
       </div>
