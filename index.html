@@ -455,9 +455,14 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   }
 }
 @media (orientation:landscape) and (max-height:520px){
-  #s-game4 > div{max-width:640px !important;}
-  #g4-mesa{min-height:120px !important;}
-  #g4-log{max-height:80px !important;}
+  #s-game4 > div{max-width:680px !important;padding:5px 10px !important;}
+  #g4-mesa{max-height:170px !important;}
+  #g4-log{max-height:56px !important;}
+  #g4-status{min-height:0 !important;font-size:10.5px !important;}
+}
+@media (max-height:400px){
+  #g4-mesa{max-height:130px !important;}
+  #g4-actions button{padding:5px 8px !important;font-size:11px !important;}
 }
 @media (max-width:380px){
   .btn-wood-main,.btn-wood-sec{width:200px;padding:7px 14px;}
@@ -1091,14 +1096,14 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
 <!-- ═══════ GAME (4 JUGADORES) ═══════ -->
 <div id="s-game4" class="screen" style="display:none;position:fixed;inset:0;background:#1a0f05;
-  flex-direction:column;overflow-y:auto;z-index:999;-webkit-overflow-scrolling:touch;">
-  <div style="max-width:520px;width:100%;margin:0 auto;padding:14px 14px 30px;
-    display:flex;flex-direction:column;gap:8px;box-sizing:border-box;min-height:100%">
+  flex-direction:column;overflow:hidden;z-index:999;-webkit-overflow-scrolling:touch;">
+  <div style="max-width:640px;width:100%;height:100%;margin:0 auto;padding:8px 10px;
+    display:flex;flex-direction:column;gap:6px;box-sizing:border-box;overflow:hidden">
 
     <div id="g4-rotate-hint">🔄 Girá tu dispositivo — se juega mejor en horizontal</div>
 
     <!-- SORTEO DE COMPAÑERO -->
-    <div id="g4-sorteo-wrap" style="display:flex;flex-direction:column;gap:10px">
+    <div id="g4-sorteo-wrap" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="color:#d4a017;font-family:Georgia,serif;font-size:16px;font-weight:700">🎴 Sorteo de compañero</div>
         <button onclick="if(confirm('¿Salir?')){cancelRoom();show('s-menu');}"
@@ -1134,39 +1139,69 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     </div>
 
     <!-- MESA DE JUEGO (aparece cuando termina el sorteo) -->
-    <div id="g4-mesa-wrap" style="display:none;flex-direction:column;gap:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
-          <div id="g4-score" style="color:#d4a017;font-family:Georgia,serif;font-size:14px;font-weight:700"></div>
-          <div id="g4-truco-badge" style="color:#e04040;font-family:Georgia,serif;font-size:11px;font-weight:700;min-height:14px"></div>
+    <div id="g4-mesa-wrap" style="display:none;flex-direction:column;gap:4px;flex:1;min-height:0;overflow-y:auto;position:relative">
+      <!-- Barra superior: puntaje en palitos + estado de truco + señas + rotar + salir -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:5px">
+        <div id="g4-score" style="flex-shrink:0"></div>
+        <div id="g4-truco-badge" style="color:#e04040;font-family:Georgia,serif;font-size:11px;font-weight:700;
+          flex:1;text-align:center;min-height:14px"></div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;position:relative">
+          <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Señas con tu compañero"
+            style="background:rgba(0,0,0,.3);border:1px solid rgba(142,200,255,.4);color:#8ec8ff;
+            font-size:13px;border-radius:7px;padding:4px 7px;cursor:pointer;line-height:1">🤝</button>
+          <div id="g4-sena-menu" style="display:none;position:absolute;top:32px;right:0;z-index:40;
+            background:#241708;border:1px solid rgba(142,200,255,.4);border-radius:10px;padding:6px;
+            box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;grid-template-columns:1fr 1fr;gap:5px;width:150px">
+            <button onclick="sendSena4('Vení')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Vení</button>
+            <button onclick="sendSena4('Poné')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Poné</button>
+            <button onclick="sendSena4('Tocá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Tocá</button>
+            <button onclick="sendSena4('Gritá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Gritá</button>
+          </div>
+          <button id="g4-rotate-toggle" onclick="toggleRotateLock4()"
+            style="background:rgba(0,0,0,.3);border:1px solid rgba(127,186,90,.4);color:#7fba5a;
+            font-size:13px;border-radius:7px;padding:4px 7px;cursor:pointer;line-height:1">🔒</button>
+          <button onclick="if(confirm('¿Salir de la partida?')){cancelRoom();show('s-menu');}"
+            style="background:none;border:none;color:#7fba5a;font-size:20px;cursor:pointer;line-height:1">✕</button>
         </div>
-        <div id="g4-muestra" style="text-align:center"></div>
-        <button onclick="if(confirm('¿Salir de la partida?')){cancelRoom();show('s-menu');}"
-          style="background:none;border:none;color:#7fba5a;font-size:20px;cursor:pointer;line-height:1">✕</button>
       </div>
 
-      <div id="g4-seat-top" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px"></div>
+      <!-- Aviso flotante cuando el compañero te manda una seña (solo vos lo ves) -->
+      <div id="g4-sena-banner" style="display:none;position:absolute;top:38px;left:50%;transform:translateX(-50%);
+        z-index:45;background:rgba(20,40,60,.95);border:1.5px solid #8ec8ff;color:#dff0ff;
+        font-family:Georgia,serif;font-size:13px;font-weight:700;padding:7px 16px;border-radius:20px;
+        box-shadow:0 6px 18px rgba(0,0,0,.5);white-space:nowrap"></div>
 
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:420px;margin:0 auto">
-        <div id="g4-seat-left" style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:70px"></div>
-        <div id="g4-mesa" style="flex:1;min-height:150px;max-width:280px;display:flex;align-items:center;justify-content:center;
-          gap:8px;background:rgba(0,0,0,.2);border-radius:16px;padding:10px"></div>
-        <div id="g4-seat-right" style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:70px"></div>
+      <!-- MESA: la muestra queda fija en el centro; cada jugador tiene su
+           celda alrededor (arriba=compañero, izq/der=rivales, abajo=vos)
+           con su nombre, la cantidad de cartas que le quedan en mano y la
+           carta que jugó en la mano actual — todo compacto para que entre
+           sin necesidad de scroll -->
+      <div id="g4-table" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;overflow:hidden">
+        <div id="g4-mesa" style="width:100%;height:100%;max-width:320px;max-height:260px;display:flex;
+          align-items:center;justify-content:center;
+          background:rgba(0,0,0,.2);border-radius:16px;padding:6px;box-sizing:border-box"></div>
       </div>
 
-      <div id="g4-turn-indicator" style="text-align:center;color:#7fba5a;font-family:Georgia,serif;font-size:13px;font-weight:700;min-height:18px"></div>
-      <div id="g4-pending" style="text-align:center;color:#ffcc66;font-family:Georgia,serif;font-size:12px;font-weight:700;min-height:16px"></div>
+      <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0"></div>
 
-      <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px"></div>
+      <div id="g4-status" style="text-align:center;font-family:Georgia,serif;font-size:12px;font-weight:700;min-height:16px;flex-shrink:0"></div>
 
-      <div id="g4-actions" style="display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:4px 0"></div>
+      <div id="g4-actions" style="display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:4px;flex-shrink:0"></div>
 
-      <div id="g4-log" style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px;max-height:110px;overflow-y:auto;
-        font-family:Georgia,serif;font-size:11px;color:#c8b890;display:flex;flex-direction:column-reverse;gap:3px"></div>
+      <details id="g4-log-details" style="flex-shrink:0">
+        <summary style="cursor:pointer;color:rgba(200,160,70,.8);padding:2px 4px;font-family:Georgia,serif;font-size:11px">📜 Historial</summary>
+        <div id="g4-log" style="background:rgba(0,0,0,.3);border-radius:10px;padding:6px 8px;max-height:90px;overflow-y:auto;
+          font-family:Georgia,serif;font-size:10.5px;color:#c8b890;display:flex;flex-direction:column-reverse;gap:3px;margin-top:3px"></div>
+      </details>
 
-      <div id="g4-handover" style="display:none;flex-direction:column;align-items:center;gap:10px;margin-top:8px">
+      <div id="g4-handover" style="display:none;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
         <button onclick="hostSiguienteMano4()" style="background:#2a4a1a;border:1px solid #4a7a2a;color:#c8e896;
-          border-radius:10px;padding:12px 24px;cursor:pointer;font-size:14px;font-weight:700;font-family:Georgia,serif">
+          border-radius:10px;padding:10px 22px;cursor:pointer;font-size:13px;font-weight:700;font-family:Georgia,serif">
           ➡️ Repartir siguiente mano
         </button>
       </div>
@@ -1947,8 +1982,8 @@ function drawFigura(val,suit,W,H){
 }
 
 // Carta HTML principal
-function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick='',isMuestra=false,mesa=false}={}){
-  const W=small?62:88, H=small?94:132;
+function cardHTML(card,{sel=false,disabled=false,back=false,small=false,onclick='',isMuestra=false,mesa=false,w=null,h=null}={}){
+  const W=w||(small?62:88), H=h||(small?94:132);
   const brd=sel?'3px solid #d4a017':isMuestra?'2.5px solid #ffcc00':'1.5px solid rgba(180,150,80,.5)';
   const shad=sel?'0 20px 40px rgba(212,160,23,.85)':isMuestra?'0 0 18px rgba(255,200,0,.7),0 4px 12px rgba(0,0,0,.6)':'3px 5px 14px rgba(0,0,0,.65)';
   const tr=sel?'translateY(-18px) scale(1.1)':'none';
@@ -2116,6 +2151,32 @@ let G4 = null;
 let TEAM_OF4 = null; // se completa recién al terminar el sorteo de compañero
 let SEAT_ORDER4 = null; // orden de asiento (antihorario) alternando equipos: [A0,B0,A1,B1]
 const ROLES4 = ['p1','p2','p3','p4'];
+
+// ── Preferencia de rotación de pantalla para la mesa de 4 ──
+// Por defecto se mantiene el comportamiento previo (forzar horizontal),
+// pero ahora el jugador puede desactivarlo y dejar la orientación libre.
+let _g4RotateLock = localStorage.getItem('g4RotateLock') !== 'off';
+function toggleRotateLock4(){
+  _g4RotateLock = !_g4RotateLock;
+  try{ localStorage.setItem('g4RotateLock', _g4RotateLock ? 'on' : 'off'); }catch(e){}
+  updateRotateToggleBtn4();
+  applyOrientationLock4();
+}
+function updateRotateToggleBtn4(){
+  const btn = document.getElementById('g4-rotate-toggle');
+  if(!btn) return;
+  btn.textContent = _g4RotateLock ? '🔒' : '🔓';
+  btn.title = _g4RotateLock
+    ? 'Rotación bloqueada en horizontal — tocá para dejarla libre'
+    : 'Rotación libre — tocá para forzar horizontal';
+}
+function applyOrientationLock4(){
+  try{
+    if(!screen.orientation) return;
+    if(_g4RotateLock && screen.orientation.lock){ screen.orientation.lock('landscape').catch(()=>{}); }
+    else if(!_g4RotateLock && screen.orientation.unlock){ screen.orientation.unlock(); }
+  }catch(e){}
+}
 
 function computeSeatOrder4(){
   // El sorteo arma los equipos según quién saca los reyes, sin importar el
@@ -2518,6 +2579,7 @@ function hostHandleAction4(role, data){
   else if(data.action==='respondFlor') changed = respondFlor4(role, data.raise);
   else if(data.action==='respondContraflor') changed = respondContraflor4(role, data.accept);
   else if(data.action==='mazo') changed = irAlMazo4(role);
+  else if(data.action==='sena') changed = callSena4(role, data.code);
   if(changed){
     if(data.action!=='play'){
       const raisedLevel = (data.action==='respondTruco' && data.raise) ? (G4.trucoPend ? G4.trucoPend.level : trucoLevelBefore) : null;
@@ -2540,6 +2602,52 @@ function uiCallFlor4(){ sendAction4('callFlor', {}); }
 function uiRespondFlor4(raise){ sendAction4('respondFlor', {raise}); }
 function uiRespondContraflor4(accept){ sendAction4('respondContraflor', {accept}); }
 function uiMazo4(){ sendAction4('mazo', {}); }
+
+// ── Señas entre compañeros de equipo ──
+// Son solo códigos libres ("Vení", "Poné", "Tocá", "Gritá") sin ningún
+// significado fijo atado a una carta o jugada — el equipo se pone de
+// acuerdo de antemano en qué quiere decir cada uno, como con las señas de
+// verdad en la mesa. Viajan por el mismo canal que el resto del estado
+// (por eso técnicamente el rival también podría verlas si mirara el código
+// fuente), pero la interfaz solo se las muestra de forma visible a vos si
+// las mandó tu compañero de equipo — a los rivales no se les asoma nada.
+let _lastSenaShownTs = 0;
+function toggleSenaMenu4(force){
+  const el = document.getElementById('g4-sena-menu');
+  if(!el) return;
+  const show = force!==undefined ? force : (el.style.display==='none');
+  el.style.display = show ? 'grid' : 'none';
+}
+function sendSena4(code){
+  toggleSenaMenu4(false);
+  sendAction4('sena', {code});
+  showSenaBanner4('✋ Le mandaste una seña a tu compañero: “'+code+'”', '#8ec8ff');
+}
+function callSena4(role, code){
+  if(!G4) return false;
+  G4.lastSena = { byRole: role, byTeam: TEAM_OF4[role], code, ts: Date.now() };
+  return true;
+}
+// Se llama en cada renderGame4(): si llegó una seña nueva y sos del mismo
+// equipo que quien la mandó (y no fuiste vos), se muestra un cartel
+// llamativo un par de segundos y se apaga solo.
+function checkIncomingSena4(){
+  const s = G4 && G4.lastSena;
+  if(!s || s.ts===_lastSenaShownTs) return;
+  _lastSenaShownTs = s.ts;
+  if(s.byRole===MY_ROLE) return; // ya te avisaste vos mismo al mandarla
+  if(!TEAM_OF4 || TEAM_OF4[MY_ROLE]!==s.byTeam) return; // no sos de su equipo: no se te muestra
+  showSenaBanner4('🤝 '+nameFor4(s.byRole)+': “'+s.code+'”', '#8ec8ff');
+}
+function showSenaBanner4(text, color){
+  const el = document.getElementById('g4-sena-banner');
+  if(!el) return;
+  el.textContent = text;
+  el.style.borderColor = color || '#8ec8ff';
+  el.style.display = 'block';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>{ el.style.display='none'; }, 2600);
+}
 
 function siguienteMano4(){
   if(!G4) return;
@@ -2567,6 +2675,39 @@ function broadcastState4(){
 }
 
 /* ── Render de la mesa de 4 ── */
+// ── Puntaje en "palitos" (rayas), como se anota en la mesa real ──
+// Cada grupo de 5 puntos se dibuja como 4 líneas verticales + 1 diagonal
+// que las cruza (la "porteria"/tranquera clásica). El resto (<5) se
+// muestra como líneas verticales sueltas.
+function palitoGrupoSVG(n){
+  const W=16,H=20;
+  const xs=[2,6,10,14];
+  let bars='';
+  for(let i=0;i<Math.min(n,4);i++){
+    bars+=`<line x1="${xs[i]}" y1="3" x2="${xs[i]}" y2="17" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  if(n>=5){
+    bars+=`<line x1="0" y1="16" x2="16" y2="2" stroke="#ffcc44" stroke-width="2.2" stroke-linecap="round"/>`;
+  }
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="flex-shrink:0">${bars}</svg>`;
+}
+function renderPalitos(score){
+  score = Math.max(0, score|0);
+  const full = Math.floor(score/5), rem = score%5;
+  let html = '<div style="display:flex;align-items:center;gap:2px;flex-wrap:wrap">';
+  for(let i=0;i<full;i++) html += palitoGrupoSVG(5);
+  if(rem>0) html += palitoGrupoSVG(rem);
+  if(score===0) html += '<span style="color:#7a6a4a;font-size:10px;font-family:Georgia,serif">—</span>';
+  html += `</div>`;
+  return html;
+}
+function renderPalitosRow(label,score,color){
+  return `<div style="display:flex;align-items:center;gap:5px">
+    <span style="color:${color};font-size:9px;font-weight:700;font-family:Georgia,serif;min-width:34px">${label}</span>
+    ${renderPalitos(score)}
+  </div>`;
+}
+
 function renderGame4(){
   if(!G4) return;
   const sorteoWrap=document.getElementById('g4-sorteo-wrap');
@@ -2586,8 +2727,24 @@ function renderGame4(){
 
   try{
 
+  checkIncomingSena4();
+
+  const myTeam = TEAM_OF4[MY_ROLE];
+  const rivalTeam4 = myTeam==='A' ? 'B' : 'A';
+  const seatOrder4 = SEAT_ORDER4 || ROLES4;
+  const myIdx4 = seatOrder4.indexOf(MY_ROLE);
+  // Sentido antihorario alrededor de la mesa: yo -> izquierda -> compañero (enfrente) -> derecha -> yo
+  const leftRole = seatOrder4[(myIdx4+1)%4];
+  const partnerRole = seatOrder4[(myIdx4+2)%4];
+  const rightRole = seatOrder4[(myIdx4+3)%4];
+  const nameFor = r => (_players4.find(p=>p.role===r)||{}).name || r;
+
   const scEl=document.getElementById('g4-score');
-  if(scEl) scEl.textContent = `Equipo A: ${G4.score.A||0} — Equipo B: ${G4.score.B||0}  (a ${G4.meta})`;
+  if(scEl) scEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:2px">
+      ${renderPalitosRow('NOS', G4.score[myTeam]||0, '#8ec8ff')}
+      ${renderPalitosRow('ELLOS', G4.score[rivalTeam4]||0, '#ff9a6a')}
+    </div>
+    <div style="color:#7a6a4a;font-size:9px;font-family:Georgia,serif;margin-top:1px">a ${G4.meta}</div>`;
 
   const tbEl=document.getElementById('g4-truco-badge');
   if(tbEl){
@@ -2597,82 +2754,74 @@ function renderGame4(){
     } else tbEl.textContent = '';
   }
 
-  const muEl=document.getElementById('g4-muestra');
-  if(muEl) muEl.innerHTML = G4.muestra ? cardHTML(G4.muestra,{small:true,disabled:true,isMuestra:true}) : '';
-
-  const myTeam = TEAM_OF4[MY_ROLE];
-  const seatOrder4 = SEAT_ORDER4 || ROLES4;
-  const myIdx4 = seatOrder4.indexOf(MY_ROLE);
-  // Sentido antihorario alrededor de la mesa: yo -> izquierda -> compañero (enfrente) -> derecha -> yo
-  const leftRole = seatOrder4[(myIdx4+1)%4];
-  const partnerRole = seatOrder4[(myIdx4+2)%4];
-  const rightRole = seatOrder4[(myIdx4+3)%4];
-  const nameFor = r => (_players4.find(p=>p.role===r)||{}).name || r;
-
-  const topEl=document.getElementById('g4-seat-top');
-  if(topEl){
-    const n = (G4.hands[partnerRole]||[]).length;
-    topEl.innerHTML = `<div style="color:#a89060;font-size:11px;font-family:Georgia,serif">${nameFor(partnerRole)} (compañero)</div>
-      <div style="display:flex;gap:4px">${Array.from({length:n}).map(()=>cardHTML(null,{back:true,small:true})).join('')}</div>`;
-  }
-  const mkOppSeat = (role)=>{
-    const n = (G4.hands[role]||[]).length;
-    return `<div style="color:#a89060;font-size:10px;font-family:Georgia,serif;text-align:center">${nameFor(role)}</div>
-      <div style="display:flex;flex-direction:column;gap:3px">${Array.from({length:n}).map(()=>cardHTML(null,{back:true,small:true})).join('')}</div>`;
-  };
-  const leftEl=document.getElementById('g4-seat-left'); if(leftEl) leftEl.innerHTML = mkOppSeat(leftRole);
-  const rightEl=document.getElementById('g4-seat-right'); if(rightEl) rightEl.innerHTML = mkOppSeat(rightRole);
-
   const mesaEl=document.getElementById('g4-mesa');
   if(mesaEl){
-    // Cruz: la carta de cada jugador se muestra del lado de la mesa que le
-    // corresponde a su asiento (arriba/izq/der/abajo), con su nombre debajo,
-    // para identificar de un vistazo quién jugó qué.
+    // Cruz alrededor de la muestra: cada celda combina el nombre del jugador,
+    // cuántas cartas le quedan en mano (si no jugó aún) y la carta que jugó
+    // en esta baza — todo en una sola celda compacta, sin filas aparte para
+    // no gastar alto de pantalla. La muestra queda fija en el centro.
     const seatCard = (role)=>{
       const c = G4.played[role];
       const isMe = role===MY_ROLE;
-      const label = `<div style="font-size:9px;color:${isMe?'#d4a017':'#7a6a3a'};font-weight:${isMe?'700':'400'};text-align:center;margin-top:2px;white-space:nowrap">${nameFor(role)}${isMe?' (vos)':''}</div>`;
-      return `<div style="display:flex;flex-direction:column;align-items:center">${c?cardHTML(c,{small:true,mesa:true}):'<div style="width:62px;height:94px"></div>'}${label}</div>`;
+      const isPartner = role===partnerRole;
+      const n = (G4.hands[role]||[]).length;
+      const who = isMe ? `${nameFor(role)} (vos)` : `${nameFor(role)}${isPartner?' 🤝':''}${(!c&&!isPartner)?' · 🂠×'+n:''}`;
+      const label = `<div style="font-size:8px;color:${isMe?'#d4a017':(isPartner?'#8ec8ff':'#a89060')};font-weight:${(isMe||isPartner)?'700':'400'};text-align:center;white-space:nowrap">${who}</div>`;
+      // Al compañero de equipo se le ven las cartas que todavía tiene en la
+      // mano (para saber cómo está parado); a los rivales no — a ellos solo
+      // se les muestra boca abajo la carta que jugó (si ya jugó).
+      if(isPartner){
+        const hand = G4.hands[partnerRole]||[];
+        const handRow = hand.length
+          ? `<div style="display:flex;gap:2px">${hand.map(pc=>cardHTML(pc,{w:26,h:40,disabled:true,mesa:true})).join('')}</div>`
+          : '';
+        const playedRow = c ? cardHTML(c,{w:36,h:54,mesa:true}) : '';
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">${label}${handRow}${playedRow}</div>`;
+      }
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">${label}${c?cardHTML(c,{w:44,h:66,mesa:true}):'<div style="width:44px;height:66px"></div>'}</div>`;
     };
-    mesaEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;
-      gap:4px;place-items:center;width:100%;max-width:260px;margin:0 auto">
+    const muestraCenter = G4.muestra ? `<div style="display:flex;flex-direction:column;align-items:center">
+        ${cardHTML(G4.muestra,{w:40,h:60,disabled:true,isMuestra:true})}
+        <div style="font-size:7px;color:#ffcc66;font-weight:700;letter-spacing:.5px;font-family:Georgia,serif;margin-top:1px">MUESTRA</div>
+      </div>` : '';
+    mesaEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr auto 1fr;
+      gap:2px;place-items:center;width:100%;height:100%;max-width:280px;margin:0 auto">
       <div style="grid-column:2;grid-row:1">${seatCard(partnerRole)}</div>
       <div style="grid-column:1;grid-row:2">${seatCard(leftRole)}</div>
+      <div style="grid-column:2;grid-row:2">${muestraCenter}</div>
       <div style="grid-column:3;grid-row:2">${seatCard(rightRole)}</div>
       <div style="grid-column:2;grid-row:3">${seatCard(MY_ROLE)}</div>
     </div>`;
   }
 
-  const turnEl=document.getElementById('g4-turn-indicator');
   const actual = turnoActual4();
-  if(turnEl){
-    if(G4.phase==='playing') turnEl.textContent = actual===MY_ROLE?'🟢 Tu turno':`Turno de ${nameFor(actual)}`;
-    else if(G4.phase==='trick_done') turnEl.textContent = '🃏 Baza completa...';
-    else turnEl.textContent = '';
-  }
-
-  const pendEl=document.getElementById('g4-pending');
-  if(pendEl){
+  const statusEl=document.getElementById('g4-status');
+  if(statusEl){
+    let txt = '', color = '#7fba5a';
     if(G4.phase==='resp_env' && G4.envPend){
       const names = { envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido' };
-      pendEl.textContent = `${nameFor(G4.envPend.byRole)} cantó ¡${names[G4.envPend.level]}! (Equipo ${G4.envPend.byTeam})`;
+      txt = `${nameFor(G4.envPend.byRole)} cantó ¡${names[G4.envPend.level]}! (Equipo ${G4.envPend.byTeam})`; color='#ffcc66';
     } else if(G4.phase==='resp_truco' && G4.trucoPend){
       const names = { truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro' };
-      pendEl.textContent = `${nameFor(G4.trucoPend.byRole)} cantó ¡${names[G4.trucoPend.level]}! (Equipo ${G4.trucoPend.byTeam})`;
+      txt = `${nameFor(G4.trucoPend.byRole)} cantó ¡${names[G4.trucoPend.level]}! (Equipo ${G4.trucoPend.byTeam})`; color='#ffcc66';
     } else if(G4.phase==='resp_flor' && G4.florPend){
       const names = { flor:'Flor', contraflor_resto:'Contra Flor al Resto' };
-      pendEl.textContent = `🌸 ${nameFor(G4.florPend.byRole)} cantó ¡${names[G4.florPend.level]}! (Equipo ${G4.florPend.byTeam})`;
-    } else {
-      pendEl.textContent = '';
+      txt = `🌸 ${nameFor(G4.florPend.byRole)} cantó ¡${names[G4.florPend.level]}! (Equipo ${G4.florPend.byTeam})`; color='#ffcc66';
+    } else if(G4.phase==='playing'){
+      txt = actual===MY_ROLE ? '🟢 Tu turno' : `Turno de ${nameFor(actual)}`;
+    } else if(G4.phase==='trick_done'){
+      txt = '🃏 Baza completa...';
     }
+    statusEl.textContent = txt;
+    statusEl.style.color = color;
   }
 
   const bottomEl=document.getElementById('g4-seat-bottom');
   if(bottomEl){
     const myHand = G4.hands[MY_ROLE]||[];
     const canPlay = G4.phase==='playing' && actual===MY_ROLE && !G4.played[MY_ROLE];
-    bottomEl.innerHTML = `<div style="color:#d4a017;font-size:11px;font-family:Georgia,serif">${nameFor(MY_ROLE)} (vos)</div>
-      <div style="display:flex;gap:6px">${myHand.map(c=>cardHTML(c,{disabled:!canPlay,
+    bottomEl.innerHTML = `<div style="color:#d4a017;font-size:10px;font-family:Georgia,serif">${nameFor(MY_ROLE)} (vos)</div>
+      <div style="display:flex;gap:5px">${myHand.map(c=>cardHTML(c,{disabled:!canPlay,w:66,h:100,
         onclick:canPlay?`handleCardClick4('${c.id}')`:''})).join('')}</div>`;
   }
 
@@ -2697,10 +2846,10 @@ function renderGame4(){
 /* ── Botones de canto/toque (envido, truco, mazo) para 4 jugadores ── */
 function mkBtn4(label, onclick, color, accent){
   color = color || '#5a3a1a'; accent = accent || '#c8963e';
-  return `<button onclick="${onclick}" style="padding:5px 8px;border-radius:6px;
+  return `<button onclick="${onclick}" style="padding:6px 10px;border-radius:6px;
     border:1.5px solid ${accent};background:${color};color:rgba(255,240,200,0.95);
     font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer;
-    width:100%;box-sizing:border-box;min-height:28px;">${label}</button>`;
+    flex:1 1 auto;box-sizing:border-box;min-height:30px;min-width:88px;">${label}</button>`;
 }
 function renderActions4(){
   const el=document.getElementById('g4-actions');
@@ -4006,6 +4155,15 @@ document.addEventListener('click', (ev)=>{
   if(!el || el.style.display!=='grid') return;
   if(el.contains(ev.target) || (btn && btn.contains(ev.target))) return;
   toggleEmojiPicker(false);
+}, true);
+
+// Cerrar el menú de señas (4 jugadores) si se toca afuera
+document.addEventListener('click', (ev)=>{
+  const el = document.getElementById('g4-sena-menu');
+  const btn = document.getElementById('g4-sena-btn');
+  if(!el || el.style.display!=='grid') return;
+  if(el.contains(ev.target) || (btn && btn.contains(ev.target))) return;
+  toggleSenaMenu4(false);
 }, true);
 
 // Reacciones automáticas de la IA según el estado de la partida.
@@ -6768,12 +6926,12 @@ function joinRoom(){
       if(data.type==='init'){
         // Legacy handler kept for safety
         _opponentName = data.playerName||'Rival';
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
+        G={...data.state, p2Joined:true}; SEL=null; BUSY=false; _p2ActionLock=false;
         addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
         _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false;
+        G={...data.state, p2Joined:true}; SEL=null; BUSY=false; _p2ActionLock=false;
         if(!_p2GameStarted){
           _p2GameStarted=true;
           addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
@@ -7163,7 +7321,8 @@ function show(id){
   try{
     if(screen.orientation && screen.orientation.lock){
       if(id==='s-game4'){
-        screen.orientation.lock('landscape').catch(()=>{});
+        applyOrientationLock4();
+        setTimeout(updateRotateToggleBtn4, 50);
       } else {
         screen.orientation.lock('portrait').catch(()=>{});
       }
