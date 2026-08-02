@@ -424,6 +424,26 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   75%{opacity:1;transform:translateX(0) scale(1);}
   100%{opacity:0;transform:translateX(0) scale(0.85);}
 }
+/* ── Flor grande centrada (reemplaza la voz al cantar Flor) ── */
+#big-flor{
+  position:fixed;top:50%;left:50%;z-index:9500;
+  pointer-events:none;opacity:0;text-align:center;
+  transform:translate(-50%,-50%) scale(0.3) rotate(-12deg);
+}
+#big-flor-emoji{font-size:150px;line-height:1;filter:drop-shadow(0 8px 22px rgba(0,0,0,.65));}
+#big-flor-label{
+  margin-top:-6px;font-family:Georgia,serif;font-weight:900;font-size:22px;letter-spacing:1px;
+  color:#ffe6f2;text-shadow:0 2px 8px rgba(0,0,0,.8),0 0 18px rgba(248,165,194,.6);
+  white-space:nowrap;
+}
+#big-flor.show{animation:bigFlorPop 2.6s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes bigFlorPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(0.2) rotate(-20deg);}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.35) rotate(10deg);}
+  30%{transform:translate(-50%,-50%) scale(1) rotate(0deg);}
+  82%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg);}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(0.85) rotate(0deg);}
+}
 #audio-toggle{background:transparent;border:1.5px solid #3a6a3a;color:#6a9a6a;
   border-radius:8px;padding:3px 8px;cursor:pointer;font-size:14px;}
 /* ── Sorteo 4 jugadores: mazo boca abajo (apilado, look 3D) y la
@@ -1766,10 +1786,11 @@ function setCardImages(sbUrl, bucket){ CARD_IMG_BASE = sbUrl+'/storage/v1/object
 // ===== SISTEMA DE MAZOS =====
 const MAZOS = [
   { id: 'MAZO URUGUAYO', nombre: 'Clasico', desc: 'Mazo espanol tradicional', folder: 'MAZO URUGUAYO', ext: 'jpeg', color: '#8B4513', preview: '\ud83c\udfb4' },
-  { id: 'CARTAS-TRUCO', nombre: 'Madera', desc: 'Diseno rustico en madera', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
-  { id: 'MAZO ANTIGUO', nombre: 'Dorado', desc: 'Cartas con acabado dorado', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
+  { id: 'CARTAS-TRUCO', nombre: 'Madera', desc:'cartas personalizadas uruguayas', folder: 'CARTAS-TRUCO', ext: 'jpeg', color: '#5D4037', preview: '\ud83e\udeb5' },
+  { id: 'MAZO ANTIGUO', nombre: 'Dorado', desc: 'cartas estilo antiguo', folder: 'MAZO ANTIGUO', ext: 'png', color: '#B8860B', preview: '\u2728' },
   { id: 'minimalista', nombre: 'Minimalista', desc: 'Diseno limpio y moderno', folder: 'CARTAS-MINIMAL', ext: 'png', color: '#37474F', preview: '\u25fc' },
 ];
+
 
 let _selectedDeck = localStorage.getItem('truco_deck') || 'clasico';
 
@@ -2554,8 +2575,8 @@ function voiceKeyForAction4(data, accepted){
   if(data.action==='callEnvido') return {envido:'envido', realenvido:'realenv', faltaenvido:'faltaenv'}[data.level];
   if(data.action==='callTruco') return 'truco';
   if(data.action==='mazo') return 'mazo';
-  if(data.action==='callFlor') return 'flor';
-  if(data.action==='respondFlor') return data.raise ? 'contraflor' : 'flor';
+  if(data.action==='callFlor') return null; // se muestra la flor grande en vez de una voz
+  if(data.action==='respondFlor') return null;
   if(data.action==='respondContraflor') return data.accept ? 'quiero' : 'noquiero';
   if(data.action==='respondEnvido'){
     if(data.raiseLevel) return data.raiseLevel==='realenvido'?'realenv':'faltaenv';
@@ -2585,6 +2606,9 @@ function hostHandleAction4(role, data){
       const raisedLevel = (data.action==='respondTruco' && data.raise) ? (G4.trucoPend ? G4.trucoPend.level : trucoLevelBefore) : null;
       const vkey = voiceKeyForAction4(data, raisedLevel);
       if(vkey) broadcastVoice4(role, vkey);
+      if(data.action==='callFlor' || (data.action==='respondFlor' && data.raise)){
+        broadcastBigFlor4(data.action==='respondFlor' ? '¡CONTRA FLOR AL RESTO!' : '¡FLOR!');
+      }
     }
     broadcastState4();
     if(G4.phase==='trick_done') setTimeout(avanzarTrasBaza4, 1400);
@@ -3021,7 +3045,10 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
   // Send P2-perspective logs after syncOnline
   if(MODE==='online'){
     sendP2Log('🃏 Nueva mano. ' + (p1IsMano ? 'El rival es mano.' : 'Sos el mano.'), '#d4a017');
-    if(h.p1Flor){
+    sendP2Log('🎴 Muestra: ' + VNOME[h.muestra.v] + ' de ' + sN[h.muestra.s], '#e8c84a');
+    if(h.p1Flor && h.p2Flor){
+      sendP2Log('🌸 Ambos tienen Flor. ' + (G.mano==='p2' ? 'Tenés' : 'El rival tiene') + ' que responder.','#f8a5c2');
+    } else if(h.p1Flor){
       sendP2Log('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
       setTimeout(()=>{ if(_conn&&_conn.open) _conn.send({type:'bubble',who:'p2',txt:'🌸 ¡La mía es Flor!'}); },350);
     } else if(h.p2Flor){
@@ -3267,14 +3294,25 @@ function finalizeHand(g) {
   G.p1Reveal = p1Reveal; G.p2Reveal = p2Reveal;
   if ((p1Reveal && G.p1Hand.length > 0) || (p2Reveal && G.p2Hand.length > 0)) {
     G.revealHands = true;
-    if (p1Reveal && G.p1Hand.length) addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
-    if (p2Reveal && G.p2Hand.length) addLog('🔍 Cartas sin jugar de IA: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
+    if (p1Reveal && G.p1Hand.length){
+      addLog('🔍 Tus cartas sin jugar: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
+      sendP2Log('🔍 Cartas sin jugar de tu rival: ' + G.p1Hand.map(cn).join(', '), '#9aa0c0');
+    }
+    if (p2Reveal && G.p2Hand.length){
+      addLog('🔍 Cartas sin jugar de ' + (MODE==='online'?'tu rival':'IA') + ': ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
+      sendP2Log('🔍 Tus cartas sin jugar: ' + G.p2Hand.map(cn).join(', '), '#9aa0c0');
+    }
   }
 
   addLog(
     (myWin ? '🏆 Ganás' : '💀 Perdés') + ' la mano! ' +
     (myWin ? '+' + pts + ' pts → Vos: ' + G.pScore : (MODE==='online'?'Rival':'IA') + ' +' + pts + ' pts → ' + (MODE==='online'?'Rival':'IA') + ': ' + G.oScore) + '/' + MAX_PTS,
     myWin ? '#7fba5a' : '#e06060'
+  );
+  sendP2Log(
+    (myWin ? '💀 Perdés' : '🏆 Ganás') + ' la mano! ' +
+    (myWin ? 'Rival +' + pts + ' pts → Rival: ' + G.pScore : '+' + pts + ' pts → Vos: ' + G.oScore) + '/' + MAX_PTS,
+    myWin ? '#e06060' : '#7fba5a'
   );
   // La IA reacciona con un emoji según el resultado de la mano (más fuerte si la mano valía mucho)
   aiEmojiReact(myWin ? (pts>=3?'bigloss':'lose') : (pts>=3?'bigwin':'win'), pts>=3?0.8:0.55);
@@ -3382,6 +3420,29 @@ let _playCardBusy = false;
 // desde el host. Sin esto, en la ventana entre "mandé la acción" y "me llegó
 // la confirmación por red" se podía repetir la misma acción o disparar otra.
 let _p2ActionLock = false;
+
+// Antes, cuando un toque quedaba bloqueado por _p2ActionLock (esperando la
+// confirmación del host), no pasaba nada visible — parecía que el botón no
+// funcionaba. Ahora se muestra un aviso breve para que quede claro que hay
+// que esperar un instante en vez de creer que el juego no respondió.
+let _flashP2Timer = null;
+function flashP2Blocked(){
+  let el = document.getElementById('p2-blocked-flash');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'p2-blocked-flash';
+    el.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;'+
+      'background:rgba(20,20,20,.92);color:#ffd88a;border:1.5px solid #d4a017;border-radius:20px;'+
+      'padding:7px 16px;font-family:Georgia,serif;font-size:13px;font-weight:700;'+
+      'box-shadow:0 6px 18px rgba(0,0,0,.5);pointer-events:none;transition:opacity .2s;';
+    document.body.appendChild(el);
+  }
+  el.textContent = '⏳ Esperando confirmación… probá de nuevo en un segundo';
+  el.style.opacity = '1';
+  el.style.display = 'block';
+  clearTimeout(_flashP2Timer);
+  _flashP2Timer = setTimeout(()=>{ el.style.opacity = '0'; }, 1400);
+}
 function playCard(idx) {
   if (G.fase !== 'p_turn' || G.handDone) return;
   if (_playCardBusy) return;  // debounce: ignore rapid double-tap
@@ -3393,7 +3454,7 @@ function playCard(idx) {
   const card = hand[idx];
   if (!card) return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sendAction('playCard',{idx});
     // Bloqueo optimista: no esperamos la confirmación del host por red para
@@ -3417,6 +3478,7 @@ function playCard(idx) {
   const aiAlreadyPlayed = !!G.mesa.p2;
   G.mesa = { ...G.mesa, [MY_ROLE]: card };
   addLog('▶ Jugás ' + cn(card), '#7fba5a');
+  sendP2Log('▶ Rival jugó ' + cn(card), '#f0a060');
   SEL = null;
   if (!aiAlreadyPlayed) G.roundLeader = 'p1';
   if (G.mesa.p2) {
@@ -3453,7 +3515,7 @@ function callEnvido(level) {
   const refuses = { envido: 1, realenvido: 2, faltaenvido: 1 };
   const names = { envido: 'Envido', realenvido: 'Real Envido', faltaenvido: 'Falta Envido' };
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2','▶ ¡'+names[level]+'!','#d4890a',names[level]);
     sendAction('callEnvido',{level});
@@ -3478,8 +3540,11 @@ function getFalta() { return MAX_PTS - Math.min(G.pScore, G.oScore); }
 function resolveFlorBattle(stake) {
   const winner = G.p1FlorPts >= G.p2FlorPts ? 'p1' : 'p2';
   const myWin = winner === 'p1';
-  addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' la Flor! Vos: ' + G.p1FlorPts + ' vs IA: ' + G.p2FlorPts +
-    '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), '#f8a5c2');
+  const oppLbl = MODE==='online' ? 'Rival' : 'IA';
+  addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' la Flor! Vos: ' + G.p1FlorPts + ' vs ' + oppLbl + ': ' + G.p2FlorPts +
+    '. ' + (myWin ? '+' + stake + ' pts.' : oppLbl + ' +' + stake + ' pts.'), '#f8a5c2');
+  sendP2Log((myWin ? '❌ Perdés' : '✅ Ganás') + ' la Flor! Vos: ' + G.p2FlorPts + ' vs Rival: ' + G.p1FlorPts +
+    '. ' + (myWin ? 'Rival +' + stake + ' pts.' : '+' + stake + ' pts.'), '#f8a5c2');
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
   else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   reactToOutcome(myWin);
@@ -3488,7 +3553,9 @@ function resolveFlorBattle(stake) {
 
 function resolveFlorReject(winnerRole, pts) {
   const myWin = winnerRole === 'p1';
-  addLog((myWin ? '✅ Ganás la Flor por no querer: +' : '❌ IA gana la Flor por no querer: +') + pts + ' pts.', '#f8a5c2');
+  const oppLbl = MODE==='online' ? 'Rival' : 'IA';
+  addLog((myWin ? '✅ Ganás la Flor por no querer: +' : '❌ '+oppLbl+' gana la Flor por no querer: +') + pts + ' pts.', '#f8a5c2');
+  sendP2Log((myWin ? '❌ Rival gana la Flor por no querer: +' : '✅ Ganás la Flor por no querer: +') + pts + ' pts.', '#f8a5c2');
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + pts);
   else G.oScore = Math.min(MAX_PTS, G.oScore + pts);
   reactToOutcome(myWin);
@@ -3508,7 +3575,7 @@ function finishFlorBattle() {
 function florAccept() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
     sendAction('florAccept',{});
@@ -3523,7 +3590,7 @@ function florAccept() {
 function florCallContraflorResto() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
     sendAction('florCallContraflorResto',{});
@@ -3543,7 +3610,7 @@ function florCallContraflorResto() {
 function respondContraflorResto(accept) {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'contraflor_resto') return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2', accept ? '▶ ¡Quiero!' : '▶ No quiero.', accept ? '#7fba5a' : '#d4890a', accept ? 'Quiero' : 'No quiero');
     sendAction('respondContraflorResto',{accept});
@@ -3607,7 +3674,7 @@ function canCallTruco() {
 function callTruco() {
   if (!canCallTruco()) return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2','▶ ¡Truco!','#e04040','Truco');
     sendAction('callTruco',{level:'truco'});
@@ -3626,13 +3693,14 @@ function callTruco() {
 function respondEnvido(accept) {
   if (G.fase !== 'p_resp_env' || !G.envPend) return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2', accept ? '▶ ¡Quiero!' : '▶ No quiero.', accept ? '#7fba5a' : '#d4890a', accept ? 'Quiero' : 'No quiero');
     sendAction('respondEnvido',{accept});
     return;
   }
   const { stake, refuseVal, by } = G.envPend;
+  const oppLbl = MODE==='online' ? 'Rival' : 'IA';
   G.envPend = null; G.envDone = true;
   if (accept) {
     G.envAccepted = true;
@@ -3640,8 +3708,10 @@ function respondEnvido(accept) {
     const winner = G.p1Env >= G.p2Env ? 'p1' : 'p2';
     G.envWinner = winner;
     const myWin = winner === 'p1';
-    addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs IA: ' + G.p2Env +
-      '. ' + (myWin ? '+' + stake + ' pts.' : 'IA +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
+    addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' el envido! Vos: ' + G.p1Env + ' vs ' + oppLbl + ': ' + G.p2Env +
+      '. ' + (myWin ? '+' + stake + ' pts.' : oppLbl + ' +' + stake + ' pts.'), myWin ? '#7fba5a' : '#e06060');
+    sendP2Log((myWin ? '❌ Perdés' : '✅ Ganás') + ' el envido! Vos: ' + G.p2Env + ' vs Rival: ' + G.p1Env +
+      '. ' + (myWin ? 'Rival +' + stake + ' pts.' : '+' + stake + ' pts.'), myWin ? '#e06060' : '#7fba5a');
     if (myWin){ G.pScore = Math.min(MAX_PTS, G.pScore + stake); campTrackEnvidoWin(); }
     else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
     aiEmojiReact(myWin ? 'lose' : 'win');
@@ -3649,9 +3719,10 @@ function respondEnvido(accept) {
     reactToOutcome(myWin);
   } else {
     sayAndShow('p1','▶ No quiero.','#d4890a','No quiero');
-    // IA llamó y jugador no quiere → IA gana refuseVal (el jugador "pierde" el envido)
+    // El rival (IA u online) llamó y el jugador no quiere → gana refuseVal
     G.oScore = Math.min(MAX_PTS, G.oScore + refuseVal);
-    addLog('❌ IA gana: +' + refuseVal + ' pts.', '#e06060');
+    addLog('❌ ' + oppLbl + ' gana: +' + refuseVal + ' pts.', '#e06060');
+    sendP2Log('✅ Ganás: +' + refuseVal + ' pts.', '#7fba5a');
     aiEmojiReact('win', 0.4);
     aiPhraseReact('win', 0.4);
     reactToOutcome(false);
@@ -3668,7 +3739,7 @@ function respondEnvido(accept) {
 function respondTruco(accept, raise = false) {
   if (G.fase !== 'p_resp_truco' || !G.trucoPend) return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     if (raise) {
       const next = { truco: 'retruco', retruco: 'vale4' }[G.trucoPend.level];
@@ -3693,6 +3764,7 @@ function respondTruco(accept, raise = false) {
     G.trucoPend = { level: next, by: 'p1', stake: stakes2[next], refuseVal: refuses2[next] };
     G.trucoLastCaller = 'p1';
     addLog('▶ Subís: ¡' + names[next] + '!', '#c0392b');
+    sendP2Log('▶ Rival sube: ¡' + names[next] + '!', '#c0392b');
     showBubble('p1', names[next]);
     say(names[next], 'p1');
     triggerTensionShake();
@@ -3729,7 +3801,7 @@ function irAlMazo(){ mazo(); }
 function mazo() {
   if (G.fase !== 'p_turn' || G.handDone) return;
   if (MODE==='online' && MY_ROLE==='p2') {
-    if (_p2ActionLock) return;
+    if (_p2ActionLock) { flashP2Blocked(); return; }
     _p2ActionLock = true;
     sayAndShow('p2','▶ Me voy al mazo.','#d4890a','Me voy al mazo');
     sendAction('mazo',{});
@@ -4243,27 +4315,67 @@ function sayAndShow(who, displayText, color, spoken){
                   : who;
   const cleanText = (spoken||displayText.replace(/[🤖▶✅❌🔄🏆💀🎯⚔️🌸🃏]/g,'')).trim();
   showBubble(bubbleWho, cleanText);
-  say(cleanText, who);
+
+  // Primero el sonido propio del juego (golpe corto), y recién después —con
+  // un pequeño respiro para que no se pisen— la voz (grabada o TTS).
+  playUiSound('snd-click', 0.6);
+
+  const isFlorCall = /\bflor\b/i.test(cleanText);
+  if(isFlorCall){
+    // Para "Flor" y "Contra Flor al Resto" ya no se juega ninguna voz —
+    // se muestra una flor grande en el centro de la pantalla en su lugar.
+    showBigFlor(/contra\s*flor/i.test(cleanText) ? '¡CONTRA FLOR AL RESTO!' : '¡FLOR!');
+  } else {
+    setTimeout(()=>{ say(cleanText, who); }, 320);
+  }
   triggerTensionShake();
   // In online mode: when the LOCAL player speaks, tell the opponent to play our recorded voice
-  if(MODE==='online' && who===MY_ROLE && _conn && _conn.open){
+  if(MODE==='online' && who===MY_ROLE && _conn && _conn.open && !isFlorCall){
     const km={'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
       '¡Quiero!':'quiero','Quiero':'quiero','No quiero':'noquiero',
       'Envido':'envido','Real Envido':'realenv','Falta Envido':'faltaenv',
-      'Al mazo':'mazo','Me voy al mazo':'mazo','La mía es flor':'flor','Flor':'flor'};
+      'Al mazo':'mazo','Me voy al mazo':'mazo'};
     const k=km[cleanText]||Object.entries(km).find(([t])=>cleanText.includes(t))?.[1];
     if(k) try{ _conn.send({type:'playvoice', key:k}); }catch(e){}
   }
 }
 
+// ── Flor grande en el centro de la pantalla ──
+// Reemplaza cualquier audio (grabado o TTS) cuando se canta Flor / Contra
+// Flor al Resto: en vez de una voz aleatoria, un 🌸 grande y llamativo.
+function showBigFlor(label){
+  let el = document.getElementById('big-flor');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'big-flor';
+    el.innerHTML = '<div id="big-flor-emoji">🌸</div><div id="big-flor-label"></div>';
+    document.body.appendChild(el);
+  }
+  const labelEl = document.getElementById('big-flor-label');
+  if(labelEl) labelEl.textContent = label || '¡FLOR!';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 2600);
+}
+
 /* ── Mostrar puntos al final de mano ────────────────────────── */
 function logEnvidoReveal(){
   // Solo mostrar puntos si el envido/flor fue aceptado y se jugó (no si alguien dijo No quiero)
+  const oppLbl = MODE==='online' ? 'Rival' : 'IA';
   if(G.p1Flor||G.p2Flor){
-    if(G.p1Flor) addLog('🌸 Tus puntos de Flor: '+G.p1FlorPts,'#f8a5c2');
-    if(G.p2Flor) addLog('🌸 Puntos de Flor de IA: '+G.p2FlorPts,'#f8a5c2');
+    if(G.p1Flor){
+      addLog('🌸 Tus puntos de Flor: '+G.p1FlorPts,'#f8a5c2');
+      sendP2Log('🌸 Puntos de Flor de tu rival: '+G.p1FlorPts,'#f8a5c2');
+    }
+    if(G.p2Flor){
+      addLog('🌸 Puntos de Flor de '+oppLbl+': '+G.p2FlorPts,'#f8a5c2');
+      sendP2Log('🌸 Tus puntos de Flor: '+G.p2FlorPts,'#f8a5c2');
+    }
   } else if(G.envAccepted){
-    addLog('📊 Tus puntos de envido: '+G.p1Env+' | IA: '+G.p2Env,'#d4890a');
+    addLog('📊 Tus puntos de envido: '+G.p1Env+' | '+oppLbl+': '+G.p2Env,'#d4890a');
+    sendP2Log('📊 Tus puntos de envido: '+G.p2Env+' | Rival: '+G.p1Env,'#d4890a');
   }
   // Si no fue aceptado (No quiero), no se muestran ni giran las cartas
 }
@@ -4347,6 +4459,12 @@ function playCustomVoice4(role, key){
 function broadcastVoice4(role, key){
   playCustomVoice4(role, key);
   Object.values(_conns4).forEach(c=>{ if(c && c.open) try{ c.send({type:'playvoice4', role, key}); }catch(e){} });
+}
+// Igual que arriba pero para la flor grande centrada: la muestra el host en
+// su pantalla y les avisa a los otros 3 para que la vean también.
+function broadcastBigFlor4(label){
+  showBigFlor(label);
+  Object.values(_conns4).forEach(c=>{ if(c && c.open) try{ c.send({type:'bigflor4', label}); }catch(e){} });
 }
 // El host guarda el paquete de voces (en base64, tal cual llega) de cada
 // jugador para poder reenviárselo a quien se conecte más tarde — así no
@@ -6568,6 +6686,8 @@ function joinRoom4(){
         receiveVoicesFromPeer4(data.role, data.voices);
       } else if(data.type==='playvoice4'){
         playCustomVoice4(data.role, data.key);
+      } else if(data.type==='bigflor4'){
+        showBigFlor(data.label);
       }
     });
     _conn.on('close', ()=>{ showMsg('join-msg-4','⚠️ Se cerró la sala.','#e06060'); });
@@ -6926,12 +7046,19 @@ function joinRoom(){
       if(data.type==='init'){
         // Legacy handler kept for safety
         _opponentName = data.playerName||'Rival';
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false; _p2ActionLock=false;
+        { const _keepLogs = (G&&G.logs)?G.logs:[]; G={...data.state, p2Joined:true, logs:_keepLogs}; }
+        SEL=null; BUSY=false; _p2ActionLock=false;
         addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
         _p2GameStarted=true;
         show('s-game'); renderGame();
       } else if(data.type==='state'){
-        G={...data.state, p2Joined:true}; SEL=null; BUSY=false; _p2ActionLock=false;
+        // Importante: NUNCA tomar "logs" del estado del host — esos textos
+        // están escritos desde SU perspectiva ("Vos"/"Rival" al revés). El
+        // historial de P2 se mantiene aparte y solo crece vía mensajes
+        // 'p2log' (ya redactados desde la perspectiva correcta), para que no
+        // se pise con cada sincronización de estado que llega después.
+        { const _keepLogs = (G&&G.logs)?G.logs:[]; G={...data.state, p2Joined:true, logs:_keepLogs}; }
+        SEL=null; BUSY=false; _p2ActionLock=false;
         if(!_p2GameStarted){
           _p2GameStarted=true;
           addLog('🟢 Conectado con '+_opponentName+'. ¡A jugar!','#7fba5a');
@@ -6967,12 +7094,9 @@ function joinRoom(){
       } else if(data.type==='playWin'){
         playWinSound();
       } else if(data.type==='p2log'){
-        // Replace the last log entry with P2's perspective version
-        if(G && G.logs && G.logs.length > 0){
-          G.logs = [...G.logs.slice(0,-1), {txt:data.txt, color:data.color||'#4a7a4a'}];
-        } else {
-          addLog(data.txt, data.color||'#4a7a4a');
-        }
+        // Se agrega como entrada nueva (el estado ya no trae logs propios
+        // que haya que "corregir" pisando la última línea).
+        addLog(data.txt, data.color||'#4a7a4a');
         renderGame();
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
@@ -7027,6 +7151,7 @@ function handleRemoteAction(action, payload){
       const playerAlreadyPlayed = !!G.mesa.p1;
       G.mesa = {...G.mesa, p2: card};
       addLog('▶ Rival jugó ' + cn(card), '#f0a060');
+      sendP2Log('▶ Jugás ' + cn(card), '#7fba5a');
       sayAndShow('p2','▶ Rival jugó','#f0a060','');
       if(!playerAlreadyPlayed) G.roundLeader = 'p2';
       if(G.mesa.p1){
@@ -7125,6 +7250,7 @@ function handleRemoteAction(action, payload){
         G.trucoPend={level:next, by:'p2', stake:stakes3[next], refuseVal:refuses3[next]};
         G.trucoLastCaller='p2';
         addLog('▶ Rival sube: ¡'+names3[next]+'!','#c0392b');
+        sendP2Log('▶ Subís: ¡'+names3[next]+'!','#c0392b');
         sayAndShow('p2',names3[next],'#c0392b',names3[next]);
         triggerTensionShake();
         G.fase='p_resp_truco';
