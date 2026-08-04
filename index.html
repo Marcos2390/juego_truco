@@ -2576,8 +2576,8 @@ function voiceKeyForAction4(data, accepted){
   if(data.action==='callEnvido') return {envido:'envido', realenvido:'realenv', faltaenvido:'faltaenv'}[data.level];
   if(data.action==='callTruco') return 'truco';
   if(data.action==='mazo') return 'mazo';
-  if(data.action==='callFlor') return null; // se muestra la flor grande en vez de una voz
-  if(data.action==='respondFlor') return null;
+  if(data.action==='callFlor') return 'flor'; // se escucha la voz del jugador, sin audio de fondo
+  if(data.action==='respondFlor') return data.raise ? 'contraflor' : null;
   if(data.action==='respondContraflor') return data.accept ? 'quiero' : 'noquiero';
   if(data.action==='respondEnvido'){
     if(data.raiseLevel) return data.raiseLevel==='realenvido'?'realenv':'faltaenv';
@@ -4352,13 +4352,16 @@ function sayAndShow(who, displayText, color, spoken){
 
   // Primero el sonido propio del juego (golpe corto), y recién después —con
   // un pequeño respiro para que no se pisen— la voz (grabada o TTS).
-  playUiSound('snd-click', 0.6);
-
+  // Excepción: al cantar Flor no se pone ningún sonido de fondo, para que
+  // se escuche bien clara y sin ruido la voz del jugador diciendo "Flor".
   const isFlorCall = /\bflor\b/i.test(cleanText);
+  if(!isFlorCall) playUiSound('snd-click', 0.6);
+
   if(isFlorCall){
-    // Para "Flor" y "Contra Flor al Resto" ya no se juega ninguna voz —
-    // se muestra una flor grande en el centro de la pantalla en su lugar.
+    // Se muestra la flor grande en el centro de la pantalla y, sin ningún
+    // otro audio de fondo, se escucha únicamente la voz del jugador.
     showBigFlor(/contra\s*flor/i.test(cleanText) ? '¡CONTRA FLOR AL RESTO!' : '¡FLOR!');
+    setTimeout(()=>{ say(cleanText, who); }, 150);
   } else {
     setTimeout(()=>{ say(cleanText, who); }, 320);
   }
