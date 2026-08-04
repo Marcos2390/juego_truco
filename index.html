@@ -1164,21 +1164,6 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         <div id="g4-truco-badge" style="color:#e04040;font-family:Georgia,serif;font-size:11px;font-weight:700;
           flex:1;text-align:center;min-height:14px"></div>
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;position:relative">
-          <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Señas con tu compañero"
-            style="background:rgba(0,0,0,.3);border:1px solid rgba(142,200,255,.4);color:#8ec8ff;
-            font-size:13px;border-radius:7px;padding:4px 7px;cursor:pointer;line-height:1">🤝</button>
-          <div id="g4-sena-menu" style="display:none;position:absolute;top:32px;right:0;z-index:40;
-            background:#241708;border:1px solid rgba(142,200,255,.4);border-radius:10px;padding:6px;
-            box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;grid-template-columns:1fr 1fr;gap:5px;width:150px">
-            <button onclick="sendSena4('Vení')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
-              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Vení</button>
-            <button onclick="sendSena4('Poné')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
-              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Poné</button>
-            <button onclick="sendSena4('Tocá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
-              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Tocá</button>
-            <button onclick="sendSena4('Gritá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
-              background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Gritá</button>
-          </div>
           <button id="g4-rotate-toggle" onclick="toggleRotateLock4()"
             style="background:rgba(0,0,0,.3);border:1px solid rgba(127,186,90,.4);color:#7fba5a;
             font-size:13px;border-radius:7px;padding:4px 7px;cursor:pointer;line-height:1">🔒</button>
@@ -1186,12 +1171,6 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
             style="background:none;border:none;color:#7fba5a;font-size:20px;cursor:pointer;line-height:1">✕</button>
         </div>
       </div>
-
-      <!-- Aviso flotante cuando el compañero te manda una seña (solo vos lo ves) -->
-      <div id="g4-sena-banner" style="display:none;position:absolute;top:38px;left:50%;transform:translateX(-50%);
-        z-index:45;background:rgba(20,40,60,.95);border:1.5px solid #8ec8ff;color:#dff0ff;
-        font-family:Georgia,serif;font-size:13px;font-weight:700;padding:7px 16px;border-radius:20px;
-        box-shadow:0 6px 18px rgba(0,0,0,.5);white-space:nowrap"></div>
 
       <!-- MESA: la muestra queda fija en el centro; cada jugador tiene su
            celda alrededor (arriba=compañero, izq/der=rivales, abajo=vos)
@@ -1202,7 +1181,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         align-items:center;justify-content:center;overflow:visible">
         <div id="g4-mesa" style="width:100%;max-width:320px;max-height:260px;display:flex;
           align-items:center;justify-content:center;flex-shrink:0;
-          background:rgba(0,0,0,.2);border-radius:16px;padding:6px;box-sizing:border-box"></div>
+          background:rgba(90,150,100,.35);border-radius:16px;padding:6px;box-sizing:border-box"></div>
       </div>
 
       <div id="g4-seat-bottom" style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0"></div>
@@ -1210,6 +1189,31 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
       <div id="g4-status" style="text-align:center;font-family:Georgia,serif;font-size:12px;font-weight:700;min-height:16px;flex-shrink:0"></div>
 
       <div id="g4-actions" style="display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:4px;flex-shrink:0"></div>
+
+      <!-- Hablar con tu compañero (señas): debajo de los botones de canto/gritos -->
+      <div style="display:flex;justify-content:center;position:relative;flex-shrink:0">
+        <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Hablar con tu compañero"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(142,200,255,.4);color:#8ec8ff;
+          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 12px;
+          cursor:pointer;line-height:1;display:flex;align-items:center;gap:6px">🤝 Hablar con tu compañero</button>
+        <div id="g4-sena-menu" style="display:none;position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:40;
+          background:#241708;border:1px solid rgba(142,200,255,.4);border-radius:10px;padding:6px;
+          box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;grid-template-columns:1fr 1fr;gap:5px;width:150px">
+          <button onclick="sendSena4('Vení')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+            background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Vení</button>
+          <button onclick="sendSena4('Poné')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+            background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Poné</button>
+          <button onclick="sendSena4('Tocá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+            background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Tocá</button>
+          <button onclick="sendSena4('Gritá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+            background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Gritá</button>
+        </div>
+        <!-- Aviso de seña: sale pegado al botón, no arriba de la mesa -->
+        <div id="g4-sena-banner" style="display:none;position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+          z-index:45;background:rgba(20,40,60,.95);border:1.5px solid #8ec8ff;color:#dff0ff;
+          font-family:Georgia,serif;font-size:13px;font-weight:700;padding:7px 16px;border-radius:20px;
+          box-shadow:0 6px 18px rgba(0,0,0,.5);white-space:nowrap"></div>
+      </div>
 
       <details id="g4-log-details" style="flex-shrink:0">
         <summary style="cursor:pointer;color:rgba(200,160,70,.8);padding:2px 4px;font-family:Georgia,serif;font-size:11px">📜 Historial</summary>
@@ -2642,7 +2646,7 @@ function toggleSenaMenu4(force){
 function sendSena4(code){
   toggleSenaMenu4(false);
   sendAction4('sena', {code});
-  showSenaBanner4('✋ Le mandaste una seña a tu compañero: “'+code+'”', '#8ec8ff');
+  showSenaBanner4(code+'!!', '#8ec8ff');
 }
 function callSena4(role, code){
   if(!G4) return false;
@@ -2658,7 +2662,7 @@ function checkIncomingSena4(){
   _lastSenaShownTs = s.ts;
   if(s.byRole===MY_ROLE) return; // ya te avisaste vos mismo al mandarla
   if(!TEAM_OF4 || TEAM_OF4[MY_ROLE]!==s.byTeam) return; // no sos de su equipo: no se te muestra
-  showSenaBanner4('🤝 '+nameFor4(s.byRole)+': “'+s.code+'”', '#8ec8ff');
+  showSenaBanner4(s.code+'!!', '#8ec8ff');
 }
 function showSenaBanner4(text, color){
   const el = document.getElementById('g4-sena-banner');
@@ -2701,14 +2705,21 @@ function broadcastState4(){
 // que las cruza (la "porteria"/tranquera clásica). El resto (<5) se
 // muestra como líneas verticales sueltas.
 function palitoGrupoSVG(n){
-  const W=16,H=20;
-  const xs=[2,6,10,14];
+  // Sistema clásico del truco: cada grupo de 5 se dibuja como un cuadro
+  // (armado lado por lado: izquierda, arriba, derecha, abajo) y al llegar
+  // a 5 se le cruza una diagonal de punta a punta.
+  const W=18,H=18;
+  const x0=2,x1=16,y0=2,y1=16;
+  const sides=[
+    `<line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y1}" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`,
+    `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y0}" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`,
+    `<line x1="${x1}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`,
+    `<line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y1}" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`
+  ];
   let bars='';
-  for(let i=0;i<Math.min(n,4);i++){
-    bars+=`<line x1="${xs[i]}" y1="3" x2="${xs[i]}" y2="17" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>`;
-  }
+  for(let i=0;i<Math.min(n,4);i++) bars+=sides[i];
   if(n>=5){
-    bars+=`<line x1="0" y1="16" x2="16" y2="2" stroke="#ffcc44" stroke-width="2.2" stroke-linecap="round"/>`;
+    bars+=`<line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y0}" stroke="#ffcc44" stroke-width="2.2" stroke-linecap="round"/>`;
   }
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="flex-shrink:0">${bars}</svg>`;
 }
