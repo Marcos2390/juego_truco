@@ -1201,7 +1201,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
            sin necesidad de scroll -->
       <div id="g4-table" style="flex:0 0 auto;display:flex;flex-direction:column;
         align-items:center;justify-content:center;overflow:visible">
-        <div id="g4-mesa" style="width:100%;max-width:320px;max-height:260px;display:flex;
+        <div id="g4-mesa" style="width:100%;max-width:320px;display:flex;
           align-items:center;justify-content:center;flex-shrink:0;
           background:rgba(90,150,100,.35);border-radius:16px;padding:6px;box-sizing:border-box"></div>
       </div>
@@ -1210,7 +1210,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <div id="g4-status" style="text-align:center;font-family:Georgia,serif;font-size:12px;font-weight:700;min-height:16px;flex-shrink:0"></div>
 
-      <div id="g4-actions" style="display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:4px;flex-shrink:0"></div>
+      <div id="g4-actions" style="display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch;justify-content:center;gap:4px;flex-shrink:0"></div>
 
       <!-- Hablar con tu compañero (señas): debajo de los botones de canto/gritos -->
       <div style="display:flex;justify-content:center;position:relative;flex-shrink:0">
@@ -1244,6 +1244,32 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         <button onclick="hostSiguienteMano4()" style="background:#2a4a1a;border:1px solid #4a7a2a;color:#c8e896;
           border-radius:10px;padding:10px 22px;cursor:pointer;font-size:13px;font-weight:700;font-family:Georgia,serif">
           ➡️ Repartir siguiente mano
+        </button>
+      </div>
+
+      <!-- Fin de partida (2v2): tabla de puntos, quién ganó y audio de festejo/derrota,
+           igual que en 1v1 / vs IA. -->
+      <div id="g4-gameover" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(5,10,5,.94);
+        flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
+        <div id="g4-go-emoji" style="font-size:64px;margin-bottom:4px">🏆</div>
+        <div id="g4-go-title" style="font-size:26px;font-weight:900;letter-spacing:2px;text-align:center;font-family:Georgia,serif;color:#fff"></div>
+        <div id="g4-go-sub" style="font-size:13px;text-align:center;margin-top:6px;font-family:Georgia,serif;color:rgba(180,210,160,.8);max-width:280px"></div>
+        <div style="margin-top:18px;width:100%;max-width:260px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.12)">
+          <div style="background:rgba(255,255,255,.06);padding:8px 0;text-align:center;font-family:monospace;font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px">RESULTADO FINAL</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid rgba(255,255,255,.07)">
+            <span style="font-family:Georgia,serif;font-size:14px;color:#8ec8ff">NOS</span>
+            <span id="g4-go-pts-nos" style="font-family:Georgia,serif;font-size:22px;font-weight:900;color:#fff">0</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid rgba(255,255,255,.07)">
+            <span style="font-family:Georgia,serif;font-size:14px;color:#ff9a6a">ELLOS</span>
+            <span id="g4-go-pts-ellos" style="font-family:Georgia,serif;font-size:22px;font-weight:900;color:#fff">0</span>
+          </div>
+        </div>
+        <button onclick="document.getElementById('g4-gameover').style.display='none';cancelRoom();show('s-menu');"
+          style="margin-top:22px;padding:14px 26px;border-radius:12px;cursor:pointer;
+          background:rgba(20,40,80,.7);border:2px solid rgba(60,120,200,.5);
+          color:rgba(160,200,255,.9);font-size:15px;font-weight:700;font-family:Georgia,serif">
+          Volver al menú
         </button>
       </div>
     </div>
@@ -2303,6 +2329,32 @@ function checkGameOver4(){
   return false;
 }
 
+// ── Fin de partida (2v2): mismo tratamiento que en 1v1/vs IA ──
+// tabla de puntos final, título de quién ganó y audio de festejo/derrota.
+let _g4GameOverShown = false;
+function showGameOver4(){
+  if(_g4GameOverShown) return;
+  _g4GameOverShown = true;
+  const el = document.getElementById('g4-gameover');
+  if(!el || !G4 || !TEAM_OF4) return;
+  const myTeam = TEAM_OF4[MY_ROLE];
+  const rivalTeam4 = myTeam==='A' ? 'B' : 'A';
+  const winnerTeam = (G4.score.A||0) >= G4.meta ? 'A' : 'B';
+  const myWin = winnerTeam === myTeam;
+  const emojiEl = document.getElementById('g4-go-emoji');
+  const titleEl = document.getElementById('g4-go-title');
+  const subEl = document.getElementById('g4-go-sub');
+  if(emojiEl) emojiEl.textContent = myWin ? '🏆' : '💀';
+  if(titleEl){ titleEl.textContent = myWin ? '¡Ganó tu equipo!' : 'Ganó el equipo rival'; titleEl.style.color = myWin ? '#7fba5a' : '#e06060'; }
+  if(subEl) subEl.textContent = myWin ? '¡Bien jugado! La victoria es de ustedes.' : 'El otro equipo fue mejor esta vez. ¡Revancha!';
+  const ptsNos = document.getElementById('g4-go-pts-nos');
+  const ptsEllos = document.getElementById('g4-go-pts-ellos');
+  if(ptsNos) ptsNos.textContent = G4.score[myTeam]||0;
+  if(ptsEllos) ptsEllos.textContent = G4.score[rivalTeam4]||0;
+  el.style.display = 'flex';
+  if(myWin) playWinSounds(); else playLoseSounds();
+}
+
 function jugarCarta4(role, cardId){
   if(!G4 || G4.phase!=='playing') return false;
   if(turnoActual4()!==role) return false;
@@ -2893,7 +2945,6 @@ function renderGame4(){
       </div>` : '';
     const gridMaxW = Math.round(280 * (SEAT_W/44));
     mesaEl.style.maxWidth = gridMaxW + 'px';
-    mesaEl.style.maxHeight = Math.round(230 * (SEAT_H/66)) + 'px';
     mesaEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr auto 1fr;
       gap:2px;place-items:center;width:100%;height:100%;max-width:${gridMaxW}px;margin:0 auto">
       <div style="grid-column:2;grid-row:1">${seatCard(partnerRole)}</div>
@@ -2943,6 +2994,14 @@ function renderGame4(){
   const hoEl=document.getElementById('g4-handover');
   if(hoEl) hoEl.style.display = (G4.phase==='handover' && MY_ROLE==='p1') ? 'flex' : 'none';
 
+  if(G4.phase==='gameover'){
+    showGameOver4();
+  } else {
+    _g4GameOverShown = false;
+    const goEl=document.getElementById('g4-gameover');
+    if(goEl) goEl.style.display = 'none';
+  }
+
   } catch(err){
     // Si algo falla acá, que quede a la vista en el log en vez de trancar
     // la pantalla en silencio (esto era lo que hacía que algunos jugadores
@@ -2956,10 +3015,10 @@ function renderGame4(){
 /* ── Botones de canto/toque (envido, truco, mazo) para 4 jugadores ── */
 function mkBtn4(label, onclick, color, accent){
   color = color || '#5a3a1a'; accent = accent || '#c8963e';
-  return `<button onclick="${onclick}" style="padding:6px 10px;border-radius:6px;
+  return `<button onclick="${onclick}" style="padding:6px 6px;border-radius:6px;
     border:1.5px solid ${accent};background:${color};color:rgba(255,240,200,0.95);
     font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer;
-    flex:1 1 auto;box-sizing:border-box;min-height:30px;min-width:88px;">${label}</button>`;
+    width:100%;box-sizing:border-box;min-height:30px;">${label}</button>`;
 }
 function renderActions4(){
   const el=document.getElementById('g4-actions');
@@ -4533,6 +4592,15 @@ function receiveVoicesFromPeer4(role, voices){
     } catch(e){ console.warn('receiveVoice4 error', role, key, e); }
   });
 }
+// Texto hablado para cada clave de voz (se usa como respaldo por TTS
+// cuando el jugador no grabó esa voz en particular).
+const KEY_TO_TEXT4 = {
+  truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro',
+  quiero:'Quiero', noquiero:'No quiero',
+  envido:'Envido', realenv:'Real Envido', faltaenv:'Falta Envido',
+  flor:'La mía es flor', contraflor:'Contra Flor al Resto',
+  mazo:'Me voy al mazo',
+};
 function playCustomVoice4(role, key){
   if(!_audioOn || !key) return;
   // La voz de Flor / Contra Flor al Resto tiene prioridad: corta cualquier
@@ -4541,11 +4609,28 @@ function playCustomVoice4(role, key){
   if(isFlorKey) stopMemeSounds();
   else if(_memeMuting) return;
   const url = (role===MY_ROLE) ? _voiceURLs[key] : (_remoteVoiceURLs4[role] && _remoteVoiceURLs4[role][key]);
-  if(!url) return;
+  if(url){
+    try{
+      const a = new Audio(url);
+      a.volume = typeof _voiceVol!=='undefined' ? _voiceVol : 1;
+      a.play().catch(()=>{});
+    }catch(e){}
+    return;
+  }
+  // No hay voz grabada para este canto en particular (es común que el
+  // jugador solo haya grabado algunas): en vez de quedar mudo, se lee por
+  // TTS para que el canto siempre se escuche, igual que en 1v1/vs IA.
+  if(!_voiceOn || !window.speechSynthesis) return;
+  const text = KEY_TO_TEXT4[key];
+  if(!text) return;
   try{
-    const a = new Audio(url);
-    a.volume = typeof _voiceVol!=='undefined' ? _voiceVol : 1;
-    a.play().catch(()=>{});
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang='es-AR'; u.rate=0.95; u.pitch=1.05;
+    u.volume = typeof _voiceVol!=='undefined' ? _voiceVol : 1;
+    const sp = pickVoiceForGender('m');
+    if(sp) u.voice = sp;
+    window.speechSynthesis.speak(u);
   }catch(e){}
 }
 // Solo el host llama esto (es quien procesa todos los cantos/toques de la
