@@ -446,6 +446,28 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 }
 #audio-toggle{background:transparent;border:1.5px solid #3a6a3a;color:#6a9a6a;
   border-radius:8px;padding:3px 8px;cursor:pointer;font-size:14px;}
+
+/* ── Aviso de seña grande y centrado: para que el compañero lo vea bien ── */
+#big-sena{
+  position:fixed;top:50%;left:50%;z-index:9600;
+  pointer-events:none;opacity:0;text-align:center;
+  transform:translate(-50%,-50%) scale(0.3);
+}
+#big-sena-emoji{font-size:96px;line-height:1;filter:drop-shadow(0 8px 22px rgba(0,0,0,.65));}
+#big-sena-label{
+  margin-top:2px;font-family:Georgia,serif;font-weight:900;font-size:38px;letter-spacing:1px;
+  color:#dff0ff;text-shadow:0 2px 8px rgba(0,0,0,.85),0 0 22px rgba(142,200,255,.7);
+  white-space:nowrap;background:rgba(15,30,45,.92);border:2.5px solid #8ec8ff;border-radius:18px;
+  padding:10px 26px;
+}
+#big-sena.show{animation:bigSenaPop 2.4s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes bigSenaPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(0.3);}
+  14%{opacity:1;transform:translate(-50%,-50%) scale(1.25);}
+  26%{transform:translate(-50%,-50%) scale(1);}
+  82%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(0.9);}
+}
 /* ── Sorteo 4 jugadores: mazo boca abajo (apilado, look 3D) y la
    animación de la carta "cayendo" desde el mazo hasta el lugar del
    jugador que la sacó ── */
@@ -1208,11 +1230,8 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
           <button onclick="sendSena4('Gritá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
             background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Gritá</button>
         </div>
-        <!-- Aviso de seña: sale pegado al botón, no arriba de la mesa -->
-        <div id="g4-sena-banner" style="display:none;position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
-          z-index:45;background:rgba(20,40,60,.95);border:1.5px solid #8ec8ff;color:#dff0ff;
-          font-family:Georgia,serif;font-size:13px;font-weight:700;padding:7px 16px;border-radius:20px;
-          box-shadow:0 6px 18px rgba(0,0,0,.5);white-space:nowrap"></div>
+        <!-- El aviso de seña ahora se muestra grande y centrado en toda la pantalla
+             (ver #big-sena / showBigSena en el JS), no acá pegado al botón. -->
       </div>
 
       <details id="g4-log-details" style="flex-shrink:0">
@@ -2646,7 +2665,7 @@ function toggleSenaMenu4(force){
 function sendSena4(code){
   toggleSenaMenu4(false);
   sendAction4('sena', {code});
-  showSenaBanner4(code+'!!', '#8ec8ff');
+  showBigSena(code+'!!');
 }
 function callSena4(role, code){
   if(!G4) return false;
@@ -2655,23 +2674,56 @@ function callSena4(role, code){
 }
 // Se llama en cada renderGame4(): si llegó una seña nueva y sos del mismo
 // equipo que quien la mandó (y no fuiste vos), se muestra un cartel
-// llamativo un par de segundos y se apaga solo.
+// grande y centrado, con vibración y sonido, para que no pase desapercibido.
 function checkIncomingSena4(){
   const s = G4 && G4.lastSena;
   if(!s || s.ts===_lastSenaShownTs) return;
   _lastSenaShownTs = s.ts;
   if(s.byRole===MY_ROLE) return; // ya te avisaste vos mismo al mandarla
   if(!TEAM_OF4 || TEAM_OF4[MY_ROLE]!==s.byTeam) return; // no sos de su equipo: no se te muestra
-  showSenaBanner4(s.code+'!!', '#8ec8ff');
+  alertSena4();
+  showBigSena(s.code+'!!');
 }
-function showSenaBanner4(text, color){
-  const el = document.getElementById('g4-sena-banner');
-  if(!el) return;
-  el.textContent = text;
-  el.style.borderColor = color || '#8ec8ff';
-  el.style.display = 'block';
+// Vibración + sonido corto para que la seña del compañero se note bien.
+function alertSena4(){
+  try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
+  try{
+    if(!_audioOn) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    const ctx = new Ctx();
+    [880, 1320].forEach((freq, i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t0 = ctx.currentTime + i*0.14;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime((typeof _voiceVol!=='undefined'?_voiceVol:1)*0.35, t0+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.24);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0); osc.stop(t0+0.26);
+    });
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 700);
+  }catch(e){}
+}
+// Cartel grande y centrado en pantalla (mismo estilo que la Flor) para que
+// el mensaje al compañero se vea grande y en el medio, no perdido abajo.
+function showBigSena(label){
+  let el = document.getElementById('big-sena');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'big-sena';
+    el.innerHTML = '<div id="big-sena-emoji">🤝</div><div id="big-sena-label"></div>';
+    document.body.appendChild(el);
+  }
+  const labelEl = document.getElementById('big-sena-label');
+  if(labelEl) labelEl.textContent = label || '';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
   clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(()=>{ el.style.display='none'; }, 2600);
+  el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 2400);
 }
 
 function siguienteMano4(){
