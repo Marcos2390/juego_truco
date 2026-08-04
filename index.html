@@ -3063,14 +3063,12 @@ function initGame(p1IsMano = true, myPts = 0, oppPts = 0) {
     G.pScore=Math.min(MAX_PTS,G.pScore+3);
     addLog('🌸 Tenés Flor! +3 pts.','#f8a5c2');
     setTimeout(()=>{ sayAndShow('p1','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },300);
-    reactToOutcome(true); // ganaste vos → el rival escucha el festejo
     if(G.pScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(true); showGameOver(true); },2600); }
   } else if(h.p2Flor){
     G.envDone=true;
     G.oScore=Math.min(MAX_PTS,G.oScore+3);
     addLog('🌸 El rival tiene Flor. +3 pts para él.','#f8a5c2');
     setTimeout(()=>{ sayAndShow('p2','🌸 ¡La mía es Flor! +3 pts','#f8a5c2','La mía es flor'); },600);
-    reactToOutcome(false); // perdiste vos
     if(G.oScore>=MAX_PTS){ setTimeout(()=>{ if(CAMP_LEVEL) campOnMatchEnd(false); showGameOver(false); },2600); }
   }
 
@@ -4359,7 +4357,9 @@ function sayAndShow(who, displayText, color, spoken){
 
   if(isFlorCall){
     // Se muestra la flor grande en el centro de la pantalla y, sin ningún
-    // otro audio de fondo, se escucha únicamente la voz del jugador.
+    // otro audio de fondo compitiendo (se corta cualquier audio "meme" que
+    // estuviera sonando), se escucha únicamente la voz del jugador.
+    stopMemeSounds();
     showBigFlor(/contra\s*flor/i.test(cleanText) ? '¡CONTRA FLOR AL RESTO!' : '¡FLOR!');
     setTimeout(()=>{ say(cleanText, who); }, 150);
   } else {
@@ -4482,7 +4482,12 @@ function receiveVoicesFromPeer4(role, voices){
   });
 }
 function playCustomVoice4(role, key){
-  if(_memeMuting || !_audioOn || !key) return;
+  if(!_audioOn || !key) return;
+  // La voz de Flor / Contra Flor al Resto tiene prioridad: corta cualquier
+  // audio "meme" que esté sonando y nunca queda muteada por _memeMuting.
+  const isFlorKey = (key==='flor' || key==='contraflor');
+  if(isFlorKey) stopMemeSounds();
+  else if(_memeMuting) return;
   const url = (role===MY_ROLE) ? _voiceURLs[key] : (_remoteVoiceURLs4[role] && _remoteVoiceURLs4[role][key]);
   if(!url) return;
   try{
@@ -4664,6 +4669,7 @@ const LOSS_SOUNDS = [
    cantos quedan muteados (_memeMuting); se desmutean solos al vaciarse. */
 let _soundQueue = [];
 let _soundPlaying = false;
+let _currentMemeAudio = null;
 function enqueueSound(src){
   if(!src) return;
   _soundQueue.push(src);
@@ -4677,8 +4683,10 @@ function _processSoundQueue(){
   const src = _soundQueue.shift();
   const a = new Audio(src);
   a.volume = typeof _voiceVol!=='undefined' ? _voiceVol : 1;
+  _currentMemeAudio = a;
   const done = ()=>{
     _soundPlaying = false;
+    _currentMemeAudio = null;
     if(!_soundQueue.length) _memeMuting = false;
     _processSoundQueue();
   };
@@ -4691,6 +4699,19 @@ function playRandomFrom(pool){
   if(!pool || !pool.length) return;
   enqueueSound(pool[Math.floor(Math.random()*pool.length)]);
 }
+// Corta en seco cualquier audio "meme" que esté sonando o en cola —
+// se usa al cantar Flor para que se escuche solo la voz del jugador,
+// sin ningún audio de fondo compitiendo ni bloqueándola.
+function stopMemeSounds(){
+  _soundQueue = [];
+  _memeMuting = false;
+  _soundPlaying = false;
+  if(_currentMemeAudio){
+    try{ _currentMemeAudio.pause(); _currentMemeAudio.currentTime = 0; }catch(e){}
+    _currentMemeAudio = null;
+  }
+}
+
 
 function playLossSound(){ playRandomFrom(LOSS_SOUNDS); }
 
@@ -4741,7 +4762,9 @@ function playAiOutcomeSound(kind){
 }
 
 function playCustomVoice(key, remote=false){
-  if(_memeMuting) return false;
+  const isFlorKey = (key==='flor' || key==='contraflor');
+  if(isFlorKey) stopMemeSounds();
+  else if(_memeMuting) return false;
   const url = remote ? _remoteVoiceURLs[key] : _voiceURLs[key];
   if(!url) return false;
   const a=new Audio(url);
@@ -4783,7 +4806,9 @@ function genderForWho(who){
 
 function say(text, who){
   if(!_audioOn) return;
-  if(_memeMuting) return;
+  const isFlorText = /\bflor\b/i.test(text);
+  if(_memeMuting && !isFlorText) return;
+  if(isFlorText) stopMemeSounds();
   const keyMap={
     'Truco':'truco','Re-Truco':'retruco','Vale Cuatro':'vale4',
     'Quiero':'quiero','No quiero':'noquiero',
