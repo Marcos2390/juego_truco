@@ -853,6 +853,18 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     </div>
 
     <div style="background:#141f10;border:1px solid #2a4a1a;border-radius:12px;padding:14px;color:#e0d8c0;font-family:Georgia,serif;font-size:14px;line-height:1.6">
+      <div style="color:#7fba5a;font-weight:800;font-size:15px;margin-bottom:6px">🤝 Hablar con tu compañero (4 jugadores)</div>
+      En el modo de 4 jugadores por equipos podés usar el botón <b>"Hablar con tu compañero"</b> (señas) para avisarle en código qué tenés en la mano, sin que los rivales entiendan nada.<br><br>
+      <b>Importante — quién responde:</b> ante un Envido, Truco o Flor cantado por el rival, <b>solo debe responder un jugador por equipo</b>: el que es <b>mano</b>, o si el mano ya jugó/no puede, el compañero que está <b>más cerca de ser mano</b> en esa mano. Si los dos compañeros responden cosas distintas al mismo canto, el juego solo toma <b>una</b> de las respuestas — y puede ser la que menos te convenía, cambiando el resultado de la partida. Por eso, antes de responder, avisale a tu compañero por señas y dejen que responda uno solo.
+    </div>
+
+    <div style="background:#141f10;border:1px solid #2a4a1a;border-radius:12px;padding:14px;color:#e0d8c0;font-family:Georgia,serif;font-size:14px;line-height:1.6">
+      <div style="color:#7fba5a;font-weight:800;font-size:15px;margin-bottom:6px">🎯🌸 Envido robado por Flor</div>
+      Si un equipo canta Envido (o sube a Real/Falta Envido) y, antes de que se resuelva, un jugador de cualquier equipo canta <b>Flor</b>, el Envido queda <b>anulado por completo</b> (no se reparten sus puntos) y se juega solo la Flor: se dice que "le robaron el Envido a la Flor".<br><br>
+      Si nadie más tiene Flor, esos 3 pts se anotan automáticos. Pero si algún jugador del equipo rival <b>también tiene Flor</b>, no se anota nada todavía: ahí se define igual que una Flor normal, con "También Flor" o subiendo a "Contra Flor al Resto".
+    </div>
+
+    <div style="background:#141f10;border:1px solid #2a4a1a;border-radius:12px;padding:14px;color:#e0d8c0;font-family:Georgia,serif;font-size:14px;line-height:1.6">
       <div style="color:#7fba5a;font-weight:800;font-size:15px;margin-bottom:6px">🃏 Al mazo</div>
       Un jugador puede irse al mazo (abandonar la mano) en cualquier momento antes de que termine. El rival se lleva los puntos que ya estaban en juego.
     </div>
@@ -891,7 +903,9 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <p style="margin:0 0 6px">Solo en la <b>primera ronda</b>, incluso si ya se gritó Truco. Opciones: Envido (2pts), Real Envido (3pts), Falta Envido (pts que faltan al que va primero).</p>
     <div style="color:#e8c84a;font-size:10px;background:#0a1a0a;border-radius:6px;padding:6px;margin-bottom:10px">Pieza 2=30 · 4=29 · 5=28 · Cba/Sota=27 · Dos mismo palo +20 · Negras (S/C/R)=0</div>
     <div style="color:#f8a5c2;font-weight:700;font-size:13px;margin-bottom:6px">🌸 Flor (Cantos)</div>
-    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual.</p>
+    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual. Si el Envido ya se había cantado y estaba sin resolver, cantar Flor lo anula por completo ("Envido robado").</p>
+    <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🤝 En equipo (4 jugadores)</div>
+    <p style="margin:0 0 10px">Ante un canto rival, que responda <b>uno solo</b>: el mano, o el compañero más cerca de ser mano. Si responden los dos con cosas distintas, el juego toma una sola respuesta al azar entre ellas y te puede cambiar la partida.</p>
     <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🃏 Al Mazo · Mano y Pie</div>
     <p style="margin:0 0 0">Tirarse al mazo = ceder 1 pt al rival. Gana la mano quien gana 2 de 3 rondas. En caso de parda, lidera la siguiente ronda quien lideró esa. La mano se alterna cada partida. Si se discutió Envido o Flor, las cartas que no se llegaron a jugar se dan vuelta automáticamente al final de la mano para verificar los puntos.</p>
   </div>
@@ -2564,7 +2578,12 @@ function mejorFlorTeam4(team){
   return best;
 }
 function canCallFlor4(role){
-  if(!G4 || G4.phase!=='playing') return false;
+  if(!G4) return false;
+  // Se puede cantar Flor en el turno normal de juego, O para "robar" un
+  // Envido que está pendiente de respuesta (la Flor tapa/anula el Envido
+  // en el momento en que se está negociando, incluso si ya se cantó).
+  const enviéndoseRobado = G4.phase==='resp_env' && !!G4.envPend;
+  if(G4.phase!=='playing' && !enviéndoseRobado) return false;
   if(!G4.florDisp || G4.florDone || G4.florPend) return false;
   if(G4.roundNum>0) return false;
   if(G4.played[role]) return false;
@@ -2574,15 +2593,26 @@ function canCallFlor4(role){
 function callFlor4(role){
   if(!canCallFlor4(role)) return false;
   const myTeam = TEAM_OF4[role], rivalTeam = myTeam==='A'?'B':'A';
+  const robandoEnvido = G4.phase==='resp_env' && !!G4.envPend;
   G4.envDisp = false; // la Flor cancela el Envido de esta mano
-  G4.logs.push({txt:`🌸 ${nameFor4(role)} canta ¡Flor!`, color:'#f8a5c2'});
+  if(robandoEnvido){
+    // Se estaba negociando un Envido: la Flor lo anula por completo, sin
+    // otorgar puntos de Envido a nadie (ni siquiera el "no quiero").
+    G4.logs.push({txt:`🌸 ${nameFor4(role)} canta ¡Flor! y anula el Envido (Envido robado)`, color:'#f8a5c2'});
+    G4.envPend = null; G4.envDone = true;
+  } else {
+    G4.logs.push({txt:`🌸 ${nameFor4(role)} canta ¡Flor!`, color:'#f8a5c2'});
+  }
   if(!equipoTieneFlor4(rivalTeam)){
     // El rival no tiene Flor: 3 pts automáticos, no hay nada que responder.
     G4.score[myTeam] = Math.min(G4.meta, (G4.score[myTeam]||0) + 3);
     G4.florDone = true;
+    G4.phase = 'playing';
     G4.logs.push({txt:`✅ Equipo ${myTeam} +3 pts (Flor sin respuesta)`, color:'#7fba5a'});
     checkGameOver4();
   } else {
+    // El rival también tiene Flor: se define con los cantos de
+    // "También Flor" / "Contra Flor al Resto", igual que una Flor normal.
     G4.florPend = { level:'flor', byRole:role, byTeam:myTeam };
     G4.phase = 'resp_flor';
   }
@@ -3033,10 +3063,17 @@ function renderActions4(){
   let html = '';
 
   if(G4.phase==='resp_env' && canRespondEnvido4(role)){
+    // Si tenés Flor, podés cantarla acá para "robar" el Envido: se anula
+    // el Envido pendiente por completo y se resuelve como una Flor normal.
+    if(canCallFlor4(role)) html += mkBtn4('🌸 Flor (roba el Envido)', `uiCallFlor4()`, '#7a2a5a', '#f8a5c2');
     html += mkBtn4('✅ Quiero', `uiRespondEnvido4(true)`, '#2a4a1a', '#7fba5a');
     html += mkBtn4('❌ No quiero', `uiRespondEnvido4(false)`, '#4a1a1a', '#c05050');
     if(G4.envPend.level==='envido') html += mkBtn4('Real Envido', `uiRespondEnvido4(false,'realenvido')`, '#4a3a10', '#d4a017');
     if(G4.envPend.level!=='faltaenvido') html += mkBtn4('Falta Envido', `uiRespondEnvido4(false,'faltaenvido')`, '#4a3a10', '#d4a017');
+  } else if(G4.phase==='resp_env' && canCallFlor4(role)){
+    // No te toca responder el Envido (es de otro compañero/rival), pero
+    // vos tenés Flor: también podés cantarla para robar el Envido.
+    html += mkBtn4('🌸 Flor (roba el Envido)', `uiCallFlor4()`, '#7a2a5a', '#f8a5c2');
   } else if(G4.phase==='resp_truco' && canRespondTruco4(role)){
     html += mkBtn4('✅ Quiero', `uiRespondTruco4(true)`, '#2a4a1a', '#7fba5a');
     html += mkBtn4('❌ No quiero', `uiRespondTruco4(false)`, '#4a1a1a', '#c05050');
