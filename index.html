@@ -1233,7 +1233,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
       <div id="g4-actions" style="display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch;justify-content:center;gap:4px;flex-shrink:0"></div>
 
       <!-- Hablar con tu compañero (señas): debajo de los botones de canto/gritos -->
-      <div style="display:flex;justify-content:center;position:relative;flex-shrink:0">
+      <div style="display:flex;justify-content:center;gap:6px;position:relative;flex-shrink:0">
         <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Hablar con tu compañero"
           style="background:rgba(0,0,0,.3);border:1px solid rgba(142,200,255,.4);color:#8ec8ff;
           font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 12px;
@@ -1252,7 +1252,31 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
         </div>
         <!-- El aviso de seña ahora se muestra grande y centrado en toda la pantalla
              (ver #big-sena / showBigSena en el JS), no acá pegado al botón. -->
+
+        <!-- Mensaje corto libre: por si "Vení/Poné/Tocá/Gritá" no alcanza y
+             querés escribir algo puntual. Se puede mandar solo a tu
+             compañero (mismo estilo privado que las señas) o a todos en
+             la mesa (rivales incluidos, como un chat abierto). -->
+        <button id="g4-msg-btn" onclick="toggleMsgMenu4()" title="Escribir un mensaje corto"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(212,160,23,.5);color:#d4a017;
+          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 10px;
+          cursor:pointer;line-height:1;display:flex;align-items:center;gap:6px">✍️</button>
+        <div id="g4-msg-menu" style="display:none;position:absolute;bottom:36px;right:0;z-index:40;
+          background:#241708;border:1px solid rgba(212,160,23,.5);border-radius:10px;padding:8px;
+          box-shadow:0 6px 18px rgba(0,0,0,.5);flex-direction:column;gap:6px;width:210px">
+          <input id="g4-msg-input" type="text" maxlength="60" placeholder="Escribí algo corto..."
+            style="width:100%;box-sizing:border-box;background:#141008;border:1px solid rgba(212,160,23,.4);
+            border-radius:6px;color:#f0e0c0;font-family:Georgia,serif;font-size:12px;padding:6px 8px"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();sendMsg4(false);}">
+          <div style="display:flex;gap:5px">
+            <button onclick="sendMsg4(false)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">🤝 Compañero</button>
+            <button onclick="sendMsg4(true)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #d4a017;
+              background:#3a2a10;color:#f8d878;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">📢 Todos</button>
+          </div>
+        </div>
       </div>
+
 
       <details id="g4-log-details" style="flex-shrink:0">
         <summary style="cursor:pointer;color:rgba(200,160,70,.8);padding:2px 4px;font-family:Georgia,serif;font-size:11px">📜 Historial</summary>
@@ -2709,6 +2733,7 @@ function hostHandleAction4(role, data){
   else if(data.action==='respondContraflor') changed = respondContraflor4(role, data.accept);
   else if(data.action==='mazo') changed = irAlMazo4(role);
   else if(data.action==='sena') changed = callSena4(role, data.code);
+  else if(data.action==='msg') changed = callMsg4(role, data.text, data.toAll);
   if(changed){
     if(data.action!=='play'){
       const raisedLevel = (data.action==='respondTruco' && data.raise) ? (G4.trucoPend ? G4.trucoPend.level : trucoLevelBefore) : null;
@@ -2749,6 +2774,7 @@ function toggleSenaMenu4(force){
   if(!el) return;
   const show = force!==undefined ? force : (el.style.display==='none');
   el.style.display = show ? 'grid' : 'none';
+  if(show) toggleMsgMenu4(false);
 }
 function sendSena4(code){
   toggleSenaMenu4(false);
@@ -2797,7 +2823,8 @@ function alertSena4(){
 }
 // Cartel grande y centrado en pantalla (mismo estilo que la Flor) para que
 // el mensaje al compañero se vea grande y en el medio, no perdido abajo.
-function showBigSena(label){
+function showBigSena(label, opts){
+  opts = opts || {};
   let el = document.getElementById('big-sena');
   if(!el){
     el = document.createElement('div');
@@ -2805,13 +2832,68 @@ function showBigSena(label){
     el.innerHTML = '<div id="big-sena-emoji">🤝</div><div id="big-sena-label"></div>';
     document.body.appendChild(el);
   }
+  const emojiEl = document.getElementById('big-sena-emoji');
   const labelEl = document.getElementById('big-sena-label');
-  if(labelEl) labelEl.textContent = label || '';
+  if(emojiEl) emojiEl.textContent = opts.emoji || '🤝';
+  if(labelEl){
+    labelEl.textContent = label || '';
+    // Las señas fijas ("Vení!!", etc.) se ven grandes y en una sola línea.
+    // Los mensajes libres pueden ser más largos, así que se muestran con
+    // letra más chica y con salto de línea para que no se corten.
+    labelEl.style.whiteSpace = opts.wrap ? 'normal' : 'nowrap';
+    labelEl.style.maxWidth = opts.wrap ? '260px' : 'none';
+    labelEl.style.fontSize = opts.wrap ? '19px' : '';
+    // Privado (solo compañero) = celeste, igual que las señas de siempre.
+    // A todos (también lo ven los rivales) = dorado, para diferenciarlo.
+    labelEl.style.borderColor = opts.isPublic ? '#d4a017' : '#8ec8ff';
+    labelEl.style.color = opts.isPublic ? '#fff3d0' : '#dff0ff';
+  }
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
   clearTimeout(el._hideTimer);
   el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 2400);
+}
+
+// ── Mensaje corto libre entre jugadores (4 jugadores) ──
+// Como las señas, pero con texto libre en vez de un código fijo. Se puede
+// mandar en dos modos:
+//  - toAll=false: privado, solo lo ve tu compañero de equipo (igual que
+//    "Vení/Poné/Tocá/Gritá" — a los rivales no se les muestra nada).
+//  - toAll=true: abierto, lo ven los 4 jugadores en la mesa (rivales
+//    incluidos), como un chat de mesa.
+let _lastMsgShownTs = 0;
+function toggleMsgMenu4(force){
+  const el = document.getElementById('g4-msg-menu');
+  if(!el) return;
+  const show = force!==undefined ? force : (el.style.display==='none' || el.style.display==='');
+  el.style.display = show ? 'flex' : 'none';
+  if(show){ toggleSenaMenu4(false); const inp = document.getElementById('g4-msg-input'); if(inp){ inp.value=''; setTimeout(()=>inp.focus(), 30); } }
+}
+function sendMsg4(toAll){
+  const inp = document.getElementById('g4-msg-input');
+  const text = inp ? inp.value.trim().slice(0,60) : '';
+  if(!text) return;
+  toggleMsgMenu4(false);
+  sendAction4('msg', {text, toAll});
+  showBigSena(text, {emoji: toAll?'📢':'🤝', isPublic: toAll, wrap:true});
+}
+function callMsg4(role, text, toAll){
+  if(!G4 || !text) return false;
+  G4.lastMsg = { byRole: role, byTeam: TEAM_OF4[role], text: String(text).slice(0,60), toAll: !!toAll, ts: Date.now() };
+  return true;
+}
+// Igual que checkIncomingSena4, pero: si el mensaje fue "a todos" se
+// muestra a cualquiera; si fue privado, solo al compañero de equipo.
+function checkIncomingMsg4(){
+  const m = G4 && G4.lastMsg;
+  if(!m || m.ts===_lastMsgShownTs) return;
+  _lastMsgShownTs = m.ts;
+  if(m.byRole===MY_ROLE) return; // ya lo viste al mandarlo vos mismo
+  const mismoEquipo = TEAM_OF4 && TEAM_OF4[MY_ROLE]===m.byTeam;
+  if(!m.toAll && !mismoEquipo) return; // privado y no sos del equipo: no se te muestra
+  alertSena4();
+  showBigSena(`${nameFor4(m.byRole)}: ${m.text}`, {emoji: m.toAll?'📢':'🤝', isPublic: m.toAll, wrap:true});
 }
 
 function siguienteMano4(){
@@ -2909,6 +2991,7 @@ function renderGame4(){
   try{
 
   checkIncomingSena4();
+  checkIncomingMsg4();
 
   const myTeam = TEAM_OF4[MY_ROLE];
   const rivalTeam4 = myTeam==='A' ? 'B' : 'A';
@@ -4457,6 +4540,15 @@ document.addEventListener('click', (ev)=>{
   if(!el || el.style.display!=='grid') return;
   if(el.contains(ev.target) || (btn && btn.contains(ev.target))) return;
   toggleSenaMenu4(false);
+}, true);
+
+// Cerrar el menú de mensaje libre (4 jugadores) si se toca afuera
+document.addEventListener('click', (ev)=>{
+  const el = document.getElementById('g4-msg-menu');
+  const btn = document.getElementById('g4-msg-btn');
+  if(!el || el.style.display!=='flex') return;
+  if(el.contains(ev.target) || (btn && btn.contains(ev.target))) return;
+  toggleMsgMenu4(false);
 }, true);
 
 // Reacciones automáticas de la IA según el estado de la partida.
