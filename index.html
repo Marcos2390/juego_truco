@@ -683,7 +683,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 <!-- ===== ANOTADOR (solo tantos, para una partida real con cartas físicas) ===== -->
 <div id="s-anotador" class="screen" style="display:none;position:fixed;inset:0;background:#140f02;
   flex-direction:column;overflow-y:auto;z-index:999;-webkit-overflow-scrolling:touch;">
-  <div style="max-width:480px;width:100%;margin:0 auto;padding:16px 16px 40px;
+  <div style="max-width:640px;width:100%;margin:0 auto;padding:16px 16px 40px;
     display:flex;flex-direction:column;gap:14px;box-sizing:border-box;min-height:100%">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
       <div style="color:#d4a017;font-size:18px;font-weight:700;font-family:Georgia,serif">📝 Anotador</div>
@@ -701,14 +701,14 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
       </select>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:#1a1408;border:2px solid #3a5a3a;border-radius:14px;padding:12px 8px;
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#1a1408;border:2px solid #3a5a3a;border-radius:14px;padding:14px 12px;
         display:flex;flex-direction:column;align-items:center;gap:8px">
         <input id="anotador-name1" value="Nosotros" oninput="anotadorSaveNames()" maxlength="16"
           style="background:none;border:none;border-bottom:1px solid #3a5a3a;color:#ffe39a;text-align:center;
           font-family:Georgia,serif;font-size:14px;font-weight:700;width:100%;padding:2px">
         <div id="anotador-score1" style="font-size:44px;font-weight:900;color:#7fba5a;font-family:Georgia,serif;line-height:1">0</div>
-        <div id="anotador-rayas1" style="min-height:30px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center;width:100%"></div>
+        <div id="anotador-rayas1" style="min-height:70px;display:flex;flex-wrap:wrap;gap:8px 10px;justify-content:center;width:100%"></div>
         <div style="display:flex;gap:10px">
           <button onclick="anotadorAdd(1,-1)" style="width:36px;height:36px;border-radius:50%;background:#2a1a1a;
             border:1px solid #5a3a3a;color:#e06060;font-size:19px;cursor:pointer">−</button>
@@ -716,13 +716,13 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
             border:1px solid #3a5a3a;color:#7fba5a;font-size:19px;cursor:pointer">+</button>
         </div>
       </div>
-      <div style="background:#1a1408;border:2px solid #5a3a3a;border-radius:14px;padding:12px 8px;
+      <div style="background:#1a1408;border:2px solid #5a3a3a;border-radius:14px;padding:14px 12px;
         display:flex;flex-direction:column;align-items:center;gap:8px">
         <input id="anotador-name2" value="Ellos" oninput="anotadorSaveNames()" maxlength="16"
           style="background:none;border:none;border-bottom:1px solid #5a3a3a;color:#ffe39a;text-align:center;
           font-family:Georgia,serif;font-size:14px;font-weight:700;width:100%;padding:2px">
         <div id="anotador-score2" style="font-size:44px;font-weight:900;color:#e06060;font-family:Georgia,serif;line-height:1">0</div>
-        <div id="anotador-rayas2" style="min-height:30px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center;width:100%"></div>
+        <div id="anotador-rayas2" style="min-height:70px;display:flex;flex-wrap:wrap;gap:8px 10px;justify-content:center;width:100%"></div>
         <div style="display:flex;gap:10px">
           <button onclick="anotadorAdd(2,-1)" style="width:36px;height:36px;border-radius:50%;background:#2a1a1a;
             border:1px solid #5a3a3a;color:#e06060;font-size:19px;cursor:pointer">−</button>
@@ -903,7 +903,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
     <p style="margin:0 0 6px">Solo en la <b>primera ronda</b>, incluso si ya se gritó Truco. Opciones: Envido (2pts), Real Envido (3pts), Falta Envido (pts que faltan al que va primero).</p>
     <div style="color:#e8c84a;font-size:10px;background:#0a1a0a;border-radius:6px;padding:6px;margin-bottom:10px">Pieza 2=30 · 4=29 · 5=28 · Cba/Sota=27 · Dos mismo palo +20 · Negras (S/C/R)=0</div>
     <div style="color:#f8a5c2;font-weight:700;font-size:13px;margin-bottom:6px">🌸 Flor (Cantos)</div>
-    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (gana el de más puntos, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30, +6). Si no se quiere la Contra Flor al Resto, el que la cantó se anota 6 pts igual. Si el Envido ya se había cantado y estaba sin resolver, cantar Flor lo anula por completo ("Envido robado").</p>
+    <p style="margin:0 0 10px">Tenés Flor si: 2+ piezas · 1 pieza + 2 cartas del mismo palo · 3 cartas del mismo palo. Vale 3 pts automáticos y cancela el envido. Si los <b>dos</b> tienen Flor: el mano canta "¡Flor!" y el otro puede responder <b>"También Flor"</b> (compara puntos directo, 6 pts) o subir a <b>"Contra Flor al Resto"</b> (se juega todo lo que falta para los 30). Si el otro respondió "También Flor" sin subir, el mano <b>todavía puede</b> subir él mismo a "Contra Flor al Resto" en vez de aceptar la comparación directa. Los puntos exactos de cada Flor recién se muestran al terminar la mano, para no dar pistas de las cartas antes de jugar el Truco. Si el Envido ya se había cantado y estaba sin resolver, cantar Flor lo anula por completo ("Envido robado").</p>
     <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🤝 En equipo (4 jugadores)</div>
     <p style="margin:0 0 10px">Ante un canto rival, que responda <b>uno solo</b>: el mano, o el compañero más cerca de ser mano. Si responden los dos con cosas distintas, el juego toma una sola respuesta al azar entre ellas y te puede cambiar la partida.</p>
     <div style="color:#d4a017;font-weight:700;font-size:13px;margin-bottom:6px">🃏 Al Mazo · Mano y Pie</div>
@@ -3844,16 +3844,19 @@ function getFalta() { return MAX_PTS - Math.min(G.pScore, G.oScore); }
 function resolveFlorBattle(stake) {
   const winner = G.p1FlorPts >= G.p2FlorPts ? 'p1' : 'p2';
   const myWin = winner === 'p1';
-  const oppLbl = MODE==='online' ? 'Rival' : 'IA';
-  addLog((myWin ? '✅ Ganás' : '❌ Perdés') + ' la Flor! Vos: ' + G.p1FlorPts + ' vs ' + oppLbl + ': ' + G.p2FlorPts +
-    '. ' + (myWin ? '+' + stake + ' pts.' : oppLbl + ' +' + stake + ' pts.'), '#f8a5c2');
-  sendP2Log((myWin ? '❌ Perdés' : '✅ Ganás') + ' la Flor! Vos: ' + G.p2FlorPts + ' vs Rival: ' + G.p1FlorPts +
-    '. ' + (myWin ? 'Rival +' + stake + ' pts.' : '+' + stake + ' pts.'), '#f8a5c2');
+  // No revelamos el desglose numérico (Vos: X vs IA: Y) en este momento:
+  // eso le daría al rival información de tus cartas ANTES de que se juegue
+  // el Truco de la mano. El puntaje exacto de cada Flor recién se muestra
+  // al terminar la mano (ver logEnvidoReveal, llamado desde finalizeHand),
+  // igual que exige el reglamento real.
+  addLog((myWin ? '✅ Ganás la Flor! +' : '❌ Perdés la Flor. ') + (myWin ? stake+' pts.' : oppLblFlor()+' +'+stake+' pts.'), '#f8a5c2');
+  sendP2Log((myWin ? '❌ Perdés la Flor. ' : '✅ Ganás la Flor! +') + (myWin ? 'Rival +'+stake+' pts.' : stake+' pts.'), '#f8a5c2');
   if (myWin) G.pScore = Math.min(MAX_PTS, G.pScore + stake);
   else G.oScore = Math.min(MAX_PTS, G.oScore + stake);
   reactToOutcome(myWin);
   finishFlorBattle();
 }
+function oppLblFlor(){ return MODE==='online' ? 'Rival' : 'IA'; }
 
 function resolveFlorReject(winnerRole, pts) {
   const myWin = winnerRole === 'p1';
@@ -3875,7 +3878,12 @@ function finishFlorBattle() {
   if (G.fase === 'ai_turn') scheduleAI(1800);
 }
 
-// El jugador (respondedor) acepta la Flor-Flor sin escalar
+// El jugador (respondedor) acepta la Flor-Flor sin escalar. OJO: esto NO
+// resuelve todavía — el mano original (quien cantó Flor primero) tiene
+// derecho a, en vez de simplemente aceptar la comparación de puntos,
+// subir la apuesta a "Contra Flor al Resto" (igual que puede hacer un
+// jugador cuando le "roban" el envido con Real Envido, etc.). Recién si
+// el mano también decide no escalar, se compara y se reparten los puntos.
 function florAccept() {
   if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_resp') return;
   if (MODE==='online' && MY_ROLE==='p2') {
@@ -3886,8 +3894,65 @@ function florAccept() {
     return;
   }
   sayAndShow('p1','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+  florHandBackToMano('p1');
+}
+
+// Pasa la decisión final al mano original: puede aceptar la comparación
+// directa (6 pts al de mayor puntaje) o subir a Contra Flor al Resto.
+// `pieRole` es quien recién respondió con la Flor básica (el "por ahora
+// esperando" para efectos de a quién le toca jugar).
+function florHandBackToMano(pieRole) {
+  const manoRole = G.florPend.by;
+  G.florPend = { level: 'flor_mano_final', by: pieRole, manoRole };
+  G.florStage = 'await_mano_final';
+  G.fase = manoRole === 'p1' ? 'p_resp_flor' : 'ai_turn';
+  renderGame();
+  syncOnline();
+  if (G.fase === 'ai_turn') scheduleAI(1600);
+}
+
+// El mano original acepta la comparación directa (no escala).
+function florManoAccept() {
+  if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_mano_final') return;
+  const manoRole = G.florPend.manoRole;
+  if (MODE==='online') {
+    if (MY_ROLE !== manoRole) return; // solo decide el mano
+    if (MY_ROLE==='p2') {
+      if (_p2ActionLock) { flashP2Blocked(); return; }
+      _p2ActionLock = true;
+      sayAndShow('p2','▶ ¡Acepto!','#7fba5a','Quiero');
+      sendAction('florManoAccept',{});
+      return;
+    }
+  } else if (manoRole !== 'p1') return;
+  sayAndShow('p1','▶ ¡Acepto!','#7fba5a','Quiero');
   syncOnline();
   resolveFlorBattle(3);
+}
+
+// El mano original, en vez de aceptar, sube a Contra Flor al Resto.
+function florManoEscalate() {
+  if (G.fase !== 'p_resp_flor' || !G.florPend || G.florPend.level !== 'flor_mano_final') return;
+  const manoRole = G.florPend.manoRole;
+  if (MODE==='online') {
+    if (MY_ROLE !== manoRole) return; // solo decide el mano
+    if (MY_ROLE==='p2') {
+      if (_p2ActionLock) { flashP2Blocked(); return; }
+      _p2ActionLock = true;
+      sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+      sendAction('florManoEscalate',{});
+      return;
+    }
+  } else if (manoRole !== 'p1') return;
+  const stake = getFalta() + 6;
+  const pieRole = G.florPend.by;
+  G.florPend = { level: 'contraflor_resto', by: 'p1', stake, refuseVal: 3 };
+  G.florStage = 'await_resto_response';
+  sayAndShow('p1','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+  G.fase = pieRole === 'p1' ? 'p_resp_flor' : 'ai_turn';
+  renderGame();
+  syncOnline();
+  if (G.fase === 'ai_turn') scheduleAI(2000);
 }
 
 // El jugador (respondedor) escala a Contra Flor al Resto
@@ -3943,6 +4008,26 @@ function aiDecideFlorResponse() {
     renderGame();
   } else {
     sayAndShow('p2','🤖 ¡La mía también es Flor!','#f8a5c2','La mía es flor');
+    florHandBackToMano('p2');
+  }
+}
+
+// El mano original (la IA) decide, después de que el jugador respondió con
+// la Flor básica sin escalar, si acepta la comparación directa o sube a
+// Contra Flor al Resto.
+function aiDecideFlorFinal() {
+  if (!G.florPend || G.florPend.level !== 'flor_mano_final' || G.florPend.manoRole !== 'p2') return;
+  const strong = G.p2FlorPts >= 31;
+  if (strong) {
+    const stake = getFalta() + 6;
+    const pieRole = G.florPend.by; // p1, quien ya había aceptado sin escalar
+    G.florPend = { level: 'contraflor_resto', by: 'p2', stake, refuseVal: 3 };
+    G.florStage = 'await_resto_response';
+    sayAndShow('p2','🤖 ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+    G.fase = pieRole === 'p1' ? 'p_resp_flor' : 'ai_turn';
+    renderGame();
+  } else {
+    sayAndShow('p2','🤖 ¡Acepto!','#7fba5a','Quiero');
     resolveFlorBattle(3);
   }
 }
@@ -4141,6 +4226,7 @@ function aiActuar() {
   // 0. Responder/decidir batalla de Flor (tiene prioridad sobre todo lo demás)
   if (G.florPend) {
     if (G.florPend.level === 'flor_resp') { aiDecideFlorResponse(); return; }
+    if (G.florPend.level === 'flor_mano_final' && G.florPend.manoRole === 'p2') { aiDecideFlorFinal(); return; }
     if (G.florPend.level === 'contraflor_resto' && G.florPend.by === 'p1') { aiDecideContraflorResto(); return; }
     return; // batalla de flor pendiente pero no le toca actuar a la IA todavía
   }
@@ -5543,18 +5629,42 @@ function anotadorLoad(){
 function anotadorSave(){
   try{ localStorage.setItem('anotador_state', JSON.stringify(ANOT)); }catch(e){}
 }
+function matchStickSVG(ax,ay,bx,by,stickW,headR){
+  // Dibuja UN fósforo (palito de madera + cabecita roja) desde (ax,ay)
+  // hasta (bx,by): el palo de madera va del punto de inicio al de fin, y
+  // la cabecita queda apoyada justo en la punta final (bx,by), orientada
+  // en la misma dirección del palito — igual que un fósforo real.
+  const dx=bx-ax, dy=by-ay;
+  const len=Math.hypot(dx,dy) || 1;
+  const ux=dx/len, uy=dy/len; // vector unitario en la dirección del palito
+  const ang=Math.atan2(dy,dx)*180/Math.PI;
+  // Anillo oscuro (quemado) justo donde la cabecita se apoya sobre la madera.
+  const ringX=bx-ux*headR*0.66, ringY=by-uy*headR*0.66;
+  // Brillito en la cabecita, corrido un poco hacia la punta.
+  const hiX=bx-ux*headR*0.3, hiY=by-uy*headR*0.3;
+  return `<g>
+    <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#dcb87a" stroke-width="${stickW}" stroke-linecap="round"/>
+    <line x1="${ax}" y1="${ay}" x2="${ax+dx*0.92}" y2="${ay+dy*0.92}" stroke="#c69a5c" stroke-width="${stickW*0.34}" stroke-linecap="round" opacity=".6"/>
+    <circle cx="${ringX}" cy="${ringY}" r="${stickW*0.66}" fill="#2a0f08"/>
+    <ellipse cx="${bx}" cy="${by}" rx="${headR}" ry="${headR*0.8}" fill="#7a2418" transform="rotate(${ang} ${bx} ${by})"/>
+    <circle cx="${hiX}" cy="${hiY}" r="${headR*0.42}" fill="#b6502f" opacity=".7"/>
+  </g>`;
+}
 function tallyGroupSVG(n, color){
-  // Dibuja UN grupo de hasta 5 tantos al estilo del anotador de truco:
-  // los primeros 4 forman un cuadrado (un lado cada uno) y el 5to
-  // es la diagonal que lo cruza.
-  const GW=18, GH=22, sw=2.4;
-  const x1=1.5, y1=1.5, x2=GW-1.5, y2=GH-1.5;
+  // Dibuja UN grupo de hasta 5 tantos al estilo del anotador de truco,
+  // pero cada trazo es un fosforito (palo de madera + cabecita roja) en
+  // vez de una simple rayita: los primeros 4 forman un cuadrado (un
+  // fósforo por lado) y el 5to es el fósforo diagonal que lo cruza.
+  // Agrandado bastante respecto de las simples rayitas de antes, para que
+  // se note más y ocupe más espacio en pantalla.
+  const GW=54, GH=66, pad=11, stickW=5.5, headR=8.5;
+  const x1=pad, y1=pad, x2=GW-pad, y2=GH-pad;
   let svg = '';
-  if(n>=1) svg += `<line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado izquierdo
-  if(n>=2) svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y1}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado de arriba
-  if(n>=3) svg += `<line x1="${x2}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado derecho
-  if(n>=4) svg += `<line x1="${x1}" y1="${y2}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // lado de abajo (cierra el cuadro)
-  if(n>=5) svg += `<line x1="${x1}" y1="${y2}" x2="${x2}" y2="${y1}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`; // diagonal
+  if(n>=1) svg += matchStickSVG(x1,y1,x1,y2,stickW,headR); // lado izquierdo
+  if(n>=2) svg += matchStickSVG(x1,y1,x2,y1,stickW,headR); // lado de arriba
+  if(n>=3) svg += matchStickSVG(x2,y1,x2,y2,stickW,headR); // lado derecho
+  if(n>=4) svg += matchStickSVG(x1,y2,x2,y2,stickW,headR); // lado de abajo (cierra el cuadro)
+  if(n>=5) svg += matchStickSVG(x1,y2,x2,y1,stickW,headR); // diagonal
   return `<svg viewBox="0 0 ${GW} ${GH}" width="${GW}" height="${GH}" style="display:block;flex-shrink:0">${svg}</svg>`;
 }
 function renderRayas(elId, count, color){
@@ -5741,7 +5851,7 @@ function renderGame(){
         const names = {
           envido:'Envido', realenvido:'Real Envido', faltaenvido:'Falta Envido',
           truco:'Truco', retruco:'Re-Truco', vale4:'Vale Cuatro',
-          flor_resp:'La mia es Flor', contraflor_resto:'Contra Flor al Resto'
+          flor_resp:'La mia es Flor', flor_mano_final:'También Flor', contraflor_resto:'Contra Flor al Resto'
         };
         const txt = names[pend.level] || pend.level;
         showBubble('p2', txt);
@@ -5842,7 +5952,7 @@ function renderGame(){
   const mn=document.getElementById('mesa-notice');
   const pend=G.envPend||G.trucoPend||G.florPend;
   if(pend){
-    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro',flor_resp:'Flor',contraflor_resto:'Contra Flor al Resto'};
+    const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro',flor_resp:'Flor',flor_mano_final:'También Flor',contraflor_resto:'Contra Flor al Resto'};
     mn.style.display='block';mn.className='notice';
     mn.textContent=(G.envPend?'🎯 ':G.florPend?'🌸 ':'⚔️ ')+names[pend.level];
   } else {
@@ -5943,7 +6053,7 @@ function renderActions(){
     resp.style.display='flex';
     const names={envido:'Envido',realenvido:'Real Envido',faltaenvido:'Falta Envido',
       truco:'Truco',retruco:'Re-Truco',vale4:'Vale Cuatro',
-      flor_resp:'La mía es Flor',contraflor_resto:'Contra Flor al Resto'};
+      flor_resp:'La mía es Flor',flor_mano_final:'También Flor',contraflor_resto:'Contra Flor al Resto'};
 
     if(respondingToEnv){
       const pend = G.envPend;
@@ -6003,6 +6113,14 @@ function renderActions(){
         btnRow.appendChild(mkBtn('Con Flor me voy', `florAccept()`,
           {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
         // No 'no quiero' option in flor battle - both must play
+      } else if(pend.level==='flor_mano_final'){
+        // El rival respondió "También Flor" sin escalar: como mano original
+        // que cantó primero, todavía podés subir la apuesta en vez de
+        // simplemente comparar los puntos.
+        btnRow.appendChild(mkBtn('Contra Flor al Resto', `florManoEscalate()`,
+          {color:'linear-gradient(135deg,#7a1a8a,#4a0f5a)',accent:'#c060e0',icon:'🌺'}));
+        btnRow.appendChild(mkBtn('¡Acepto!', `florManoAccept()`,
+          {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
       } else if(pend.level==='contraflor_resto'){
         btnRow.appendChild(mkBtn('¡Quiero!', `respondContraflorResto(true)`,
           {color:'linear-gradient(135deg,#1a5c28,#0f3a18)',accent:'#7fba5a',icon:'✅'}));
@@ -7658,7 +7776,29 @@ function handleRemoteAction(action, payload){
     }
     case 'florAccept': {
       sayAndShow('p2','▶ ¡La mía también es Flor!','#f8a5c2','La mía es flor');
-      resolveFlorBattle(3);
+      florHandBackToMano('p2');
+      break;
+    }
+    case 'florManoAccept': {
+      // El mano (P2) decidió no escalar: se compara directo.
+      if(G.florPend && G.florPend.level==='flor_mano_final' && G.florPend.manoRole==='p2'){
+        sayAndShow('p2','▶ ¡Acepto!','#7fba5a','Quiero');
+        resolveFlorBattle(3);
+      }
+      break;
+    }
+    case 'florManoEscalate': {
+      // El mano (P2) decidió subir a Contra Flor al Resto en vez de aceptar.
+      if(G.florPend && G.florPend.level==='flor_mano_final' && G.florPend.manoRole==='p2'){
+        const stakeM = getFalta()+6;
+        const pieRoleM = G.florPend.by; // p1, quien había aceptado sin escalar
+        G.florPend = { level:'contraflor_resto', by:'p2', stake:stakeM, refuseVal:3 };
+        G.florStage = 'await_resto_response';
+        sayAndShow('p2','▶ ¡Contra Flor al Resto!','#f8a5c2','Contra Flor al Resto');
+        G.fase = pieRoleM==='p1' ? 'p_resp_flor' : 'ai_turn';
+        renderGame();
+        syncOnline();
+      }
       break;
     }
     case 'florCallContraflorResto': {
