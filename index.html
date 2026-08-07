@@ -2362,6 +2362,46 @@ function calcEnvidoTeam4(team){
 function turnoActual4(){ return G4 ? G4.order[G4.turnIdx] : null; }
 
 function nameFor4(r){ return (_players4.find(p=>p.role===r)||{}).name || r; }
+// Marcador de bazas: una fila de 3 puntitos (una por baza de la mano
+// actual) para saber de un vistazo quién va ganando cada ronda sin tener
+// que llevar la cuenta de memoria. Se llenan de a uno, con el color del
+// equipo que ganó esa baza; las que todavía no se jugaron quedan vacías.
+function bazasTrackerHTML4(){
+  if(!G4) return '';
+  const dots = [0,1,2].map(i=>{
+    const h = G4.history && G4.history[i];
+    if(!h){
+      return `<div style="width:9px;height:9px;border-radius:50%;background:#241a0a;
+        border:1px solid #4a3a18" title="Baza ${i+1}: todavía no se jugó"></div>`;
+    }
+    const team = TEAM_OF4[h.winner];
+    const color = team==='A' ? '#8ec8ff' : '#ff9a6a';
+    return `<div style="width:9px;height:9px;border-radius:50%;background:${color};
+      border:1px solid rgba(255,255,255,.4);box-shadow:0 0 3px ${color}"
+      title="Baza ${i+1}: gana ${nameFor4(h.winner)} (Equipo ${team})"></div>`;
+  }).join('');
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:2px">
+      <div style="font-size:6px;color:#7a6a4a;letter-spacing:.4px;font-family:Georgia,serif">BAZAS</div>
+      <div style="display:flex;gap:4px">${dots}</div>
+    </div>`;
+}
+// Mini-avatar circular con la imagen del personaje elegido por cada
+// jugador (guardado en _players4[].charKey). Si todavía no eligió uno
+// (por ejemplo, se unió sin pasar por esa pantalla), se muestra un
+// círculo con la inicial del nombre en vez de romper el layout.
+function avatarHTML4(r, size){
+  size = size || 22;
+  const p = _players4.find(p=>p.role===r) || {};
+  const img = p.charKey && typeof CHAR_IMAGES!=='undefined' ? CHAR_IMAGES[p.charKey] : null;
+  const initial = (p.name||r||'?').trim().charAt(0).toUpperCase() || '?';
+  if(img){
+    return `<img src="${img}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;
+      border:1.5px solid rgba(212,160,23,.6);flex-shrink:0;display:block" alt="">`;
+  }
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#3a2a10;
+    border:1.5px solid rgba(212,160,23,.6);color:#d4a017;font-family:Georgia,serif;font-weight:700;
+    font-size:${Math.round(size*0.5)}px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>`;
+}
 
 function checkGameOver4(){
   if((G4.score.A||0) >= G4.meta || (G4.score.B||0) >= G4.meta){
@@ -3042,9 +3082,14 @@ function renderGame4(){
       const c = G4.played[role];
       const isMe = role===MY_ROLE;
       const isPartner = role===partnerRole;
+      const isMano = role===G4.mano;
       const n = (G4.hands[role]||[]).length;
-      const who = isMe ? `${nameFor(role)} (vos)` : `${nameFor(role)}${isPartner?' 🤝':''}${(!c&&!isPartner)?' · 🂠×'+n:''}`;
-      const label = `<div style="font-size:8px;color:${isMe?'#d4a017':(isPartner?'#8ec8ff':'#a89060')};font-weight:${(isMe||isPartner)?'700':'400'};text-align:center;white-space:nowrap">${who}</div>`;
+      const who = (isMano?'🫱 ':'') + (isMe ? `${nameFor(role)} (vos)` : `${nameFor(role)}${isPartner?' 🤝':''}${(!c&&!isPartner)?' · 🂠×'+n:''}`);
+      const avatarSize = Math.max(16, Math.round(SEAT_W*0.5));
+      const label = `<div style="display:flex;align-items:center;gap:3px;justify-content:center">
+          ${avatarHTML4(role, avatarSize)}
+          <div style="font-size:8px;color:${isMe?'#d4a017':(isPartner?'#8ec8ff':'#a89060')};font-weight:${(isMe||isPartner)?'700':'400'};white-space:nowrap">${who}</div>
+        </div>`;
       // Al compañero de equipo se le ven las cartas que todavía tiene en la
       // mano (para saber cómo está parado); a los rivales no — a ellos solo
       // se les muestra boca abajo la carta que jugó (si ya jugó).
@@ -3061,6 +3106,7 @@ function renderGame4(){
     const muestraCenter = G4.muestra ? `<div style="display:flex;flex-direction:column;align-items:center">
         ${cardHTML(G4.muestra,{w:MUESTRA_W,h:MUESTRA_H,disabled:true,isMuestra:true})}
         <div style="font-size:7px;color:#ffcc66;font-weight:700;letter-spacing:.5px;font-family:Georgia,serif;margin-top:1px">MUESTRA</div>
+        ${bazasTrackerHTML4()}
       </div>` : '';
     const gridMaxW = Math.round(280 * (SEAT_W/44));
     mesaEl.style.maxWidth = gridMaxW + 'px';
@@ -3100,7 +3146,11 @@ function renderGame4(){
   if(bottomEl){
     const myHand = G4.hands[MY_ROLE]||[];
     const canPlay = G4.phase==='playing' && actual===MY_ROLE && !G4.played[MY_ROLE];
-    bottomEl.innerHTML = `<div style="color:#d4a017;font-size:10px;font-family:Georgia,serif">${nameFor(MY_ROLE)} (vos)</div>
+    const iAmMano4 = MY_ROLE===G4.mano;
+    bottomEl.innerHTML = `<div style="display:flex;align-items:center;gap:5px;justify-content:center">
+        ${avatarHTML4(MY_ROLE, 24)}
+        <div style="color:#d4a017;font-size:10px;font-family:Georgia,serif">${iAmMano4?'🫱 ':''}${nameFor(MY_ROLE)} (vos)</div>
+      </div>
       <div style="display:flex;gap:5px">${myHand.map(c=>cardHTML(c,{disabled:!canPlay,w:HAND_W,h:HAND_H,
         onclick:canPlay?`handleCardClick4('${c.id}')`:''})).join('')}</div>`;
   }
@@ -7370,8 +7420,13 @@ function renderSorteo4(){
     });
     slotEl.appendChild(pile);
 
+    const avatarEl = document.createElement('div');
+    avatarEl.style.cssText = 'margin-top:2px';
+    avatarEl.innerHTML = avatarHTML4(role, 20);
+    slotEl.appendChild(avatarEl);
+
     const label = document.createElement('div');
-    label.style.cssText = `font-size:9px;font-family:Georgia,serif;color:${gotKing?'#ffd700':'#a89060'};margin-top:2px;text-align:center`;
+    label.style.cssText = `font-size:9px;font-family:Georgia,serif;color:${gotKing?'#ffd700':'#a89060'};margin-top:1px;text-align:center`;
     label.textContent = nameFor(role) + (gotKing ? ' 👑 ¡Rey!' : '');
     slotEl.appendChild(label);
 
