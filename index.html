@@ -2368,6 +2368,7 @@ function nameFor4(r){ return (_players4.find(p=>p.role===r)||{}).name || r; }
 // equipo que ganó esa baza; las que todavía no se jugaron quedan vacías.
 function bazasTrackerHTML4(){
   if(!G4) return '';
+  const myTeam = TEAM_OF4 ? TEAM_OF4[MY_ROLE] : null;
   const dots = [0,1,2].map(i=>{
     const h = G4.history && G4.history[i];
     if(!h){
@@ -2375,10 +2376,13 @@ function bazasTrackerHTML4(){
         border:1px solid #4a3a18" title="Baza ${i+1}: todavía no se jugó"></div>`;
     }
     const team = TEAM_OF4[h.winner];
-    const color = team==='A' ? '#8ec8ff' : '#ff9a6a';
+    const won = myTeam && team===myTeam;
+    const color = won ? '#5fd75f' : '#ff5a5a';
+    const mark = won ? '✓' : '✕';
     return `<div style="width:9px;height:9px;border-radius:50%;background:${color};
-      border:1px solid rgba(255,255,255,.4);box-shadow:0 0 3px ${color}"
-      title="Baza ${i+1}: gana ${nameFor4(h.winner)} (Equipo ${team})"></div>`;
+      border:1px solid rgba(255,255,255,.4);box-shadow:0 0 3px ${color};
+      display:flex;align-items:center;justify-content:center;font-size:7px;line-height:1;color:#1a1200;font-weight:900"
+      title="Baza ${i+1}: gana ${nameFor4(h.winner)} (Equipo ${team})">${mark}</div>`;
   }).join('');
   return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:2px">
       <div style="font-size:6px;color:#7a6a4a;letter-spacing:.4px;font-family:Georgia,serif">BAZAS</div>
@@ -2392,7 +2396,15 @@ function bazasTrackerHTML4(){
 function avatarHTML4(r, size){
   size = size || 22;
   const p = _players4.find(p=>p.role===r) || {};
-  const img = p.charKey && typeof CHAR_IMAGES!=='undefined' ? CHAR_IMAGES[p.charKey] : null;
+  // OJO: si el charKey es 'custom' (foto propia subida), NO hay que buscarla
+  // en CHAR_IMAGES['custom'] — esa entrada es SIEMPRE la foto de ESTE
+  // dispositivo, no la del jugador p. Por eso cada jugador manda su propia
+  // foto (p.customImg) por la conexión, y acá se usa esa en vez de la
+  // compartida. Sin esto, todos veían su propia cara en el lugar de
+  // cualquier compañero/rival que hubiese elegido "foto propia".
+  const img = p.customImg
+    ? p.customImg
+    : (p.charKey && typeof CHAR_IMAGES!=='undefined' ? CHAR_IMAGES[p.charKey] : null);
   const initial = (p.name||r||'?').trim().charAt(0).toUpperCase() || '?';
   if(img){
     return `<img src="${img}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;
@@ -3411,24 +3423,47 @@ const CHAR_NAMES={"lincoln": "Lincoln", "isabel": "Isabel I", "washington": "Was
 const CHAR_GENDER={lincoln:'m',isabel:'f',washington:'m',templario:'m',napoleon:'m',churchill:'m',juana:'f',bill:'m',antonieta:'f',cleopatra:'f',guerrera:'f',centurion:'m',jfk:'m',pancho:'m',apache:'m',mandela:'m',torosentado:'m',che:'m',jesus:'m',lenin:'m',hawking:'m',edison:'m',hendrix:'m',cesar:'m',tesla:'m',douglass:'m',einstein:'m',gandhi:'m',vangogh:'m',elvis:'m',dali:'m',kane:'m',suarez_nac:'m',neymar:'m',mbappe:'m',valverde:'m',dembele:'m',williams:'m',haaland:'m',ronaldo:'m',cavani:'m',messi:'m',forlan:'m',suarez:'m'};
 function selectChar(key,name,el){_selectedCharKey=key;_selectedCharName=name;document.querySelectorAll('#player-grid .char-card').forEach(c=>c.classList.remove('char-sel'));el.classList.add('char-sel');var _ni=document.getElementById('char-name-input');if(_ni) _ni.placeholder='Nombre (ej: '+name+')';}
 // ── Foto propia como personaje: tomar con la cámara o subir desde la galería ──
+// La foto se reduce a un cuadrado chico (con canvas) antes de guardarla:
+// así el dataURL final pesa poco, lo que evita fallos al mandarla por la
+// conexión P2P a los demás jugadores (una foto de cámara sin reducir puede
+// pesar varios MB, y eso rompe el mensaje o tarda demasiado en llegar).
 function handleCustomCharUpload(input){
   const file = input.files && input.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (e)=>{
-    const dataUrl = e.target.result;
-    CHAR_IMAGES['custom'] = dataUrl;
-    CHAR_NAMES['custom'] = _playerName || 'Mi foto';
-    try{ localStorage.setItem('truco_custom_char', dataUrl); }catch(err){}
-    const img = document.getElementById('custom-char-img');
-    const ph = document.getElementById('custom-char-placeholder');
-    if(img){ img.src = dataUrl; img.style.display='block'; }
-    if(ph) ph.style.display='none';
-    const card = document.getElementById('custom-char-card');
-    if(card) selectChar('custom', CHAR_NAMES['custom'], card);
+    const img0 = new Image();
+    img0.onload = ()=>{
+      const MAX = 220;
+      const side = Math.min(img0.width, img0.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = MAX; canvas.height = MAX;
+      const ctx = canvas.getContext('2d');
+      // Recorte centrado cuadrado + reescalado a MAXxMAX
+      const sx = (img0.width - side)/2, sy = (img0.height - side)/2;
+      ctx.drawImage(img0, sx, sy, side, side, 0, 0, MAX, MAX);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      CHAR_IMAGES['custom'] = dataUrl;
+      CHAR_NAMES['custom'] = _playerName || 'Mi foto';
+      try{ localStorage.setItem('truco_custom_char', dataUrl); }catch(err){}
+      const img = document.getElementById('custom-char-img');
+      const ph = document.getElementById('custom-char-placeholder');
+      if(img){ img.src = dataUrl; img.style.display='block'; }
+      if(ph) ph.style.display='none';
+      const card = document.getElementById('custom-char-card');
+      if(card) selectChar('custom', CHAR_NAMES['custom'], card);
+    };
+    img0.onerror = ()=>{ /* archivo no es una imagen válida: no hacemos nada */ };
+    img0.src = e.target.result;
   };
   reader.readAsDataURL(file);
   input.value = '';
+}
+// Devuelve la foto propia (dataURL) SOLO si el personaje elegido es la foto
+// personalizada; se usa para mandarla a los demás jugadores por la conexión,
+// ya que ellos no tienen esa imagen guardada en su propio dispositivo.
+function myCustomImgToSend(){
+  return _selectedCharKey==='custom' ? (CHAR_IMAGES['custom']||null) : null;
 }
 // Si ya había una foto propia guardada de una sesión anterior, se muestra
 // en la tarjeta (pero no se selecciona sola: hay que tocarla para elegirla).
@@ -3480,7 +3515,7 @@ function updateInGameCharacters(){
     oppImg=window._aiCharImg; oppName=window._aiCharName;
     meImg=window._playerCharImg; meName=window._playerCharName;
   } else if(MODE==='online'){
-    oppImg=_opponentCharKey?CHAR_IMAGES[_opponentCharKey]:null;
+    oppImg=_opponentCustomImg ? _opponentCustomImg : (_opponentCharKey?CHAR_IMAGES[_opponentCharKey]:null);
     oppName=_opponentName;
     meImg=_selectedCharKey?CHAR_IMAGES[_selectedCharKey]:null;
     meName=_playerName||_selectedCharName;
@@ -7064,7 +7099,7 @@ function createRoom4(fixedCode){
   const code = fixedCode || genCode();
   ROOM=code; MY_ROLE='p1'; MODE='online4';
   loadVoices();
-  _players4 = [{role:'p1', name:_playerName||'Vos', charKey:_selectedCharKey}];
+  _players4 = [{role:'p1', name:_playerName||'Vos', charKey:_selectedCharKey, customImg:myCustomImgToSend()}];
 
   // Guardo mi propio paquete de voces para poder repartírselo a cada
   // invitado que se conecte (además de mandárselo directo yo mismo).
@@ -7117,8 +7152,8 @@ function createRoom4(fixedCode){
         if(data.clientId) _clientRoleMap4[data.clientId] = role;
 
         const existing = _players4.find(p=>p.role===role);
-        if(existing){ existing.name=data.name||role; existing.charKey=data.charKey||null; }
-        else _players4.push({role, name:data.name||role, charKey:data.charKey||null});
+        if(existing){ existing.name=data.name||role; existing.charKey=data.charKey||null; existing.customImg=data.customImg||null; }
+        else _players4.push({role, name:data.name||role, charKey:data.charKey||null, customImg:data.customImg||null});
         connection.send({type:'assign', role, players:_players4});
         broadcastRoster4();
         renderRoomSlots4('room-slots-4', _players4);
@@ -7186,7 +7221,7 @@ function joinRoom4(){
     _conn = _peer.connect('truco4-'+code, { reliable:true });
 
     _conn.on('open', ()=>{
-      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey, clientId:getClientId4() });
+      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey, customImg:myCustomImgToSend(), clientId:getClientId4() });
       sendVoicesToPeer(_conn);
       showMsg('join-msg-4','🟢 Conectado — esperando a los demás...','#7fba5a');
       const slotsEl=document.getElementById('room-slots-4-guest');
@@ -7475,6 +7510,7 @@ let _peer = null;   // PeerJS Peer instance
 let _conn = null;   // active DataConnection
 let _opponentName = 'Rival';
 let _opponentCharKey = null; // key del personaje elegido por el rival (partida online)
+let _opponentCustomImg = null; // si el rival eligió "foto propia", su foto viaja acá (ver nota en avatarHTML4)
 
 function createRoom(fixedCode){
   if(_peer){ _peer.destroy(); _peer=null; _conn=null; }
@@ -7515,7 +7551,7 @@ function createRoom(fixedCode){
         show('s-game');
         lobbySetPlaying();
         // Send P1's name to P2 before the state so _opponentName is set
-        if(_conn && _conn.open) _conn.send({type:'name', name:_playerName, charKey:_selectedCharKey});
+        if(_conn && _conn.open) _conn.send({type:'name', name:_playerName, charKey:_selectedCharKey, customImg:myCustomImgToSend()});
         sendVoicesToPeer(_conn); // Send P1's recorded voices to P2
         // Init game with P1 as mano — initGame() ya detecta y anuncia la Flor,
         // otorga sus puntos, arma la batalla de Contra Flor al Resto si corresponde,
@@ -7546,6 +7582,7 @@ function createRoom(fixedCode){
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
         _opponentCharKey = data.charKey||null;
+        _opponentCustomImg = data.customImg||null;
         updateInGameCharacters();
       }
     });
@@ -7577,7 +7614,7 @@ function joinRoom(){
     _conn = _peer.connect('truco-'+code, { reliable:true });
 
     _conn.on('open', () => {
-      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey });
+      _conn.send({ type:'name', name:_playerName, charKey:_selectedCharKey, customImg:myCustomImgToSend() });
       sendVoicesToPeer(_conn); // Send P2's recorded voices to P1
       showMsg('join-msg','🟢 Conectado — esperando inicio...','#7fba5a');
     });
@@ -7643,6 +7680,7 @@ function joinRoom(){
       } else if(data.type==='name'){
         _opponentName = data.name||'Rival';
         _opponentCharKey = data.charKey||null;
+        _opponentCustomImg = data.customImg||null;
         updateInGameCharacters();
       }
     });
