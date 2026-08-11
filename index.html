@@ -488,13 +488,16 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 .sorteo-dealt-card{ animation:cardFallToSlot .5s cubic-bezier(.25,.7,.4,1) both; }
 /* ── Mesa de 4 jugadores: aprovechar el horizontal ── */
 #g4-rotate-hint{display:none;}
+.g4-rotate-hint-txt{display:none;white-space:nowrap;}
 @media (orientation:portrait){
   #g4-rotate-hint{
-    display:flex;align-items:center;gap:8px;justify-content:center;
-    background:rgba(212,160,23,.14);border:1px solid rgba(212,160,23,.4);
-    border-radius:10px;padding:6px 10px;color:#ffcc66;font-family:Georgia,serif;
-    font-size:12px;font-weight:700;
+    display:flex;align-items:center;gap:6px;justify-content:center;
+    position:absolute;top:6px;right:6px;z-index:1001;
+    background:rgba(212,160,23,.22);border:1px solid rgba(212,160,23,.5);
+    border-radius:16px;padding:5px 7px;color:#ffcc66;font-family:Georgia,serif;
+    font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4);
   }
+  #g4-rotate-hint.open .g4-rotate-hint-txt{display:inline;font-size:11px;padding-right:2px;}
 }
 @media (orientation:landscape) and (max-height:520px){
   #s-game4 > div{max-width:680px !important;padding:5px 10px !important;}
@@ -1160,7 +1163,7 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
   <div style="max-width:640px;width:100%;height:100%;margin:0 auto;padding:8px 10px;
     display:flex;flex-direction:column;gap:6px;box-sizing:border-box;overflow:hidden">
 
-    <div id="g4-rotate-hint">🔄 Girá tu dispositivo — se juega mejor en horizontal</div>
+    <div id="g4-rotate-hint" title="Girá tu dispositivo — se juega mejor en horizontal" onclick="this.classList.toggle('open')">🔄<span class="g4-rotate-hint-txt">Girá tu dispositivo</span></div>
 
     <!-- SORTEO DE COMPAÑERO -->
     <div id="g4-sorteo-wrap" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0">
@@ -1234,10 +1237,10 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
 
       <!-- Hablar con tu compañero (señas): debajo de los botones de canto/gritos -->
       <div style="display:flex;justify-content:center;gap:6px;position:relative;flex-shrink:0">
-        <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Hablar con tu compañero"
-          style="background:rgba(0,0,0,.3);border:1px solid rgba(142,200,255,.4);color:#8ec8ff;
-          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 12px;
-          cursor:pointer;line-height:1;display:flex;align-items:center;gap:6px">🤝 Hablar con tu compañero</button>
+        <button id="g4-sena-btn" onclick="toggleSenaMenu4()" title="Mensajes rápidos para tu compañero"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(200,180,140,.5);color:#e8d8b0;
+          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 14px;
+          cursor:pointer;line-height:1">Mensaje rápido</button>
         <div id="g4-sena-menu" style="display:none;position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:40;
           background:#241708;border:1px solid rgba(142,200,255,.4);border-radius:10px;padding:6px;
           box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;grid-template-columns:1fr 1fr;gap:5px;width:150px">
@@ -1249,31 +1252,40 @@ label{color:var(--muted);font-size:11px;letter-spacing:1px;margin-bottom:4px;dis
             background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Tocá</button>
           <button onclick="sendSena4('Gritá')" style="padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
             background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Gritá</button>
+          <button onclick="sendSena4('Voy')" style="grid-column:1 / span 2;padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+            background:#1a2a3a;color:#cfe8ff;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Voy</button>
         </div>
         <!-- El aviso de seña ahora se muestra grande y centrado en toda la pantalla
              (ver #big-sena / showBigSena en el JS), no acá pegado al botón. -->
 
-        <!-- Mensaje corto libre: por si "Vení/Poné/Tocá/Gritá" no alcanza y
+        <!-- Mensaje corto libre: por si "Vení/Poné/Tocá/Gritá/Voy" no alcanza y
              querés escribir algo puntual. Se puede mandar solo a tu
              compañero (mismo estilo privado que las señas) o a todos en
-             la mesa (rivales incluidos, como un chat abierto). -->
-        <button id="g4-msg-btn" onclick="toggleMsgMenu4()" title="Escribir un mensaje corto"
-          style="background:rgba(0,0,0,.3);border:1px solid rgba(212,160,23,.5);color:#d4a017;
-          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 10px;
-          cursor:pointer;line-height:1;display:flex;align-items:center;gap:6px">✍️</button>
+             la mesa (rivales incluidos, como un chat abierto). Antes los dos
+             botones de destino mandaban el mensaje al toque, así que no
+             quedaba claro a quién le había llegado; ahora primero elegís el
+             destino (queda resaltado cuál está seleccionado) y después lo
+             mandás con "Enviar". -->
+        <button id="g4-msg-btn" onclick="toggleMsgMenu4()" title="Escribir un mensaje"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(200,180,140,.5);color:#e8d8b0;
+          font-size:12px;font-family:Georgia,serif;font-weight:700;border-radius:8px;padding:6px 14px;
+          cursor:pointer;line-height:1">Escribir</button>
         <div id="g4-msg-menu" style="display:none;position:absolute;bottom:36px;right:0;z-index:40;
           background:#241708;border:1px solid rgba(212,160,23,.5);border-radius:10px;padding:8px;
           box-shadow:0 6px 18px rgba(0,0,0,.5);flex-direction:column;gap:6px;width:210px">
           <input id="g4-msg-input" type="text" maxlength="60" placeholder="Escribí algo corto..."
             style="width:100%;box-sizing:border-box;background:#141008;border:1px solid rgba(212,160,23,.4);
             border-radius:6px;color:#f0e0c0;font-family:Georgia,serif;font-size:12px;padding:6px 8px"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();sendMsg4(false);}">
+            onkeydown="if(event.key==='Enter'){event.preventDefault();sendMsg4();}">
+          <div style="text-align:center;color:#a89060;font-size:9.5px;font-family:Georgia,serif">Enviar a:</div>
           <div style="display:flex;gap:5px">
-            <button onclick="sendMsg4(false)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
-              background:#1a2a3a;color:#cfe8ff;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">🤝 Compañero</button>
-            <button onclick="sendMsg4(true)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #d4a017;
-              background:#3a2a10;color:#f8d878;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">📢 Todos</button>
+            <button id="g4-msg-target-comp" onclick="setMsgTarget4(false)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #8ec8ff;
+              background:#1a2a3a;color:#cfe8ff;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Compañero</button>
+            <button id="g4-msg-target-all" onclick="setMsgTarget4(true)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid #d4a017;
+              background:#3a2a10;color:#f8d878;font-size:10.5px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Grupo</button>
           </div>
+          <button onclick="sendMsg4()" style="width:100%;padding:7px 4px;border-radius:6px;border:1px solid #7fba5a;
+            background:#2a4a1a;color:#dfffc0;font-size:11px;font-family:Georgia,serif;font-weight:700;cursor:pointer">Enviar</button>
         </div>
       </div>
 
@@ -2915,14 +2927,28 @@ function showBigSena(label, opts){
 //  - toAll=true: abierto, lo ven los 4 jugadores en la mesa (rivales
 //    incluidos), como un chat de mesa.
 let _lastMsgShownTs = 0;
+// A quién se manda el mensaje libre: false = solo compañero, true = todos.
+// Antes los dos botones ("Compañero" / "Todos") mandaban directo y no
+// quedaba ningún rastro visual de a cuál le habías pegado clic; ahora es
+// una selección (con resaltado) que se mantiene hasta que la cambiás, y
+// recién se manda al tocar "Enviar".
+let _msgTarget4 = false;
+function setMsgTarget4(toAll){
+  _msgTarget4 = !!toAll;
+  const cBtn = document.getElementById('g4-msg-target-comp');
+  const aBtn = document.getElementById('g4-msg-target-all');
+  if(cBtn) { cBtn.style.opacity = _msgTarget4 ? '.45' : '1'; cBtn.style.boxShadow = _msgTarget4 ? 'none' : '0 0 0 2px #8ec8ff inset'; }
+  if(aBtn) { aBtn.style.opacity = _msgTarget4 ? '1' : '.45'; aBtn.style.boxShadow = _msgTarget4 ? '0 0 0 2px #d4a017 inset' : 'none'; }
+}
 function toggleMsgMenu4(force){
   const el = document.getElementById('g4-msg-menu');
   if(!el) return;
   const show = force!==undefined ? force : (el.style.display==='none' || el.style.display==='');
   el.style.display = show ? 'flex' : 'none';
-  if(show){ toggleSenaMenu4(false); const inp = document.getElementById('g4-msg-input'); if(inp){ inp.value=''; setTimeout(()=>inp.focus(), 30); } }
+  if(show){ toggleSenaMenu4(false); setMsgTarget4(false); const inp = document.getElementById('g4-msg-input'); if(inp){ inp.value=''; setTimeout(()=>inp.focus(), 30); } }
 }
 function sendMsg4(toAll){
+  if(toAll===undefined) toAll = _msgTarget4;
   const inp = document.getElementById('g4-msg-input');
   const text = inp ? inp.value.trim().slice(0,60) : '';
   if(!text) return;
@@ -3076,12 +3102,16 @@ function renderGame4(){
   // todo entre sin superponerse ni pedir scroll.
   const _vh4 = window.innerHeight || document.documentElement.clientHeight || 700;
   let SEAT_W,SEAT_H,MUESTRA_W,MUESTRA_H,PMINI_W,PMINI_H,PPLAY_W,PPLAY_H,HAND_W,HAND_H;
+  // Cartas de la mesa (rivales + muestra + jugadas) y las del compañero
+  // se agrandaron ~15% respecto de antes, para que se lean mejor; las
+  // proporciones entre ellas se mantienen igual para no romper el layout
+  // (la mesa ya escala su ancho máximo en base a SEAT_W más abajo).
   if(_vh4 >= 560){
-    SEAT_W=54;SEAT_H=81; MUESTRA_W=48;MUESTRA_H=72; PMINI_W=32;PMINI_H=48; PPLAY_W=42;PPLAY_H=63; HAND_W=80;HAND_H=120;
+    SEAT_W=62;SEAT_H=93; MUESTRA_W=55;MUESTRA_H=83; PMINI_W=37;PMINI_H=55; PPLAY_W=48;PPLAY_H=72; HAND_W=80;HAND_H=120;
   } else if(_vh4 >= 420){
-    SEAT_W=48;SEAT_H=72; MUESTRA_W=42;MUESTRA_H=63; PMINI_W=28;PMINI_H=42; PPLAY_W=38;PPLAY_H=57; HAND_W=70;HAND_H=105;
+    SEAT_W=55;SEAT_H=83; MUESTRA_W=48;MUESTRA_H=72; PMINI_W=32;PMINI_H=48; PPLAY_W=44;PPLAY_H=66; HAND_W=70;HAND_H=105;
   } else {
-    SEAT_W=44;SEAT_H=66; MUESTRA_W=40;MUESTRA_H=60; PMINI_W=26;PMINI_H=40; PPLAY_W=36;PPLAY_H=54; HAND_W=66;HAND_H=100;
+    SEAT_W=50;SEAT_H=76; MUESTRA_W=46;MUESTRA_H=69; PMINI_W=30;PMINI_H=46; PPLAY_W=41;PPLAY_H=62; HAND_W=66;HAND_H=100;
   }
 
   const mesaEl=document.getElementById('g4-mesa');
@@ -3163,8 +3193,7 @@ function renderGame4(){
         ${avatarHTML4(MY_ROLE, 24)}
         <div style="color:#d4a017;font-size:10px;font-family:Georgia,serif">${iAmMano4?'🫱 ':''}${nameFor(MY_ROLE)} (vos)</div>
       </div>
-      <div style="display:flex;gap:5px">${myHand.map(c=>cardHTML(c,{disabled:!canPlay,w:HAND_W,h:HAND_H,
-        onclick:canPlay?`handleCardClick4('${c.id}')`:''})).join('')}</div>`;
+      ${fanHandHTML4(myHand,{w:HAND_W,h:HAND_H,disabled:!canPlay})}`;
   }
 
   renderActions4();
@@ -4530,6 +4559,33 @@ function fanHandHTML(cards,{disabled=false,selIdx=null,isMuestraFn=null}={}){
   });
   h+='</div>';
   return h;
+}
+
+// Igual que fanHandHTML pero para el modo de 4 jugadores: acá las cartas
+// se identifican por card.id (no por índice) y el tamaño es variable según
+// el alto de pantalla (HAND_W/HAND_H calculado en renderGame4), así que el
+// abanico se arma en base a esas medidas en vez de un tamaño fijo.
+function fanHandHTML4(cards,{w=80,h=120,disabled=false}={}){
+  if(!cards||!cards.length) return `<div style="height:${h}px"></div>`;
+  const n=cards.length;
+  const ty1=Math.round(h*0.065), ty2=Math.round(h*0.11);
+  const cfgs={1:[{r:0,ty:0}],2:[{r:-8,ty:ty1},{r:8,ty:ty1}],3:[{r:-13,ty:ty2},{r:0,ty:0},{r:13,ty:ty2}]};
+  const config=cfgs[n]||cfgs[3];
+  const spacing=Math.round(w*0.62);
+  const totalW=(n-1)*spacing+w;
+  const startX=-(totalW/2)+(w/2);
+  let html=`<div style="position:relative;height:${h+16}px;width:100%;display:flex;justify-content:center;align-items:flex-end">`;
+  cards.forEach((card,i)=>{
+    const cfg=config[i]||{r:0,ty:0};
+    const xPos=startX+i*spacing;
+    html+=`<div style="position:absolute;bottom:0;left:50%;
+      transform:translateX(${xPos-(w/2)}px) translateY(${cfg.ty}px) rotate(${cfg.r}deg);
+      transform-origin:center bottom;z-index:${i+1};transition:transform .15s">
+      ${cardHTML(card,{disabled,w,h,onclick:disabled?'':`handleCardClick4('${card.id}')`})}
+    </div>`;
+  });
+  html+='</div>';
+  return html;
 }
 
 function fanFaceDown(n){
